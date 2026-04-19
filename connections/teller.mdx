@@ -1,0 +1,117 @@
+---
+title: "Connect banks with Teller"
+description: "Set up your Teller App ID and mTLS certificates, then link bank accounts using the Teller Connect flow from the Breadbox admin dashboard."
+---
+
+Teller is an alternative to Plaid for connecting US bank accounts. It uses a different authentication model — mutual TLS (mTLS) certificates instead of API keys — but the experience from the admin dashboard is nearly identical to connecting with Plaid. Use Teller when your bank is supported by Teller but not Plaid, or when you prefer Teller's coverage for your institutions.
+
+## What you need
+
+Before configuring Teller in Breadbox, you need:
+
+- A **Teller account** — create one at [teller.io](https://teller.io).
+- Your **App ID** (`TELLER_APP_ID`) from the Teller Dashboard.
+- A **certificate and private key** (`cert.pem` and `private-key.pem`) issued by Teller from the Teller Dashboard. These files authenticate your application to the Teller API.
+
+<Note>
+  The certificate and private key are application-level credentials shared across all your Teller connections. They do not contain any per-user bank credentials.
+</Note>
+
+## Teller environments
+
+Teller has three environments, similar to Plaid:
+
+| Environment | What it connects to | Cost | Notes |
+|-------------|---------------------|------|-------|
+| Sandbox | Simulated bank data | Free | Unlimited test enrollments |
+| Development | Real bank accounts | Free | Limited to 100 cumulative enrollments |
+| Production | Real bank accounts | Paid | Unlimited |
+
+Unlike Plaid, the Teller environment is selected during the Teller Connect enrollment flow itself, not in the API configuration. All three environments use the same API base URL.
+
+<Warning>
+  Development enrollments count cumulatively and are not restored when you delete a connection. Plan accordingly before connecting real accounts in development.
+</Warning>
+
+## Configure Teller in Breadbox
+
+Teller credentials are supplied as environment variables. Set the following before starting Breadbox:
+
+| Variable | Description |
+|----------|-------------|
+| `TELLER_APP_ID` | Your application ID from the Teller Dashboard |
+| `TELLER_CERT_PATH` | Absolute path to your `cert.pem` file |
+| `TELLER_KEY_PATH` | Absolute path to your `private-key.pem` file |
+| `TELLER_ENV` | `sandbox`, `development`, or `production` |
+| `TELLER_WEBHOOK_SECRET` | HMAC signing secret from the Teller Dashboard (required for webhooks) |
+
+<Note>
+  The certificate and key paths reference files on the server filesystem and cannot be entered through the admin dashboard UI. You must set them as environment variables before starting the Breadbox process.
+</Note>
+
+## Connect a bank account
+
+Once Teller is configured, the connection flow from the admin dashboard works the same way as Plaid.
+
+<Steps>
+  <Step title="Start a new connection">
+    Go to **Connections** → **Connect New Bank**. Select the family member this account belongs to. If both Plaid and Teller are configured, select **Teller** as the provider.
+  </Step>
+  <Step title="Complete the Teller Connect dialog">
+    Breadbox opens the Teller Connect widget in your browser. Search for your bank, enter your online banking credentials, and complete any multi-factor authentication your bank requires. Teller handles the login flow — Breadbox never sees your bank credentials.
+  </Step>
+  <Step title="Wait for the initial sync">
+    After you complete enrollment, Breadbox fetches up to two years of transaction history for each account. The sync runs in the background. The connection status shows **Active** once it completes.
+  </Step>
+</Steps>
+
+## How Teller authentication works
+
+Teller uses **mutual TLS (mTLS)** to authenticate your Breadbox application. Every API request includes your certificate, which proves to Teller that the request comes from your registered application. Per-connection access tokens are then passed as HTTP Basic Auth credentials — Teller issues a unique access token for each bank enrollment, which Breadbox stores encrypted in your database.
+
+This two-layer model means:
+
+1. The certificate identifies your application to Teller.
+2. The access token identifies the specific bank enrollment (one per bank you link).
+
+## Sync behavior
+
+Teller syncs work on a date-range polling basis rather than the cursor-based approach Plaid uses. On each sync, Breadbox fetches transactions from a date window that overlaps with the previous sync by 10 days. This overlap ensures that any pending transactions that posted on a different date than they were authorized are captured correctly.
+
+The scheduled and webhook-driven sync mechanisms are identical to Plaid. When you configure a webhook URL in Breadbox Settings, Teller sends a notification when new transactions are processed, and Breadbox syncs immediately.
+
+<Note>
+  Teller webhooks are configured in the Teller Dashboard, not via the Breadbox UI. Set your webhook URL to `https://{your-domain}/webhooks/teller` in the Teller Dashboard.
+</Note>
+
+## Re-authentication
+
+If your bank credentials change or your session at the bank expires, Teller sends an `enrollment.disconnected` webhook to Breadbox. The connection status changes to **Re-auth Needed**.
+
+To re-authenticate:
+
+<Steps>
+  <Step title="Open the connection">
+    Go to **Connections** and click **Re-authenticate** on the affected connection.
+  </Step>
+  <Step title="Complete the Teller Connect dialog again">
+    Breadbox opens the Teller Connect widget in reconnection mode for your existing enrollment. Log in to your bank again. No new access token is issued — your existing token is restored.
+  </Step>
+  <Step title="Confirm the connection is active">
+    After completing the login, Breadbox triggers an immediate sync and the connection status returns to **Active**.
+  </Step>
+</Steps>
+
+## Disconnecting a bank
+
+To remove a Teller connection, click **Remove Connection** on the connection detail page and confirm the dialog.
+
+Removing a connection:
+
+- Calls Teller's API to revoke the enrollment and invalidate the access token.
+- Sets the connection status to **Disconnected** in Breadbox.
+- **Preserves all transaction history.** Previously synced transactions remain in your database.
+
+## Connection management
+
+All connection management actions — viewing account balances, sync history, triggering a manual sync, re-authenticating, and removing — are identical for Teller and Plaid connections. See the [connections overview](/connections/overview) for a full description of connection statuses and dashboard controls.

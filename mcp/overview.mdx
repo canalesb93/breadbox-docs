@@ -1,0 +1,64 @@
+---
+title: "Give AI agents access to your finances with Breadbox MCP"
+description: "Breadbox exposes your household financial data to AI agents via the Model Context Protocol, letting Claude query accounts, transactions, and more."
+---
+
+Breadbox includes a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that lets AI agents like Claude read your financial data directly — no copy-pasting exports, no custom scripts. Once connected, an agent can analyze spending patterns, detect unusual transactions, answer questions about your accounts, and submit structured reports, all against live data that you control and host yourself.
+
+## What MCP is
+
+MCP is an open standard for giving AI agents structured access to external data sources and tools. Instead of asking Claude to reason over a paste of bank statements, you give it a live connection to Breadbox. The agent calls tools to query your data, reads context resources to understand your household setup, and responds based on real, up-to-date information.
+
+## Two transports
+
+Breadbox supports two ways to connect an MCP client.
+
+**Streamable HTTP** is the primary transport. The MCP endpoint lives at `/mcp` on your Breadbox server — the same process that serves the REST API and admin dashboard. This transport works for any deployment: Docker, remote server, or a local binary running as a server. HTTP connections require an API key passed in the `X-API-Key` header.
+
+**Stdio** is a convenience mode for local setups. Running `breadbox mcp-stdio` starts an MCP session over stdin/stdout. Because the process connects directly to your database, no API key is required. This mode is ideal when Claude Desktop is running on the same machine as Breadbox.
+
+## What the MCP server exposes
+
+The server advertises two capability types: **tools** and **resources**.
+
+**Tools** are callable functions the agent uses to query your data — listing accounts, searching transactions, counting results, and triggering syncs. See the [tools reference](/mcp/tools) for the full list.
+
+**Resources** are passive context documents the agent can read to orient itself before taking action.
+
+| Resource URI | What it contains |
+|---|---|
+| `breadbox://overview` | A live summary of your dataset: users, connections, account counts, transaction date range, 30-day spending by top category, and pending transaction count |
+| `breadbox://review-guidelines` | Guidelines for reviewing transactions and creating categorization rules; editable from the MCP Settings page |
+| `breadbox://report-format` | Templates and formatting rules for agent-submitted reports; editable from the MCP Settings page |
+
+The `breadbox://overview` resource gives the agent ambient context about your household's financial state without requiring a round-trip tool call. An agent that reads it first knows how many accounts you have, which providers are connected, and roughly what your recent spending looks like — before it asks a single question.
+
+## What agents can do
+
+With an MCP connection to Breadbox, an agent can:
+
+- Summarize monthly spending by category across all accounts or per family member
+- Flag transactions that look unusual given your typical patterns
+- Identify uncategorized transactions and suggest categories based on your existing data
+- Answer questions like "how much did we spend on groceries last quarter?"
+- Trigger a manual sync to pull the latest transactions before running an analysis
+- Submit a formatted spending report for your records
+
+<Note>
+MCP access can be scoped to read-only or read-write depending on your API key configuration. A read-only key prevents the agent from triggering syncs or submitting reports. See [API keys](/configuration/api-keys) for details.
+</Note>
+
+## API key requirement
+
+HTTP transport requires a valid API key in every request. Generate one from the API Keys section of the admin dashboard and pass it as the `X-API-Key` header in your MCP client config. Stdio mode does not require an API key because the process has direct database access.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Set up MCP" icon="plug" href="/mcp/setup">
+    Connect Claude Desktop, Claude Code, or any MCP-compatible agent to Breadbox.
+  </Card>
+  <Card title="Tools reference" icon="wrench" href="/mcp/tools">
+    Full reference for every MCP tool: parameters, example inputs, and example outputs.
+  </Card>
+</CardGroup>

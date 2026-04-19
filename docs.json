@@ -1,0 +1,97 @@
+{
+  "$schema": "https://mintlify.com/docs.json",
+  "name": "Breadbox",
+  "theme": "almond",
+  "logo": {
+    "light": "https://media.brand.dev/4f0ee8f5-1e0f-4f7c-8861-d413d6ced849.svg",
+    "dark": "https://media.brand.dev/4f0ee8f5-1e0f-4f7c-8861-d413d6ced849.svg"
+  },
+  "favicon": "https://media.brand.dev/6159ff9d-2a47-4b80-b46b-9b8b0d369fc9.jpg",
+  "colors": {
+    "primary": "#7c7c7c",
+    "light": "#070707",
+    "dark": "#d3d3d3"
+  },
+  "navbar": {
+    "primary": {
+      "type": "github",
+      "href": "https://github.com/canalesb93/breadbox"
+    }
+  },
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Bank Connections",
+            "pages": [
+              "connections/overview",
+              "connections/plaid",
+              "connections/teller",
+              "connections/csv-import"
+            ]
+          },
+          {
+            "group": "Transactions",
+            "pages": [
+              "transactions/overview",
+              "transactions/categories",
+              "transactions/rules",
+              "transactions/review-queue"
+            ]
+          },
+          {
+            "group": "AI Integration",
+            "pages": [
+              "mcp/overview",
+              "mcp/setup",
+              "mcp/tools"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/api-keys",
+              "configuration/backup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/pagination"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/accounts",
+              "api/transactions",
+              "api/categories",
+              "api/rules",
+              "api/connections",
+              "api/users",
+              "api/reports"
+            ]
+          }
+        ]
+      }
+    ]
+  }
+}

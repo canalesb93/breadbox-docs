@@ -1,0 +1,83 @@
+---
+title: "How Breadbox syncs, stores, and exposes transactions"
+description: "Learn how Breadbox syncs, stores, and represents transactions from your connected bank accounts, including field definitions and amount conventions."
+---
+
+Breadbox automatically pulls transactions from your connected bank accounts on a scheduled sync. Each transaction is stored in your PostgreSQL database and exposed through the admin dashboard, REST API, and MCP server. This page explains how transactions are structured, what each field means, and what to expect as your data accumulates.
+
+## How transactions are synced
+
+When you connect a bank account, Breadbox performs an initial sync that pulls your full available transaction history. After that, syncs run on the schedule you configure (every 4, 8, 12, or 24 hours) and also fire immediately whenever your bank pushes a webhook notification.
+
+Each sync fetches only the changes since the last run — new transactions, modifications to pending transactions, and removals. Breadbox processes these three lists atomically so your database stays consistent.
+
+<Note>
+You can trigger a manual sync at any time from the admin dashboard under **Connections**, or by calling `POST /api/v1/sync` from the REST API.
+</Note>
+
+## Amount convention
+
+Breadbox passes Plaid's native sign convention through without modification:
+
+| Value | Meaning |
+|-------|---------|
+| **Positive** | Money leaving the account — purchases, fees, payments, withdrawals |
+| **Negative** | Money entering the account — deposits, refunds, credits, transfers in |
+
+For example, a $12.50 coffee purchase is stored as `amount = 12.50`. A $1,000 paycheck deposit is stored as `amount = -1000.00`.
+
+<Warning>
+Never sum amounts across different currencies. Always check `iso_currency_code` before aggregating, and treat each currency separately.
+</Warning>
+
+## Key transaction fields
+
+Every transaction record includes the following fields:
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `id` | UUID | Internal Breadbox identifier. Stable for the lifetime of the record. |
+| `short_id` | string | 8-character base62 alias for the same record. Accepted anywhere `id` is accepted. |
+| `account_id` | UUID | The account this transaction belongs to. Set to `null` if the parent account is later removed (the transaction is preserved). |
+| `amount` | decimal | Transaction amount. Positive = money out, negative = money in. |
+| `iso_currency_code` | string | ISO 4217 currency code (e.g., `USD`). Never aggregate across different values. |
+| `date` | date | Settlement date for posted transactions; occurrence date for pending ones. Format: `YYYY-MM-DD`. |
+| `name` | string | Raw transaction description from the financial institution. Always populated. |
+| `merchant_name` | string | Enriched, cleaned merchant name (e.g., `McDonald's`). May be `null` when the merchant cannot be identified. |
+| `category_primary` | string | High-level provider category (e.g., `FOOD_AND_DRINK`, `TRANSPORTATION`). |
+| `category_detailed` | string | Granular subcategory (e.g., `FOOD_AND_DRINK_RESTAURANTS`). |
+| `pending` | boolean | `true` if the transaction has not yet settled. `false` means posted. |
+
+<Tip>
+The `short_id` is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.
+</Tip>
+
+## Pending vs. posted transactions
+
+A transaction starts as **pending** when the bank reports it but it has not yet settled. Pending transactions may change or be cancelled before they post.
+
+When a pending transaction settles, the bank issues a new transaction ID for the posted version. Breadbox links the posted record back to the pending one and soft-deletes the pending row automatically, so you see only one record per transaction.
+
+<Note>
+Pending transactions are included in API responses and dashboard views by default. Use the `pending=false` query parameter to filter to posted transactions only.
+</Note>
+
+## Browsing transactions in the dashboard
+
+Navigate to **Transactions** in the admin dashboard sidebar to browse, search, and filter your transaction history. From there you can:
+
+- Filter by account, date range, category, amount, or keyword
+- Click any transaction to view its full details and activity timeline
+- Manually override a transaction's category
+- Add tags and comments
+
+## Querying via API and MCP
+
+For programmatic access, Breadbox offers two interfaces:
+
+- **REST API** — Use `GET /api/v1/transactions` with query parameters to filter, sort, and paginate. See the [API reference](/api/transactions) for the full parameter list.
+- **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions` and `count_transactions` to query data in natural language workflows. See the [MCP overview](/mcp/overview) for setup instructions.
+
+## Soft deletes
+
+When your bank reports that a transaction has been removed (for example, a declined charge or a reissued pending transaction), Breadbox sets a `deleted_at` timestamp on the row rather than erasing it. The transaction disappears from normal API responses and dashboard views, but the record is never hard-deleted from your database. This preserves history and keeps any prior agent references consistent.

@@ -1,0 +1,219 @@
+---
+title: "Reports API — submit and retrieve agent reports"
+description: "Reference for Breadbox reports endpoints: list all reports, count unread reports, submit a Markdown report from an agent, and mark reports as read."
+---
+
+Reports let AI agents communicate findings to the household. An agent might submit a monthly spending summary, flag unusual transactions for human review, or note patterns worth attention. Reports appear in the Breadbox admin dashboard where household members can read and acknowledge them. All report bodies use Markdown, so agents can format summaries with headers, tables, and lists.
+
+---
+
+## List reports
+
+```
+GET /api/v1/reports
+```
+
+Returns all reports, ordered by creation time descending (newest first).
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
+      "short_id": "Uv8wXy9z",
+      "title": "Monthly spending summary — January 2025",
+      "body": "## Summary\n\nTotal spending: $3,241.50 across 127 transactions...",
+      "read": false,
+      "created_at": "2025-02-01T08:00:00Z",
+      "updated_at": "2025-02-01T08:00:00Z"
+    },
+    {
+      "id": "rp2b3c4d5-e6f7-890a-bcde-f12345678901",
+      "short_id": "Vw9xYz0a",
+      "title": "Unusual transaction detected — $899 at Best Buy",
+      "body": "## Alert\n\nA transaction of **$899.00** at Best Buy was detected on January 14...",
+      "read": true,
+      "created_at": "2025-01-15T10:30:00Z",
+      "updated_at": "2025-01-15T14:22:00Z"
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/reports"
+```
+
+---
+
+## Count unread reports
+
+```
+GET /api/v1/reports/unread-count
+```
+
+Returns the number of reports that have not yet been marked as read. Use this to display a notification badge in a dashboard or agent interface.
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "count": 3
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/reports/unread-count"
+```
+
+---
+
+## Submit a report
+
+```
+POST /api/v1/reports
+```
+
+Submits a new report. Reports are created in the unread state and appear immediately in the admin dashboard. The body field accepts Markdown — use headers, tables, bullet lists, and bold text to structure the content clearly for human readers.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "title": "Monthly spending summary — January 2025",
+  "body": "## Summary\n\nTotal spending: **$3,241.50** across 127 transactions in January 2025.\n\n## Top categories\n\n| Category | Amount |\n|----------|--------|\n| Food & Drink | $843.21 |\n| Transportation | $312.50 |\n| Entertainment | $127.00 |\n\n## Notable transactions\n\n- $899.00 at Best Buy on January 14 — unusually large electronics purchase.\n- $450.00 at Delta Air Lines on January 22 — potential upcoming travel."
+}
+```
+
+<ParamField body="title" type="string" required>
+  A concise, descriptive title for the report (e.g., `"Monthly spending summary — January 2025"`).
+</ParamField>
+
+<ParamField body="body" type="string" required>
+  The report content in Markdown. There is no enforced length limit, but keep reports focused and actionable for human readers.
+</ParamField>
+
+### Response — 201 Created
+
+```json
+{
+  "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
+  "short_id": "Uv8wXy9z",
+  "title": "Monthly spending summary — January 2025",
+  "body": "## Summary\n\n...",
+  "read": false,
+  "created_at": "2025-02-01T08:00:00Z",
+  "updated_at": "2025-02-01T08:00:00Z"
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "title": "Monthly spending summary — January 2025",
+    "body": "## Summary\n\nTotal spending: $3,241.50 across 127 transactions..."
+  }' \
+  "http://localhost:8080/api/v1/reports"
+```
+
+---
+
+## Mark a report as read
+
+```
+PATCH /api/v1/reports/{id}/read
+```
+
+Marks a report as read. This clears the unread indicator in the dashboard and decrements the unread count. The report content is not changed.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The report's Breadbox UUID or short ID.
+</ParamField>
+
+### Response — 200 OK
+
+```json
+{
+  "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
+  "read": true,
+  "updated_at": "2025-02-02T09:15:00Z"
+}
+```
+
+```bash
+curl -X PATCH \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/reports/rp1a2b3c4-d5e6-f789-0abc-def123456789/read"
+```
+
+---
+
+## Report response fields
+
+<ResponseField name="id" type="string (UUID)" required>
+  Breadbox-assigned UUID for this report.
+</ResponseField>
+
+<ResponseField name="short_id" type="string" required>
+  8-character base62 alias.
+</ResponseField>
+
+<ResponseField name="title" type="string" required>
+  The report title as submitted.
+</ResponseField>
+
+<ResponseField name="body" type="string" required>
+  The report body in Markdown as submitted.
+</ResponseField>
+
+<ResponseField name="read" type="boolean" required>
+  `true` if the report has been marked as read. `false` for new, unread reports.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)" required>
+  Timestamp when the report was submitted.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)" required>
+  Timestamp when the report was last updated (e.g., when marked as read).
+</ResponseField>
+
+---
+
+## Writing effective reports
+
+A few conventions help make agent reports useful in the admin dashboard:
+
+- **Start with a summary.** Lead with the most important finding so humans can quickly assess whether the report needs action.
+- **Use tables for comparisons.** Markdown tables render well in the dashboard and make category or merchant breakdowns easy to scan.
+- **Be specific about amounts.** Include the exact amount and date for flagged transactions rather than approximations.
+- **Link to relevant filters.** If you flag a category as over-budget, mention the category slug so the household member can query transactions directly.
+- **Keep titles scannable.** Include the time period and subject in the title (e.g., `"Weekly digest — Feb 24–28, 2025"`) so reports are easy to find in a list.
+
+---
+
+## Error codes
+
+| Condition | Status | Code |
+|-----------|--------|------|
+| Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
+| Missing `title` or `body` | `422` | `VALIDATION_ERROR` |
+| Report not found | `404` | `NOT_FOUND` |

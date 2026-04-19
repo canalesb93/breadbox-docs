@@ -1,0 +1,146 @@
+---
+title: "Breadbox REST API: base URL, auth, errors, conventions"
+description: "Base URL structure, authentication, JSON response format, error codes, amount sign conventions, and health check endpoints for the Breadbox REST API."
+---
+
+The Breadbox REST API gives you programmatic access to your household's financial data — accounts, transactions, categories, rules, and more. All endpoints follow a consistent JSON request/response structure, use API key authentication, and return errors in a machine-readable envelope.
+
+## Base URL
+
+All API endpoints are served relative to your Breadbox host under the `/api/v1/` prefix:
+
+```
+http://your-host:8080/api/v1/
+```
+
+For a local installation the full base URL is typically `http://localhost:8080/api/v1/`. Replace `localhost:8080` with your actual host and port in all examples.
+
+The health check and version endpoints are exceptions — they sit outside the versioned prefix:
+
+| Method | Endpoint | Auth | Description |
+|--------|----------|------|-------------|
+| GET | `/health` | No | Basic liveness check — returns `200` if the HTTP server is running |
+| GET | `/health/live` | No | Alias for `/health` |
+| GET | `/health/ready` | No | Deep readiness check — verifies database connectivity and scheduler status |
+| GET | `/api/v1/version` | No | Current server version and update availability |
+
+<CodeGroup>
+
+```bash Liveness
+curl http://localhost:8080/health
+```
+
+```json Response
+{
+  "status": "ok",
+  "version": "0.5.0"
+}
+```
+
+</CodeGroup>
+
+<CodeGroup>
+
+```bash Readiness
+curl http://localhost:8080/health/ready
+```
+
+```json Response (healthy)
+{
+  "status": "ok",
+  "db": "ok",
+  "scheduler": "running",
+  "version": "0.5.0"
+}
+```
+
+```json Response (degraded)
+{
+  "status": "degraded",
+  "db": "error",
+  "db_error": "connection refused",
+  "scheduler": "running",
+  "version": "0.5.0"
+}
+```
+
+</CodeGroup>
+
+## Authentication
+
+Every `/api/v1/` endpoint requires an API key passed in the `X-API-Key` request header. See the [Authentication](/api/authentication) page for full details on key scopes and management.
+
+```
+X-API-Key: bb_your_api_key_here
+```
+
+## Response format
+
+All successful responses return JSON with a `Content-Type: application/json` header. List endpoints wrap results in a `data` array and include a `pagination` object. Single-resource endpoints return the object directly.
+
+```json
+{
+  "data": [ ... ],
+  "next_cursor": "eyJ...",
+  "has_more": false
+}
+```
+
+## Error format
+
+Every error response — regardless of HTTP status code — uses the same JSON envelope:
+
+```json
+{
+  "error": {
+    "code": "UPPER_SNAKE_CASE",
+    "message": "Human-readable description of what went wrong."
+  }
+}
+```
+
+The `code` field is stable and machine-readable; match against it in client code. The `message` field is for humans and may change without notice.
+
+### Error codes
+
+| HTTP Status | Code | Description |
+|-------------|------|-------------|
+| `400` | `INVALID_PARAMETER` | A query parameter or request body field has an invalid value, wrong type, or is out of range. |
+| `400` | `INVALID_CURSOR` | The pagination cursor is malformed or has expired. |
+| `401` | `MISSING_API_KEY` | The `X-API-Key` header was not provided. |
+| `401` | `INVALID_API_KEY` | The key is malformed or does not match any active key. |
+| `401` | `REVOKED_API_KEY` | The key exists but has been revoked. |
+| `403` | `FORBIDDEN` | The key does not have sufficient scope for this operation (e.g., a `read_only` key calling a write endpoint). |
+| `404` | `NOT_FOUND` | The requested resource does not exist. |
+| `409` | `SYNC_IN_PROGRESS` | A sync is already running for the specified connection. |
+| `422` | `VALIDATION_ERROR` | The request body failed validation. |
+| `429` | `RATE_LIMITED` | Too many requests. |
+| `500` | `INTERNAL_ERROR` | An unexpected server-side error occurred. Check server logs. |
+| `503` | `DATABASE_UNAVAILABLE` | The database connection is not healthy. |
+
+## Amount convention
+
+Breadbox uses the Plaid sign convention for all monetary amounts:
+
+- **Positive amount** — money leaving the account (debits, purchases, fees, payments)
+- **Negative amount** — money entering the account (credits, deposits, refunds)
+
+A grocery purchase of $42.50 appears as `42.50`. A direct deposit of $2,500 appears as `-2500.00`.
+
+Every amount field is accompanied by an `iso_currency_code` field (e.g., `"USD"`). Never aggregate amounts across different currencies — always filter to a single `iso_currency_code` before summing.
+
+## HTTP status codes
+
+| Code | Meaning |
+|------|---------|
+| `200 OK` | Request succeeded. |
+| `202 Accepted` | Request accepted for async processing (e.g., sync trigger). |
+| `400 Bad Request` | Invalid parameter or cursor. |
+| `401 Unauthorized` | Missing or invalid API key. |
+| `403 Forbidden` | Key lacks required scope. |
+| `404 Not Found` | Resource does not exist. |
+| `409 Conflict` | State conflict (e.g., sync already in progress). |
+| `422 Unprocessable Entity` | Request body validation failed. |
+| `500 Internal Server Error` | Unexpected server error. |
+| `502 Bad Gateway` | Upstream provider error (e.g., Plaid returned an error). |
+| `503 Service Unavailable` | Database is unreachable. |

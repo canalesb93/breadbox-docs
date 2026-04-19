@@ -1,0 +1,188 @@
+---
+title: "Back up and restore your Breadbox data"
+description: "Back up your PostgreSQL database and ENCRYPTION_KEY, restore from a dump or Docker volume snapshot, and automate daily backups with a cron script."
+---
+
+All Breadbox data — accounts, transactions, bank connections, categories, rules, and users — lives in PostgreSQL. To protect your data, you need two things: a regular database backup and a secure copy of your `ENCRYPTION_KEY`. This page covers the most practical backup approaches for a self-hosted setup and explains how to restore when something goes wrong.
+
+## What to back up
+
+| Item | Where it lives | What you lose without it |
+|---|---|---|
+| PostgreSQL database | `postgres_data` volume or your database server | All financial data — accounts, transactions, connections |
+| `ENCRYPTION_KEY` | Your `.env` / `.docker.env` file or secrets store | Access to bank connections (transactions stay, but connections can't sync) |
+
+Back up both. A database backup without the matching encryption key leaves your transaction history readable but all bank connections broken — you'd need to re-link every account.
+
+<Warning>
+  **Never lose your `ENCRYPTION_KEY`.** Breadbox uses AES-256-GCM to encrypt Plaid and Teller access tokens at rest. If the key is lost, there is no way to decrypt the stored credentials. Store the key in a password manager or secrets vault, separately from your database backup.
+</Warning>
+
+## Backup with pg_dump
+
+`pg_dump` is the most reliable way to back up a running PostgreSQL database. The custom format (`-Fc`) produces a compressed archive you can restore selectively.
+
+```bash
+pg_dump -Fc -h localhost -U breadbox -d breadbox \
+  > breadbox_backup_$(date +%Y%m%d).dump
+```
+
+If your connection is in `DATABASE_URL`, you can use it directly:
+
+```bash
+pg_dump -Fc "$DATABASE_URL" > breadbox_backup_$(date +%Y%m%d).dump
+```
+
+Store the resulting `.dump` file offsite — a different machine, a cloud bucket, or an encrypted external drive.
+
+## Restore from a pg_dump backup
+
+<Steps>
+  <Step title="Stop or pause Breadbox">
+    Bring down the Breadbox service to avoid writes during restore:
+
+    ```bash
+    docker compose stop breadbox
+    ```
+  </Step>
+  <Step title="Restore the dump">
+    ```bash
+    pg_restore -h localhost -U breadbox -d breadbox \
+      --clean --if-exists breadbox_backup.dump
+    ```
+
+    `--clean --if-exists` drops existing objects before recreating them, making the restore idempotent.
+  </Step>
+  <Step title="Restart Breadbox">
+    ```bash
+    docker compose start breadbox
+    ```
+  </Step>
+  <Step title="Verify the restore">
+    Check that data came back by querying key tables:
+
+    ```sql
+    SELECT 'users'            AS table_name, COUNT(*) FROM users
+    UNION ALL
+    SELECT 'bank_connections',               COUNT(*) FROM bank_connections
+    UNION ALL
+    SELECT 'accounts',                       COUNT(*) FROM accounts
+    UNION ALL
+    SELECT 'transactions',                   COUNT(*) FROM transactions;
+    ```
+
+    Then sign in to the admin dashboard and confirm that connections show their last sync time and status.
+  </Step>
+</Steps>
+
+## Backup the Docker volume
+
+If you run Breadbox with Docker Compose, PostgreSQL data lives in the `breadbox_postgres_data` named volume. You can snapshot it directly without connecting to the database.
+
+```bash
+# Stop the database for a consistent snapshot
+docker compose stop db
+
+# Archive the volume contents
+docker run --rm \
+  -v breadbox_postgres_data:/data \
+  -v $(pwd):/backup \
+  alpine tar czf /backup/postgres_data_$(date +%Y%m%d).tar.gz -C /data .
+
+# Restart the database
+docker compose start db
+```
+
+### Restore a volume backup
+
+```bash
+docker compose stop db
+
+# Clear existing data and extract the archive
+docker run --rm \
+  -v breadbox_postgres_data:/data \
+  -v $(pwd):/backup \
+  alpine sh -c "rm -rf /data/* && tar xzf /backup/postgres_data_YYYYMMDD.tar.gz -C /data"
+
+docker compose start db
+```
+
+## Automate backups with cron
+
+Save the following script as `/usr/local/bin/breadbox-backup.sh` to run daily backups and keep a rolling window of recent dumps:
+
+```bash
+#!/bin/bash
+set -euo pipefail
+
+BACKUP_DIR="/var/backups/breadbox"
+DB_NAME="breadbox"
+DB_USER="breadbox"
+DB_HOST="localhost"
+RETAIN_DAILY=7
+RETAIN_WEEKLY=4
+
+mkdir -p "$BACKUP_DIR/daily" "$BACKUP_DIR/weekly"
+
+TIMESTAMP=$(date +%Y%m%d_%H%M%S)
+DAY_OF_WEEK=$(date +%u)
+DAILY_FILE="$BACKUP_DIR/daily/breadbox_${TIMESTAMP}.dump"
+
+# Create daily backup
+pg_dump -Fc -h "$DB_HOST" -U "$DB_USER" -d "$DB_NAME" > "$DAILY_FILE"
+
+# On Sundays, copy to weekly
+if [ "$DAY_OF_WEEK" -eq 7 ]; then
+    cp "$DAILY_FILE" "$BACKUP_DIR/weekly/breadbox_weekly_${TIMESTAMP}.dump"
+fi
+
+# Prune old daily backups
+ls -t "$BACKUP_DIR/daily/"*.dump 2>/dev/null \
+  | tail -n +$((RETAIN_DAILY + 1)) | xargs -r rm
+
+# Prune old weekly backups
+ls -t "$BACKUP_DIR/weekly/"*.dump 2>/dev/null \
+  | tail -n +$((RETAIN_WEEKLY + 1)) | xargs -r rm
+
+echo "Backup completed: $DAILY_FILE"
+```
+
+Make it executable and schedule it:
+
+```bash
+chmod +x /usr/local/bin/breadbox-backup.sh
+
+# Edit crontab
+crontab -e
+
+# Run daily at 2:00 AM
+0 2 * * * /usr/local/bin/breadbox-backup.sh >> /var/log/breadbox-backup.log 2>&1
+```
+
+This keeps seven daily backups and four weekly backups before pruning.
+
+## Back up your ENCRYPTION_KEY
+
+Your `ENCRYPTION_KEY` is not in the database, so database backups do not include it. Store it separately:
+
+- In a password manager (1Password, Bitwarden, etc.)
+- In a secrets vault (HashiCorp Vault, AWS Secrets Manager, etc.)
+- In encrypted offline storage
+
+Do not commit it to version control. If you lose the key and need to recover, your transaction history remains intact but every bank connection must be re-linked by hand.
+
+<Note>
+  Key rotation is a manual process. To change your encryption key, you must decrypt all stored credentials with the old key, re-encrypt them with the new key, and update `ENCRYPTION_KEY` before restarting. Breadbox does not automate this. Plan rotations carefully.
+</Note>
+
+## Export transactions via the REST API
+
+As an alternative or supplement to database backups, you can export your transaction history through the REST API. This is useful for archiving data in a format that is independent of the database schema:
+
+```bash
+curl -H "X-API-Key: bb_your_api_key" \
+  "http://localhost:8080/api/v1/transactions?limit=100" \
+  > transactions.json
+```
+
+Use the cursor-based pagination in the API response to page through all records. Exported JSON does not include bank credentials, so it is safe to store without the encryption key.

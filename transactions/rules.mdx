@@ -1,0 +1,210 @@
+---
+title: "Auto-categorize transactions with rules"
+description: "Build condition-based rules that automatically categorize, tag, and annotate transactions at sync time using Breadbox's recursive AND/OR/NOT rule engine."
+---
+
+Breadbox's rules engine lets you define conditions that run automatically whenever transactions are synced. When a transaction matches a rule's conditions, the rule assigns a category, adds tags, or leaves a comment — without any manual intervention. This is one of Breadbox's most powerful features for keeping your transaction history organized.
+
+## What rules do
+
+A rule is a JSON document that pairs a **condition** (which transactions to match) with one or more **actions** (what to do with them). Rules run at sync time in a defined pipeline order. You can also apply rules retroactively to your full transaction history at any time.
+
+A single rule can:
+
+- Set a transaction's category (`set_category`)
+- Add a tag to the transaction (`add_tag`)
+- Remove a tag from the transaction (`remove_tag`)
+- Leave an automated comment explaining the categorization (`add_comment`)
+
+## Condition structure
+
+Rule conditions use a recursive tree of **leaf nodes** and **combinators**.
+
+A **leaf node** tests a single field:
+
+```json
+{ "field": "merchant_name", "op": "contains", "value": "Starbucks" }
+```
+
+A **combinator** groups multiple conditions with logic:
+
+```json
+{ "and": [ <condition>, <condition> ] }
+{ "or":  [ <condition>, <condition> ] }
+{ "not":   <condition> }
+```
+
+Combinators nest to any depth up to 10 levels. An empty condition object `{}` matches every transaction.
+
+### Available fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Raw transaction description from the institution |
+| `merchant_name` | string | Enriched merchant name (may be empty for CSV or un-enriched rows) |
+| `amount` | numeric | Transaction amount — positive = money out, negative = money in |
+| `category_primary` | string | Provider's raw primary category (does not change when Breadbox reassigns) |
+| `category_detailed` | string | Provider's raw detailed subcategory |
+| `category` | string | Currently assigned Breadbox category slug (updates mid-pipeline as rules run) |
+| `pending` | boolean | Whether the transaction is pending |
+| `provider` | string | `plaid`, `teller`, or `csv` |
+| `account_id` | string | Account UUID |
+| `account_name` | string | Account display name |
+| `user_id` | string | Family member UUID |
+| `user_name` | string | Family member display name |
+| `tags` | tags | Current tag slugs on the transaction |
+
+<Note>
+Use `category` (not `category_primary` or `category_detailed`) when you want a condition to react to the category that Breadbox or a prior rule assigned. The `category_primary` and `category_detailed` fields always hold the provider's original values and never change.
+</Note>
+
+### Operators by field type
+
+**String fields** (`name`, `merchant_name`, `category_primary`, `category_detailed`, `category`, `provider`, `account_name`, `user_name`):
+
+| Operator | Behavior |
+|----------|----------|
+| `eq` | Exact match (case-insensitive) |
+| `neq` | Not equal (case-insensitive) |
+| `contains` | Substring match (case-insensitive) |
+| `not_contains` | Substring does not match (case-insensitive) |
+| `matches` | RE2 regex match (case-sensitive by default; use `(?i)` for insensitive) |
+| `in` | Value is in the provided array (case-insensitive) |
+
+**Numeric fields** (`amount`):
+
+| Operator | Behavior |
+|----------|----------|
+| `eq` | Equal |
+| `neq` | Not equal |
+| `gt` | Greater than |
+| `gte` | Greater than or equal |
+| `lt` | Less than |
+| `lte` | Less than or equal |
+
+**Boolean fields** (`pending`):
+
+| Operator | Behavior |
+|----------|----------|
+| `eq` | Equal to `true` or `false` |
+| `neq` | Not equal to `true` or `false` |
+
+**Tag fields** (`tags`):
+
+| Operator | Behavior |
+|----------|----------|
+| `contains` | Transaction has the specified tag slug |
+| `not_contains` | Transaction does not have the specified tag slug |
+| `in` | Transaction has any of the slugs in the provided array |
+
+## Pipeline stages
+
+Rules run in pipeline order — lower stage numbers run first. For `set_category`, the **last matching rule wins**, so higher-stage rules have the final say on categorization. For `add_tag` and `add_comment`, every matching rule contributes.
+
+| Stage name | Priority | Purpose |
+|------------|----------|---------|
+| `baseline` | 0 | Foundation rules — broad, default classifications |
+| `standard` | 10 | General-purpose rules (default when no stage is specified) |
+| `refinement` | 50 | Reacts to output from baseline and standard rules |
+| `override` | 100 | Has the final say — overrides everything below |
+
+Supply `stage` as a string in the request body. You can also supply a raw `priority` integer (0–1000) for fine-grained ordering within a stage. If you supply both, `priority` wins.
+
+### Rule chaining
+
+Because rules run in pipeline order and share a mutable transaction context, later rules can react to what earlier rules did. A rule that assigns a category at stage 0 makes that category readable via `field: "category"` for any rule at stage 10 or higher in the same sync pass.
+
+## Creating a rule
+
+Here is a complete example that categorizes Amazon purchases:
+
+```json
+{
+  "name": "Amazon purchases",
+  "condition": {
+    "type": "and",
+    "conditions": [
+      { "field": "name", "operator": "contains", "value": "AMAZON" },
+      { "field": "amount", "operator": "gt", "value": 0 }
+    ]
+  },
+  "category_id": "cat_shopping",
+  "stage": "standard"
+}
+```
+
+Send it to the API:
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Amazon purchases",
+    "conditions": {
+      "and": [
+        { "field": "name", "op": "contains", "value": "AMAZON" },
+        { "field": "amount", "op": "gt", "value": 0 }
+      ]
+    },
+    "actions": [
+      { "type": "set_category", "category_slug": "shopping" }
+    ],
+    "trigger": "on_create",
+    "stage": "standard"
+  }' \
+  http://localhost:8080/api/v1/rules
+```
+
+A rule with no `trigger` specified defaults to `on_create`, which means it fires only on newly synced transactions. Use `always` to also run on re-synced changes, or `on_change` to run only when an existing transaction is modified.
+
+## Previewing a rule
+
+Before saving a rule, you can dry-run its condition against your existing transactions to see what it would match:
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "conditions": {
+      "and": [
+        { "field": "name", "op": "contains", "value": "AMAZON" },
+        { "field": "amount", "op": "gt", "value": 0 }
+      ]
+    }
+  }' \
+  http://localhost:8080/api/v1/rules/preview
+```
+
+The response returns a match count and a sample of matched transactions. Preview evaluates the condition in isolation — it does not simulate the full pipeline.
+
+## Applying a rule retroactively
+
+After creating or editing a rule, apply it to your full transaction history without waiting for the next sync:
+
+<CodeGroup>
+
+```bash Apply a single rule
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/rules/rule_abc123/apply
+```
+
+```bash Apply all active rules
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/rules/apply-all
+```
+
+</CodeGroup>
+
+Retroactive apply respects the same pipeline stage ordering as sync. It also respects `category_override` — transactions with a manual override are skipped for `set_category` actions, just as they are during sync.
+
+<Warning>
+`add_comment` actions do **not** fire during retroactive apply. Comments are designed to narrate a specific sync event and are only written during live syncs.
+</Warning>
+
+## Respecting manual overrides
+
+If a transaction has been manually categorized (its `category_override` flag is `true`), a rule's `set_category` action is skipped for that transaction. The rule still runs — `add_tag` and `add_comment` actions fire normally — but the category is not changed. This means you can safely apply rules in bulk without worrying about undoing deliberate manual work.

@@ -1,0 +1,132 @@
+---
+title: "Connect banks with Plaid"
+description: "Set up your Plaid developer account, enter credentials in the Breadbox setup wizard, and link your first bank account using the Plaid Link flow."
+---
+
+Plaid is the primary way to connect US bank accounts to Breadbox. It supports thousands of financial institutions, retrieves up to two years of transaction history on first connection, and keeps your data current through a combination of scheduled syncing and real-time webhooks. This page walks you through everything you need as a user to get a Plaid connection running.
+
+## What you need
+
+You need a Plaid developer account before you can configure Breadbox. A free account gives you access to the sandbox and development environments — no payment information required.
+
+[Create a Plaid account at plaid.com](https://plaid.com) to get your Client ID and Secret.
+
+## Plaid environments
+
+Plaid has three environments. You choose one during the Breadbox setup wizard, and it determines which banks you can connect and whether there are costs.
+
+| Environment | What it connects to | Cost |
+|-------------|---------------------|------|
+| Sandbox | Simulated bank data only. Use this to try Breadbox without linking a real bank. | Free |
+| Development | Real bank accounts. Limited to 100 live connections total. | Free |
+| Production | Real bank accounts. Unlimited connections. | ~$1.50 per connected bank per month |
+
+<Note>
+  Start with Development to test with your real bank accounts at no cost. Switch to Production only when you need more than 100 connections or are ready for a permanent setup.
+</Note>
+
+## Enter your Plaid credentials
+
+During the Breadbox first-run setup wizard, Step 2 asks for your Plaid credentials.
+
+<Steps>
+  <Step title="Open your Plaid Dashboard">
+    Log in at [dashboard.plaid.com](https://dashboard.plaid.com) and navigate to **Keys**. Copy your **Client ID** and the **Secret** for the environment you want to use (sandbox, development, or production).
+  </Step>
+  <Step title="Enter credentials in the setup wizard">
+    In the Breadbox setup wizard (Step 2), paste your Client ID and Secret into the corresponding fields, then select the environment from the dropdown.
+  </Step>
+  <Step title="Validate and continue">
+    Click **Validate and Continue**. Breadbox makes a live test call to Plaid to confirm your credentials are correct before saving them. If the call fails, check that you copied the secret for the right environment.
+  </Step>
+</Steps>
+
+Your credentials are stored encrypted in your Breadbox database and never exposed through the API. If you prefer to supply them as environment variables (`PLAID_CLIENT_ID`, `PLAID_SECRET`, `PLAID_ENV`), those take precedence over the database values and the fields become read-only in Settings.
+
+## Connect a bank account
+
+Once your Plaid credentials are saved, you can add bank connections from the **Connections** page.
+
+<Steps>
+  <Step title="Start a new connection">
+    Go to **Connections** → **Connect New Bank**. Select the family member this bank account belongs to, then click **Continue to Bank Selection**.
+  </Step>
+  <Step title="Complete the Plaid Link dialog">
+    Breadbox opens the Plaid Link dialog in your browser. Search for your bank, enter your online banking username and password, and complete any multi-factor authentication your bank requires. Plaid handles the login flow directly — Breadbox never sees your bank credentials.
+  </Step>
+  <Step title="Select accounts">
+    After you authenticate, Plaid shows the accounts available at your institution. Select the accounts you want Breadbox to track, then click **Continue**.
+  </Step>
+  <Step title="Wait for the initial sync">
+    Breadbox immediately begins pulling your transaction history. Plaid requests up to two years of transactions on the first connection. The sync runs in the background — you can navigate away and check back on the Connections page. The status shows **Active** once the initial sync completes.
+  </Step>
+</Steps>
+
+## Transaction history
+
+On the first connection, Breadbox requests up to 730 days (approximately two years) of transaction history from Plaid. This is the maximum Plaid allows. For older transactions, use the [CSV import](/connections/csv-import) to supplement the Plaid connection.
+
+Subsequent syncs are incremental — only new, changed, or removed transactions are fetched, which keeps sync fast.
+
+## Webhook setup for near-real-time updates
+
+Without a webhook, Breadbox syncs your Plaid connections on a fixed schedule (every 4–24 hours depending on your configuration). With a webhook, Plaid notifies Breadbox within minutes of new transactions being available, and Breadbox syncs immediately.
+
+To enable webhooks:
+
+<Steps>
+  <Step title="Make Breadbox publicly reachable">
+    Your Breadbox instance needs a public HTTPS URL. If you run Breadbox at home, [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) is a free option that creates a stable public URL without port forwarding.
+  </Step>
+  <Step title="Set the webhook URL in Breadbox">
+    In **Settings** (or during setup wizard Step 4), enter your public base URL. Breadbox will register `{your-url}/webhooks/plaid` as the webhook endpoint with Plaid automatically when you create new connections.
+  </Step>
+</Steps>
+
+You can skip this step and add a webhook URL later in **Settings** without re-linking any banks.
+
+## Re-authentication
+
+Plaid connections occasionally require re-authentication. This happens when:
+
+- Your bank password changes.
+- Your bank's multi-factor authentication session expires.
+- OAuth consent is revoked or about to expire.
+
+When Breadbox detects this, the connection status changes to **Re-auth Needed** (yellow) or **Error** (red) in the Connections list. Syncing stops until you re-authenticate.
+
+To re-authenticate:
+
+<Steps>
+  <Step title="Open the connection">
+    Go to **Connections** and click **Re-authenticate** on the affected connection, or click **View** then **Re-authenticate** from the connection detail page.
+  </Step>
+  <Step title="Complete the Plaid Link dialog again">
+    Breadbox opens the Plaid Link dialog in update mode. Log in to your bank again. You do not need to re-select your accounts.
+  </Step>
+  <Step title="Confirm the connection is active">
+    After you complete the login, Breadbox immediately triggers a sync. The connection status returns to **Active**.
+  </Step>
+</Steps>
+
+## Disconnecting a bank
+
+To remove a Plaid connection, click **Remove Connection** on the connection detail page and confirm the dialog.
+
+Removing a connection:
+
+- Immediately revokes Breadbox's access at Plaid. This also stops any Plaid billing for that connection.
+- Sets the connection status to **Disconnected** in Breadbox.
+- **Preserves all transaction history.** Previously synced transactions remain in your database.
+
+<Warning>
+  Removing a connection stops billing for that Plaid item immediately. If you want to resume syncing in the future, you must re-link the bank from scratch, which starts a new billing cycle.
+</Warning>
+
+## Production costs
+
+Plaid's Production environment is billed at approximately $1.50 per connected bank (called an "item") per month. Each bank you connect — regardless of how many accounts it has — counts as one item. The Development environment is free up to 100 items.
+
+<Note>
+  Syncing more frequently does not increase your cost. Production billing is per item per month, not per API call.
+</Note>

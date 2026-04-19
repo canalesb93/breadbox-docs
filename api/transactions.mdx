@@ -1,0 +1,498 @@
+---
+title: "Transactions API — query, filter, and categorize"
+description: "Complete reference for Breadbox transaction endpoints: list, count, summarize, merchant stats, single fetch, category overrides, and bulk recategorize."
+---
+
+Transactions are the core data in Breadbox. The transactions API lets you query with rich filters, count and summarize spending, retrieve merchant statistics, and set or reset category overrides — individually or in bulk. All amounts follow the Plaid sign convention: positive is money out (debits), negative is money in (credits).
+
+---
+
+## List transactions
+
+```
+GET /api/v1/transactions
+```
+
+Returns a paginated list of transactions sorted by date descending by default. Soft-deleted transactions are always excluded. All filters are combined with `AND` logic.
+
+**Auth:** Read
+
+### Query parameters
+
+| Parameter | Type | Default | Description |
+|-----------|------|---------|-------------|
+| `account_id` | string (UUID) | — | Filter to transactions from a single account. |
+| `user_id` | string (UUID) | — | Filter to transactions from all accounts owned by a family member. Uses attribution-aware logic: `COALESCE(attributed_user_id, account.user_id)`. |
+| `category_slug` | string | — | Filter by category slug (e.g., `food-and-drink-groceries`). |
+| `start_date` | string (YYYY-MM-DD) | — | Inclusive lower bound on the transaction date. |
+| `end_date` | string (YYYY-MM-DD) | — | Exclusive upper bound on the transaction date. A transaction on `end_date` is excluded — use this to express calendar months without overlap (e.g., `start_date=2025-01-01&end_date=2025-02-01` returns all of January). |
+| `min_amount` | number | — | Inclusive lower bound on amount. Uses Plaid convention (positive = debit). To find all debits over $100: `min_amount=100`. |
+| `max_amount` | number | — | Inclusive upper bound on amount. To find all credits: `max_amount=-0.01`. |
+| `search` | string | — | Case-insensitive search on `name` and `merchant_name`. Comma-separate values for OR logic. Minimum 2 characters. |
+| `exclude_search` | string | — | Exclude transactions where `name` or `merchant_name` matches this term. Minimum 2 characters. |
+| `search_mode` | string | `contains` | How the `search` term is matched. One of: `contains` (default substring), `words` (word-boundary match), `fuzzy` (trigram similarity). |
+| `pending` | boolean | — | `true` returns only pending transactions; `false` returns only posted. Omit to return both. |
+| `sort_by` | string | `date` | Sort field. One of: `date`, `amount`, `name`. Cursor pagination only works with `date` sort. |
+| `sort_order` | string | `desc` | Sort direction. One of: `desc`, `asc`. |
+| `fields` | string | — | Field selection preset. One of: `minimal`, `core`, `category`, `timestamps`. Returns a subset of fields to reduce response size. |
+| `cursor` | string | — | Opaque pagination cursor from a previous response. Omit to fetch the first page. Only works with `date` sort. |
+| `limit` | integer | `50` | Results per page. Minimum `1`, maximum `500`. |
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
+      "short_id": "Wm5kTrU9",
+      "account_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+      "amount": 67.43,
+      "iso_currency_code": "USD",
+      "date": "2026-02-27",
+      "datetime": "2026-02-27T10:23:00Z",
+      "authorized_date": "2026-02-26",
+      "name": "WHOLE FOODS MARKET #10452",
+      "merchant_name": "Whole Foods Market",
+      "category_primary": "FOOD_AND_DRINK",
+      "category_detailed": "FOOD_AND_DRINK_GROCERIES",
+      "payment_channel": "in store",
+      "pending": false,
+      "created_at": "2026-02-27T08:15:00Z",
+      "updated_at": "2026-02-27T08:15:00Z"
+    },
+    {
+      "id": "t2b3c4d5-e6f7-890a-bcde-f12345678901",
+      "short_id": "Xn6lUsV0",
+      "account_id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+      "amount": -2500.00,
+      "iso_currency_code": "USD",
+      "date": "2026-02-25",
+      "datetime": null,
+      "authorized_date": null,
+      "name": "EMPLOYER DIRECT DEPOSIT",
+      "merchant_name": null,
+      "category_primary": "INCOME",
+      "category_detailed": "INCOME_WAGES",
+      "payment_channel": "other",
+      "pending": false,
+      "created_at": "2026-02-25T06:00:00Z",
+      "updated_at": "2026-02-25T06:00:00Z"
+    }
+  ],
+  "next_cursor": "eyJkYXRlIjoiMjAyNi0wMi0yNSIsImlkIjoidDJiM2M0ZDUifQ",
+  "has_more": true
+}
+```
+
+### Examples
+
+<CodeGroup>
+
+```bash All grocery transactions in January 2025
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions?category_slug=food-and-drink-groceries&start_date=2025-01-01&end_date=2025-02-01"
+```
+
+```bash Search for Amazon purchases over $50
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions?search=amazon&min_amount=50"
+```
+
+```bash Posted transactions for a specific user
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions?user_id=u1a2b3c4-d5e6-f789-0abc-def123456789&pending=false&limit=100"
+```
+
+</CodeGroup>
+
+---
+
+## Count transactions
+
+```
+GET /api/v1/transactions/count
+```
+
+Returns the total number of transactions matching the given filters, without fetching the transaction records themselves. Accepts the same filter parameters as the list endpoint (excluding `cursor`, `limit`, `sort_by`, `sort_order`, and `fields`).
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "count": 1523
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions/count?start_date=2025-01-01&end_date=2026-01-01"
+```
+
+---
+
+## Summarize transactions
+
+```
+GET /api/v1/transactions/summary
+```
+
+Returns aggregated spending totals grouped by category, month, week, or day. Useful for building spending breakdowns and charts without pulling every transaction record.
+
+**Auth:** Read
+
+Accepts the same filter parameters as the list endpoint. The `group_by` parameter controls the aggregation dimension.
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "group": "FOOD_AND_DRINK",
+      "total": 843.21,
+      "count": 34,
+      "iso_currency_code": "USD"
+    },
+    {
+      "group": "TRANSPORTATION",
+      "total": 312.50,
+      "count": 18,
+      "iso_currency_code": "USD"
+    }
+  ]
+}
+```
+
+---
+
+## Merchant statistics
+
+```
+GET /api/v1/transactions/merchants
+```
+
+Returns merchant-level statistics — total spent, transaction count, and average transaction amount — aggregated across all transactions matching the filters.
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "merchant_name": "Whole Foods Market",
+      "count": 12,
+      "total": 843.21,
+      "average": 70.27,
+      "iso_currency_code": "USD"
+    },
+    {
+      "merchant_name": "Netflix",
+      "count": 3,
+      "total": 42.00,
+      "average": 14.00,
+      "iso_currency_code": "USD"
+    }
+  ]
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions/merchants?start_date=2025-01-01&end_date=2026-01-01"
+```
+
+---
+
+## Get a single transaction
+
+```
+GET /api/v1/transactions/{id}
+```
+
+Returns a single transaction by its Breadbox UUID or short ID.
+
+**Auth:** Read
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The transaction's Breadbox UUID or 8-character short ID.
+</ParamField>
+
+### Response
+
+```json
+{
+  "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
+  "short_id": "Wm5kTrU9",
+  "account_id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+  "external_transaction_id": "lPNZkR5o3Vh1qWxYuEj2dM7fKtS9gA",
+  "pending_transaction_id": null,
+  "amount": 67.43,
+  "iso_currency_code": "USD",
+  "date": "2026-02-27",
+  "datetime": "2026-02-27T10:23:00Z",
+  "authorized_date": "2026-02-26",
+  "authorized_datetime": "2026-02-26T19:45:00Z",
+  "name": "WHOLE FOODS MARKET #10452",
+  "merchant_name": "Whole Foods Market",
+  "category_primary": "FOOD_AND_DRINK",
+  "category_detailed": "FOOD_AND_DRINK_GROCERIES",
+  "category_override": false,
+  "payment_channel": "in store",
+  "pending": false,
+  "created_at": "2026-02-27T08:15:00Z",
+  "updated_at": "2026-02-27T08:15:00Z"
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions/t1a2b3c4-d5e6-f789-0abc-def123456789"
+```
+
+---
+
+## Set category override
+
+```
+PATCH /api/v1/transactions/{id}/category
+```
+
+Sets a manual category override on a single transaction. Once overridden, Breadbox rules and future syncs will not change the category — the override is permanent until explicitly deleted. Overridden transactions have `category_override: true` in their response.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The transaction's Breadbox UUID or short ID.
+</ParamField>
+
+### Request body
+
+```json
+{
+  "category_slug": "food-and-drink-groceries"
+}
+```
+
+<ParamField body="category_slug" type="string" required>
+  The slug of the category to assign. Must be an existing category slug from `GET /api/v1/categories`.
+</ParamField>
+
+```bash
+curl -X PATCH \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"category_slug": "food-and-drink-groceries"}' \
+  "http://localhost:8080/api/v1/transactions/t1a2b3c4-d5e6-f789-0abc-def123456789/category"
+```
+
+---
+
+## Reset category override
+
+```
+DELETE /api/v1/transactions/{id}/category
+```
+
+Removes a manual category override, restoring the transaction to its provider-assigned category. After deletion, rules and future syncs may re-categorize the transaction normally.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The transaction's Breadbox UUID or short ID.
+</ParamField>
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions/t1a2b3c4-d5e6-f789-0abc-def123456789/category"
+```
+
+---
+
+## Batch categorize
+
+```
+POST /api/v1/transactions/batch-categorize
+```
+
+Sets a category override on multiple transactions in a single request. Maximum 500 transactions per call. All transactions receive the same category; to assign different categories, make multiple requests.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "transaction_ids": [
+    "t1a2b3c4-d5e6-f789-0abc-def123456789",
+    "t2b3c4d5-e6f7-890a-bcde-f12345678901"
+  ],
+  "category_slug": "food-and-drink-groceries"
+}
+```
+
+<ParamField body="transaction_ids" type="array of strings" required>
+  List of transaction UUIDs or short IDs to categorize. Maximum 500 per request.
+</ParamField>
+
+<ParamField body="category_slug" type="string" required>
+  The category slug to assign to all listed transactions.
+</ParamField>
+
+### Response
+
+```json
+{
+  "updated_count": 2
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction_ids": ["t1a2b3c4-d5e6-f789-0abc-def123456789"],
+    "category_slug": "food-and-drink-groceries"
+  }' \
+  "http://localhost:8080/api/v1/transactions/batch-categorize"
+```
+
+---
+
+## Bulk recategorize
+
+```
+POST /api/v1/transactions/bulk-recategorize
+```
+
+Recategorizes all transactions matching a set of filters in a single server-side operation. Unlike batch categorize, you do not need to know the individual transaction IDs. This endpoint is useful for correcting a category across a large set of matching transactions at once.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "filters": {
+    "search": "NETFLIX",
+    "start_date": "2025-01-01"
+  },
+  "category_slug": "entertainment-streaming-services"
+}
+```
+
+<ParamField body="filters" type="object" required>
+  The same filter parameters accepted by `GET /api/v1/transactions` (e.g., `account_id`, `search`, `start_date`, `end_date`, `category_slug`). All matching transactions are recategorized.
+</ParamField>
+
+<ParamField body="category_slug" type="string" required>
+  The category slug to assign to all matching transactions.
+</ParamField>
+
+### Response
+
+```json
+{
+  "updated_count": 14
+}
+```
+
+---
+
+## Transaction response fields
+
+<ResponseField name="id" type="string (UUID)" required>
+  Breadbox-assigned UUID for this transaction.
+</ResponseField>
+
+<ResponseField name="short_id" type="string" required>
+  8-character base62 alias. Accepted interchangeably with `id` in path parameters.
+</ResponseField>
+
+<ResponseField name="account_id" type="string (UUID)">
+  UUID of the account this transaction belongs to. May be `null` if the parent account was removed.
+</ResponseField>
+
+<ResponseField name="external_transaction_id" type="string" required>
+  The transaction ID assigned by the provider (e.g., Plaid's `transaction_id`). Unique within a provider item.
+</ResponseField>
+
+<ResponseField name="pending_transaction_id" type="string">
+  If this posted transaction replaced a pending one, this field holds the `external_transaction_id` of the original pending transaction. Use this to link posted and pending records. `null` otherwise.
+</ResponseField>
+
+<ResponseField name="amount" type="number" required>
+  Transaction amount. Positive = money out (debit). Negative = money in (credit). Stored as `NUMERIC(12,2)`.
+</ResponseField>
+
+<ResponseField name="iso_currency_code" type="string">
+  ISO 4217 currency code (e.g., `"USD"`). `null` when an unofficial currency code is used.
+</ResponseField>
+
+<ResponseField name="date" type="string (YYYY-MM-DD)" required>
+  Posted date for settled transactions; pending date for pending transactions.
+</ResponseField>
+
+<ResponseField name="datetime" type="string (ISO 8601)">
+  Full timestamp of the transaction, if provided by the institution. `null` for most transactions.
+</ResponseField>
+
+<ResponseField name="authorized_date" type="string (YYYY-MM-DD)">
+  Date the transaction was authorized. May differ from `date`. `null` when not provided.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Raw transaction name from the institution (e.g., `"WHOLE FOODS MARKET #10452"`).
+</ResponseField>
+
+<ResponseField name="merchant_name" type="string">
+  Cleaned merchant name as classified by the provider (e.g., `"Whole Foods Market"`). `null` if the provider could not identify the merchant.
+</ResponseField>
+
+<ResponseField name="category_primary" type="string">
+  High-level category in `UPPER_SNAKE_CASE` (e.g., `"FOOD_AND_DRINK"`). May reflect a manual override.
+</ResponseField>
+
+<ResponseField name="category_detailed" type="string">
+  Granular subcategory (e.g., `"FOOD_AND_DRINK_GROCERIES"`). May reflect a manual override.
+</ResponseField>
+
+<ResponseField name="category_override" type="boolean" required>
+  `true` if the category was set by a manual override and is protected from rule and sync changes.
+</ResponseField>
+
+<ResponseField name="payment_channel" type="string">
+  How the transaction was made. One of: `"in store"`, `"online"`, `"other"`. `null` when not reported.
+</ResponseField>
+
+<ResponseField name="pending" type="boolean" required>
+  `true` if the transaction has not yet posted. Pending transactions may be updated or replaced.
+</ResponseField>
+
+---
+
+## Error codes
+
+| Condition | Status | Code |
+|-----------|--------|------|
+| Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
+| `limit` out of range | `400` | `INVALID_PARAMETER` |
+| Date not in `YYYY-MM-DD` format | `400` | `INVALID_PARAMETER` |
+| `start_date` is after `end_date` | `400` | `INVALID_PARAMETER` |
+| Invalid UUID for `account_id` or `user_id` | `400` | `INVALID_PARAMETER` |
+| `search` shorter than 2 characters | `400` | `INVALID_PARAMETER` |
+| Malformed or expired `cursor` | `400` | `INVALID_CURSOR` |
+| Transaction not found | `404` | `NOT_FOUND` |
+| Invalid `category_slug` | `422` | `VALIDATION_ERROR` |

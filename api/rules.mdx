@@ -1,0 +1,442 @@
+---
+title: "Rules API — create and manage categorization rules"
+description: "Reference for Breadbox rules endpoints: list, get, create, update, delete rules, apply retroactively, and dry-run conditions against existing transactions."
+---
+
+Rules automatically categorize transactions during sync by matching conditions on transaction fields. Each rule contains a condition tree that Breadbox evaluates against every new or modified transaction. When the condition matches, the rule applies its configured action — typically setting the transaction's category. Rules run in priority order (lower number = runs first) according to a four-stage pipeline.
+
+---
+
+## List rules
+
+```
+GET /api/v1/rules
+```
+
+Returns all transaction rules. Accepts optional filters for active/inactive status and creator type.
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "r1a2b3c4-d5e6-f789-0abc-def123456789",
+      "short_id": "Pq7rSt8u",
+      "name": "Amazon purchases",
+      "enabled": true,
+      "stage": "standard",
+      "priority": 10,
+      "condition": {
+        "type": "and",
+        "conditions": [
+          { "field": "name", "operator": "contains", "value": "AMAZON" }
+        ]
+      },
+      "action_field": "category_slug",
+      "action_value": "shopping-online",
+      "creator_type": "user",
+      "created_at": "2025-12-01T10:00:00Z",
+      "updated_at": "2025-12-01T10:00:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/rules"
+```
+
+---
+
+## Get a single rule
+
+```
+GET /api/v1/rules/{id}
+```
+
+Returns a single rule by its UUID or short ID.
+
+**Auth:** Read
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The rule's Breadbox UUID or short ID.
+</ParamField>
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/rules/r1a2b3c4-d5e6-f789-0abc-def123456789"
+```
+
+---
+
+## Create a rule
+
+```
+POST /api/v1/rules
+```
+
+Creates a new categorization rule. The rule runs automatically on every future sync. To apply it to existing transactions immediately, use `POST /api/v1/rules/{id}/apply` after creation.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "name": "Netflix subscription",
+  "enabled": true,
+  "stage": "standard",
+  "condition": {
+    "type": "and",
+    "conditions": [
+      { "field": "name", "operator": "contains", "value": "NETFLIX" },
+      { "field": "amount", "operator": "gt", "value": 0 }
+    ]
+  },
+  "action_field": "category_slug",
+  "action_value": "entertainment-streaming-services"
+}
+```
+
+<ParamField body="name" type="string" required>
+  Human-readable name for the rule (e.g., `"Netflix subscription"`).
+</ParamField>
+
+<ParamField body="enabled" type="boolean" default="true">
+  Whether the rule is active. Disabled rules are skipped during sync.
+</ParamField>
+
+<ParamField body="stage" type="string" default="standard">
+  Pipeline stage. One of: `baseline`, `standard`, `refinement`, `override`. Resolves to priority `0`, `10`, `50`, or `100` respectively. Stage names are case-insensitive. If both `stage` and `priority` are provided, `priority` wins.
+</ParamField>
+
+<ParamField body="priority" type="integer">
+  Raw pipeline priority integer from `0` to `1000`. Lower numbers run first. Overrides `stage` when both are provided.
+</ParamField>
+
+<ParamField body="condition" type="object" required>
+  The condition tree to evaluate. See [Condition structure](#condition-structure) below.
+</ParamField>
+
+<ParamField body="action_field" type="string" required>
+  The field to set when the condition matches. Typically `"category_slug"`.
+</ParamField>
+
+<ParamField body="action_value" type="string" required>
+  The value to assign to `action_field`. For category rules, this is the category slug.
+</ParamField>
+
+### Response
+
+Returns the created rule with `201 Created`.
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Netflix subscription",
+    "stage": "standard",
+    "condition": {
+      "type": "and",
+      "conditions": [
+        { "field": "name", "operator": "contains", "value": "NETFLIX" }
+      ]
+    },
+    "action_field": "category_slug",
+    "action_value": "entertainment-streaming-services"
+  }' \
+  "http://localhost:8080/api/v1/rules"
+```
+
+---
+
+## Update a rule
+
+```
+PUT /api/v1/rules/{id}
+```
+
+Updates an existing rule. All fields in the request body replace their current values. Omitted fields retain their existing values.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The rule's Breadbox UUID or short ID.
+</ParamField>
+
+```bash
+curl -X PUT \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"enabled": false}' \
+  "http://localhost:8080/api/v1/rules/r1a2b3c4-d5e6-f789-0abc-def123456789"
+```
+
+---
+
+## Delete a rule
+
+```
+DELETE /api/v1/rules/{id}
+```
+
+Permanently deletes a rule. Already-categorized transactions are not affected. System-seeded rules cannot be deleted — disable them instead.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The rule's Breadbox UUID or short ID.
+</ParamField>
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/rules/r1a2b3c4-d5e6-f789-0abc-def123456789"
+```
+
+---
+
+## Apply a rule retroactively
+
+```
+POST /api/v1/rules/{id}/apply
+```
+
+Runs a single rule against all existing transactions in the database. Transactions that already have a manual `category_override` are skipped. Returns the number of transactions updated.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The rule's Breadbox UUID or short ID.
+</ParamField>
+
+### Response
+
+```json
+{
+  "updated_count": 23
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/rules/r1a2b3c4-d5e6-f789-0abc-def123456789/apply"
+```
+
+---
+
+## Apply all rules retroactively
+
+```
+POST /api/v1/rules/apply-all
+```
+
+Runs all active rules against all existing transactions, in priority order. Transactions with a `category_override` are skipped. This is equivalent to re-running the full categorization pipeline on historical data.
+
+**Auth:** Write
+
+### Response
+
+```json
+{
+  "rules_applied": 8,
+  "transactions_updated": 142
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/rules/apply-all"
+```
+
+---
+
+## Preview a condition (dry run)
+
+```
+POST /api/v1/rules/preview
+```
+
+Runs a condition tree against existing transactions without making any changes. Returns the matching transactions so you can verify a condition before saving it as a rule.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "condition": {
+    "type": "and",
+    "conditions": [
+      { "field": "name", "operator": "contains", "value": "AMAZON" },
+      { "field": "amount", "operator": "gt", "value": 50 }
+    ]
+  },
+  "limit": 20
+}
+```
+
+<ParamField body="condition" type="object" required>
+  The condition tree to evaluate. Uses the same structure as rule conditions.
+</ParamField>
+
+<ParamField body="limit" type="integer" default="50">
+  Maximum number of matching transactions to return for preview.
+</ParamField>
+
+### Response
+
+```json
+{
+  "match_count": 34,
+  "sample": [
+    {
+      "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
+      "name": "AMAZON.COM*AB1CD2EF3",
+      "amount": 89.99,
+      "date": "2026-01-15"
+    }
+  ]
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "condition": {
+      "type": "and",
+      "conditions": [
+        { "field": "name", "operator": "contains", "value": "AMAZON" }
+      ]
+    }
+  }' \
+  "http://localhost:8080/api/v1/rules/preview"
+```
+
+---
+
+## Condition structure
+
+Rules use a recursive JSON condition tree. A condition node is either a **leaf** (field comparison) or a **composite** (logical combination of other nodes).
+
+### Composite nodes
+
+| Type | Description |
+|------|-------------|
+| `and` | All child conditions must match. |
+| `or` | At least one child condition must match. |
+| `not` | The single child condition must not match. |
+
+```json
+{
+  "type": "and",
+  "conditions": [
+    { "field": "name", "operator": "contains", "value": "AMAZON" },
+    {
+      "type": "or",
+      "conditions": [
+        { "field": "amount", "operator": "gt", "value": 50 },
+        { "field": "merchant_name", "operator": "eq", "value": "Amazon" }
+      ]
+    }
+  ]
+}
+```
+
+### Leaf nodes
+
+| Field | Description |
+|-------|-------------|
+| `field` | Transaction field to evaluate (see available fields below). |
+| `operator` | Comparison operator (see operators below). |
+| `value` | The value to compare against. |
+
+### Available fields
+
+| Field | Type | Description |
+|-------|------|-------------|
+| `name` | string | Raw transaction name from the institution. |
+| `merchant_name` | string | Cleaned merchant name from the provider. |
+| `amount` | numeric | Transaction amount (Plaid convention: positive = debit). |
+| `category_primary` | string | Current primary category. |
+| `category_detailed` | string | Current detailed subcategory. |
+| `pending` | boolean | Whether the transaction is pending. |
+| `provider` | string | Data provider (`plaid`, `teller`, `csv`). |
+| `account_id` | string | Breadbox account UUID. |
+| `user_id` | string | Breadbox user UUID. |
+| `user_name` | string | Family member display name. |
+
+### Operators by field type
+
+**String operators**
+
+| Operator | Description |
+|----------|-------------|
+| `eq` | Exact match (case-sensitive). |
+| `neq` | Not equal. |
+| `contains` | Case-insensitive substring match. |
+| `not_contains` | Does not contain the substring. |
+| `matches` | Regular expression match. |
+| `in` | Value is one of a list (pass `value` as an array). |
+
+**Numeric operators**
+
+| Operator | Description |
+|----------|-------------|
+| `eq` | Equal. |
+| `neq` | Not equal. |
+| `gt` | Greater than. |
+| `gte` | Greater than or equal. |
+| `lt` | Less than. |
+| `lte` | Less than or equal. |
+
+**Boolean operators**
+
+| Operator | Description |
+|----------|-------------|
+| `eq` | Equal to `true` or `false`. |
+| `neq` | Not equal. |
+
+---
+
+## Pipeline stages
+
+Rules run in priority order during sync. Lower priority numbers run first, so earlier stages can set a baseline that later stages can refine or override.
+
+| Stage | Priority | Description |
+|-------|----------|-------------|
+| `baseline` | `0` | Broad catch-all rules that categorize the most common transactions. |
+| `standard` | `10` | Default stage. Regular categorization rules. |
+| `refinement` | `50` | Rules that correct or narrow categories set by earlier stages. |
+| `override` | `100` | High-confidence rules that should always win, regardless of earlier results. |
+
+Transactions with a manual `category_override` are skipped by all pipeline stages.
+
+---
+
+## Error codes
+
+| Condition | Status | Code |
+|-----------|--------|------|
+| Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
+| Rule not found | `404` | `NOT_FOUND` |
+| Unknown `stage` value | `400` | `VALIDATION_ERROR` |
+| Invalid condition structure | `422` | `VALIDATION_ERROR` |
+| Attempting to delete a system rule | `422` | `VALIDATION_ERROR` |

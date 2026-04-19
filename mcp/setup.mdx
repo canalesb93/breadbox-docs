@@ -1,0 +1,144 @@
+---
+title: "Set up MCP for Claude and AI agents"
+description: "Step-by-step instructions for connecting Claude Desktop, Claude Code, or any MCP-compatible agent to your Breadbox instance."
+---
+
+Breadbox's MCP server is ready as soon as your instance is running — there's nothing extra to install or start. You configure your AI client to point at Breadbox and it connects using the MCP protocol. This page walks through setup for Claude Desktop, Claude Code, and any other MCP-compatible agent.
+
+## Prerequisites
+
+- A running Breadbox instance (local binary, Docker, or remote server)
+- An API key if you're connecting over HTTP — generate one from the API Keys section of the admin dashboard ([API keys](/configuration/api-keys))
+
+---
+
+## Option A: Claude Desktop via Streamable HTTP
+
+Use this option when Breadbox is running in Docker or on a remote server. Claude Desktop connects to the `/mcp` endpoint over HTTP and authenticates with your API key.
+
+Open the Claude Desktop config file. On macOS, it is at:
+
+```
+~/Library/Application Support/Claude/claude_desktop_config.json
+```
+
+Add a Breadbox entry under `mcpServers`:
+
+```json
+{
+  "mcpServers": {
+    "breadbox": {
+      "type": "http",
+      "url": "http://localhost:8080/mcp",
+      "headers": {
+        "X-API-Key": "bb_your_api_key_here"
+      }
+    }
+  }
+}
+```
+
+Replace `localhost:8080` with the actual host and port where Breadbox is running. For a remote server with HTTPS, use `https://your-domain.com/mcp`.
+
+Restart Claude Desktop after saving the file.
+
+---
+
+## Option B: Claude Desktop via Stdio
+
+Use this option when the `breadbox` binary is installed locally on the same machine as Claude Desktop. Stdio mode connects directly to the database — no HTTP server or API key needed.
+
+```json
+{
+  "mcpServers": {
+    "breadbox": {
+      "type": "stdio",
+      "command": "breadbox",
+      "args": ["mcp-stdio"]
+    }
+  }
+}
+```
+
+The `breadbox` binary must be on your `PATH`. Stdio mode uses the same database credentials configured in Breadbox's environment.
+
+Restart Claude Desktop after saving the file.
+
+---
+
+## Option C: Claude Code
+
+Claude Code reads MCP configuration from `.mcp.json` in your project root, or from `~/.config/claude/mcp.json` for a user-level config that applies to all projects.
+
+<Tabs>
+  <Tab title="Streamable HTTP">
+    ```json
+    {
+      "mcpServers": {
+        "breadbox": {
+          "type": "http",
+          "url": "http://localhost:8080/mcp",
+          "headers": {
+            "X-API-Key": "bb_your_api_key_here"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Stdio">
+    ```json
+    {
+      "mcpServers": {
+        "breadbox": {
+          "type": "stdio",
+          "command": "breadbox",
+          "args": ["mcp-stdio"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## Option D: Any MCP-compatible agent
+
+Any agent that supports MCP over Streamable HTTP can connect to Breadbox. Point your client at the `/mcp` endpoint and include your API key:
+
+```
+URL:    https://your-host/mcp
+Header: X-API-Key: bb_your_api_key_here
+```
+
+The endpoint responds to:
+- `POST /mcp` — JSON-RPC messages
+- `GET /mcp` — SSE stream (with session resumption support)
+- `DELETE /mcp` — terminates the session
+
+---
+
+## Connection URL reference
+
+| Deployment | Transport | URL or command |
+|---|---|---|
+| Docker Compose (local) | HTTP | `http://localhost:8080/mcp` |
+| Remote server | HTTP | `https://your-domain.com/mcp` |
+| Local binary | Stdio | `breadbox mcp-stdio` |
+
+---
+
+## Read-only vs. read-write
+
+API keys have a scope that controls what the connected agent can do.
+
+A **read-only** key gives the agent access to all query tools — listing accounts, searching transactions, checking sync status — but prevents it from triggering syncs or submitting reports.
+
+A **full access** key allows the agent to trigger manual syncs and submit reports in addition to reading data.
+
+<Note>
+For most analysis and Q&A use cases, a read-only key is sufficient and limits what the agent can affect. Use a full access key only when you want the agent to trigger syncs or submit reports on your behalf.
+</Note>
+
+Stdio mode always has full access because it connects directly to the database.

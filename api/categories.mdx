@@ -1,0 +1,351 @@
+---
+title: "Categories API — manage transaction categories"
+description: "Reference for Breadbox category endpoints: list, create, update, delete, export as TSV, import from TSV, and merge categories together."
+---
+
+Categories organize transactions into a two-level hierarchy: a primary category (e.g., `FOOD_AND_DRINK`) and a detailed subcategory (e.g., `FOOD_AND_DRINK_GROCERIES`). Breadbox ships with the Plaid taxonomy pre-loaded, and you can customize it by creating, editing, or merging categories. Transaction rules and manual overrides reference categories by their `slug`.
+
+## Two-level hierarchy
+
+Every category has a primary parent and an optional detailed child. For example:
+
+```
+FOOD_AND_DRINK
+├── FOOD_AND_DRINK_GROCERIES
+├── FOOD_AND_DRINK_RESTAURANTS
+└── FOOD_AND_DRINK_COFFEE
+
+TRANSPORTATION
+├── TRANSPORTATION_GAS
+└── TRANSPORTATION_PUBLIC_TRANSIT
+```
+
+Primary categories group broad spending areas. Detailed categories give finer-grained labels for rules, filters, and reporting. When you filter transactions by `category_slug`, you can use either level.
+
+---
+
+## List categories
+
+```
+GET /api/v1/categories
+```
+
+Returns all categories in the two-level hierarchy.
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "data": [
+    {
+      "id": "c1a2b3c4-d5e6-f789-0abc-def123456789",
+      "short_id": "Ab1cDe2f",
+      "slug": "food-and-drink",
+      "name": "Food & Drink",
+      "primary_slug": null,
+      "description": "Restaurants, groceries, coffee, and bars.",
+      "created_at": "2025-11-01T09:00:00Z",
+      "updated_at": "2025-11-01T09:00:00Z"
+    },
+    {
+      "id": "c2b3c4d5-e6f7-890a-bcde-f12345678901",
+      "short_id": "Bc2dEf3g",
+      "slug": "food-and-drink-groceries",
+      "name": "Groceries",
+      "primary_slug": "food-and-drink",
+      "description": "Supermarkets and grocery stores.",
+      "created_at": "2025-11-01T09:00:00Z",
+      "updated_at": "2025-11-01T09:00:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/categories"
+```
+
+---
+
+## Export categories as TSV
+
+```
+GET /api/v1/categories/export
+```
+
+Returns all categories as a tab-separated values (TSV) file. Useful for bulk editing in a spreadsheet and re-importing with `POST /api/v1/categories/import`.
+
+**Auth:** Read
+
+The response has `Content-Type: text/tab-separated-values` and includes a header row:
+
+```
+slug	name	primary_slug	description
+food-and-drink	Food & Drink		Restaurants, groceries, coffee, and bars.
+food-and-drink-groceries	Groceries	food-and-drink	Supermarkets and grocery stores.
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/categories/export" \
+  -o categories.tsv
+```
+
+---
+
+## Get a single category
+
+```
+GET /api/v1/categories/{id}
+```
+
+Returns a single category by its UUID or slug.
+
+**Auth:** Read
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The category's Breadbox UUID, short ID, or slug.
+</ParamField>
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/categories/food-and-drink-groceries"
+```
+
+---
+
+## Create a category
+
+```
+POST /api/v1/categories
+```
+
+Creates a new category. To create a detailed subcategory, set `primary_slug` to the slug of an existing primary category.
+
+**Auth:** Write
+
+### Request body
+
+```json
+{
+  "slug": "food-and-drink-meal-prep",
+  "name": "Meal Prep & Delivery",
+  "primary_slug": "food-and-drink",
+  "description": "Meal kit subscriptions and prepared food delivery services."
+}
+```
+
+<ParamField body="slug" type="string" required>
+  URL-safe identifier for the category. Lowercase letters, numbers, and hyphens only. Must be globally unique. Immutable after creation.
+</ParamField>
+
+<ParamField body="name" type="string" required>
+  Human-readable display name (e.g., `"Meal Prep & Delivery"`).
+</ParamField>
+
+<ParamField body="primary_slug" type="string">
+  Slug of the parent primary category. Set this to create a detailed subcategory. Omit to create a top-level primary category.
+</ParamField>
+
+<ParamField body="description" type="string">
+  Optional description shown in the admin dashboard.
+</ParamField>
+
+### Response
+
+Returns the created category object with `201 Created`.
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "slug": "food-and-drink-meal-prep",
+    "name": "Meal Prep & Delivery",
+    "primary_slug": "food-and-drink"
+  }' \
+  "http://localhost:8080/api/v1/categories"
+```
+
+---
+
+## Update a category
+
+```
+PUT /api/v1/categories/{id}
+```
+
+Updates an existing category. You can change the `name`, `description`, and `primary_slug`. The `slug` cannot be changed after creation.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The category's UUID, short ID, or slug.
+</ParamField>
+
+### Request body
+
+```json
+{
+  "name": "Meal Kits & Delivery",
+  "description": "Updated description."
+}
+```
+
+```bash
+curl -X PUT \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Meal Kits & Delivery"}' \
+  "http://localhost:8080/api/v1/categories/food-and-drink-meal-prep"
+```
+
+---
+
+## Delete a category
+
+```
+DELETE /api/v1/categories/{id}
+```
+
+Deletes a category. Transactions currently assigned to this category will have their category cleared unless you merge the category into another before deleting. You cannot delete a primary category that still has active detailed subcategories.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The category's UUID, short ID, or slug.
+</ParamField>
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/categories/food-and-drink-meal-prep"
+```
+
+---
+
+## Import categories from TSV
+
+```
+POST /api/v1/categories/import
+```
+
+Imports categories from a TSV file. Existing categories with matching slugs are updated; new slugs are created. The TSV must include a header row with columns `slug`, `name`, `primary_slug`, and `description`.
+
+**Auth:** Write
+
+### Request body
+
+Send the TSV content as `Content-Type: text/tab-separated-values`:
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: text/tab-separated-values" \
+  --data-binary @categories.tsv \
+  "http://localhost:8080/api/v1/categories/import"
+```
+
+### Response
+
+```json
+{
+  "created_count": 3,
+  "updated_count": 12
+}
+```
+
+---
+
+## Merge a category
+
+```
+POST /api/v1/categories/{id}/merge
+```
+
+Merges a category into another. All transactions assigned to the source category are reassigned to the target category, and the source category is deleted. This is the recommended way to consolidate duplicate or unwanted categories without losing transaction history.
+
+**Auth:** Write
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The source category to merge and delete.
+</ParamField>
+
+### Request body
+
+```json
+{
+  "into_slug": "food-and-drink-restaurants"
+}
+```
+
+<ParamField body="into_slug" type="string" required>
+  The slug of the target category that will receive all transactions from the source.
+</ParamField>
+
+### Response
+
+```json
+{
+  "reassigned_count": 47,
+  "deleted_slug": "food-and-drink-meal-prep"
+}
+```
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"into_slug": "food-and-drink-restaurants"}' \
+  "http://localhost:8080/api/v1/categories/food-and-drink-meal-prep/merge"
+```
+
+---
+
+## Category response fields
+
+<ResponseField name="id" type="string (UUID)" required>
+  Breadbox-assigned UUID.
+</ResponseField>
+
+<ResponseField name="short_id" type="string" required>
+  8-character base62 alias.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  URL-safe unique identifier (e.g., `"food-and-drink-groceries"`). Immutable after creation.
+</ResponseField>
+
+<ResponseField name="name" type="string" required>
+  Human-readable display name.
+</ResponseField>
+
+<ResponseField name="primary_slug" type="string">
+  Slug of the parent primary category. `null` for top-level primary categories.
+</ResponseField>
+
+<ResponseField name="description" type="string" required>
+  Optional description for the admin dashboard.
+</ResponseField>
+
+---
+
+## Error codes
+
+| Condition | Status | Code |
+|-----------|--------|------|
+| Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
+| Category not found | `404` | `NOT_FOUND` |
+| Slug already exists | `409` | `VALIDATION_ERROR` |
+| Invalid request body | `422` | `VALIDATION_ERROR` |

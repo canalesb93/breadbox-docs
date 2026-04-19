@@ -1,0 +1,133 @@
+---
+title: "Get started with Breadbox"
+description: "Connect a bank, sync your first transactions, and query them through the REST API — from a fresh install to your first API response in minutes."
+---
+
+This guide takes you from a fresh install to your first queried transaction. By the end, you'll have Breadbox running, a bank account connected, and your transactions accessible through the REST API.
+
+## Step 1: Start Breadbox with Docker Compose
+
+If you haven't installed Breadbox yet, follow the [installation guide](/installation) first. Once your `.env` file is ready, start Breadbox and PostgreSQL:
+
+```bash
+docker compose up -d breadbox db
+```
+
+Wait a few seconds for the database to initialize and for Breadbox to run its migrations. You can check that everything is healthy:
+
+```bash
+docker compose ps
+```
+
+Both the `breadbox` and `db` services should show a `running` or `healthy` status.
+
+## Step 2: Open the setup wizard
+
+Open [http://localhost:8080](http://localhost:8080) in your browser. If this is your first launch, Breadbox redirects you to the setup wizard automatically.
+
+The wizard runs once and collects everything Breadbox needs before you can connect a bank.
+
+## Step 3: Complete the setup wizard
+
+The setup wizard has five steps. Work through them in order:
+
+<Steps>
+  <Step title="Create your admin account">
+    Enter a username and password for your admin account. This is the account you'll use to log in to the dashboard and manage connections.
+  </Step>
+  <Step title="Configure your bank provider">
+    Enter your Plaid or Teller API credentials.
+
+    - **Plaid:** Paste your **Client ID** and **Secret** from the [Plaid dashboard](https://dashboard.plaid.com/). Set the environment to `sandbox` for testing.
+    - **Teller:** Enter your **App ID** from the [Teller console](https://teller.io/).
+
+    <Note>
+      If you're testing, use Plaid's sandbox environment. It's free and includes pre-populated test institutions with realistic transaction history — no production approval needed.
+    </Note>
+  </Step>
+  <Step title="Set the sync interval">
+    Choose how often Breadbox polls your banks for new transactions. The default is every 12 hours. You can change this at any time from the admin dashboard.
+  </Step>
+  <Step title="Set a webhook URL (optional)">
+    Enter a public URL for your Breadbox instance if you want Plaid to push transaction updates to you in real time instead of waiting for the next scheduled poll.
+
+    Leave this blank if you're running locally or don't have a public URL yet — polling-based sync works without it.
+  </Step>
+  <Step title="Finish">
+    Review your settings and click **Complete setup**. Breadbox saves your configuration and redirects you to the admin dashboard.
+  </Step>
+</Steps>
+
+## Step 4: Connect a bank
+
+From the admin dashboard, navigate to **Connections** and click **Add connection**.
+
+Breadbox opens the Plaid Link (or Teller) widget in your browser. Select your bank, sign in with your bank credentials, and grant access to your accounts. Your credentials go directly to Plaid or Teller — Breadbox never sees them.
+
+After you complete the widget flow, Breadbox stores the encrypted access token and queues an initial sync for that connection.
+
+## Step 5: Wait for the initial sync
+
+The initial sync fetches your full transaction history from your bank. For most connections this takes under a minute, but it can take longer for accounts with several years of history.
+
+Watch the sync status from the dashboard under **Connections**. The status changes from `in_progress` to `success` when the sync completes.
+
+<Tip>
+  You can also trigger a manual sync at any time from the **Connections** page by clicking **Sync now** next to a connection.
+</Tip>
+
+## Step 6: Query your first transaction
+
+Once the sync completes, use the REST API to fetch your transactions. You'll need an API key — generate one from **Settings → API keys** in the admin dashboard.
+
+```bash
+curl -H "X-API-Key: bb_your_api_key" \
+  "http://localhost:8080/api/v1/transactions?limit=5"
+```
+
+A successful response looks like this:
+
+```json
+{
+  "data": [
+    {
+      "id": "txn_abc12345",
+      "account_id": "acc_xyz98765",
+      "amount": "42.50",
+      "iso_currency_code": "USD",
+      "name": "WHOLE FOODS MARKET",
+      "merchant_name": "Whole Foods",
+      "date": "2026-04-18",
+      "pending": false,
+      "category": {
+        "primary": "Food and Drink",
+        "detailed": "Groceries"
+      }
+    }
+  ],
+  "next_cursor": "eyJpZCI6InR4bl9hYmMxMjM0NSJ9"
+}
+```
+
+<Note>
+  Replace `bb_your_api_key` with the key you generated from the dashboard. API keys always start with the `bb_` prefix.
+</Note>
+
+## What's next?
+
+Now that your first transactions are syncing, explore what Breadbox can do:
+
+<CardGroup cols={2}>
+  <Card title="Transaction rules" icon="filter" href="/transactions/rules">
+    Auto-categorize transactions with flexible AND/OR/NOT rule conditions.
+  </Card>
+  <Card title="AI integration (MCP)" icon="robot" href="/mcp/overview">
+    Connect Claude or another AI assistant to query and analyze your financial data.
+  </Card>
+  <Card title="REST API reference" icon="code" href="/api/overview">
+    Explore all available endpoints, filters, and pagination options.
+  </Card>
+  <Card title="Bank connections" icon="building-columns" href="/connections/overview">
+    Add more banks, manage existing connections, or import CSV files.
+  </Card>
+</CardGroup>

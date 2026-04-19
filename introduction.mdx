@@ -1,0 +1,71 @@
+---
+title: "What is Breadbox?"
+description: "Breadbox is a self-hosted financial data aggregator that syncs your household bank accounts into a PostgreSQL database you own and control."
+---
+
+Breadbox is a self-hosted financial data aggregation tool for households. It connects to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a PostgreSQL database you own, and exposes that data through a REST API and a built-in MCP server for AI agents. Your financial data never touches a third-party cloud — it lives on your hardware, encrypted at rest, and is exportable or deletable at any time.
+
+## Why Breadbox?
+
+Banks silo your financial data behind their own apps. AI assistants can help with budgeting, spending analysis, and anomaly detection — but they need structured access to your data without touching your bank credentials.
+
+Breadbox bridges that gap. It handles the secure sync from your bank, stores transactions in a database you control, and gives any tool or agent a clean, queryable interface to that data.
+
+## Key benefits
+
+<CardGroup cols={2}>
+  <Card title="Your data, your database" icon="database">
+    All transactions are stored in a PostgreSQL database you own. No vendor lock-in — export or delete at any time.
+  </Card>
+  <Card title="AI-ready via MCP" icon="robot">
+    A built-in Model Context Protocol server lets AI assistants like Claude query your financial data securely, without your bank credentials.
+  </Card>
+  <Card title="REST API" icon="code">
+    Query transactions, accounts, and categories from any tool using a structured REST API with cursor pagination, field selection, and filtering.
+  </Card>
+  <Card title="Multi-user households" icon="users">
+    Support every family member under one Breadbox instance, with per-user account assignment and attribution-aware filtering.
+  </Card>
+</CardGroup>
+
+## Features
+
+- **Bank sync** via Plaid, Teller, and CSV import
+- **MCP server** for AI agent integration (Streamable HTTP at `/mcp` and stdio)
+- **REST API** with cursor pagination, field selection, and filtering
+- **Admin dashboard** for connection management, sync monitoring, and transaction review
+- **Transaction rules engine** with recursive AND/OR/NOT conditions for auto-categorization
+- **Review queue** for triaging new or uncategorized transactions
+- **Account linking** to deduplicate transactions across connections (e.g., authorized user cards)
+- **Category system** with a two-level hierarchy
+- **Agent reports** for AI agents to submit summaries and flag transactions
+- **API key auth** with scoped access (full access or read-only)
+- **AES-256-GCM encryption** for all provider credentials stored at rest
+- **Single binary** — one Go binary serves everything: API, MCP server, admin dashboard, webhooks, and the sync scheduler
+
+## What you need to get started
+
+Before installing Breadbox, make sure you have the following:
+
+| Requirement | Details |
+|---|---|
+| **Docker** (recommended) | Docker Engine + Docker Compose, or any Linux/macOS machine |
+| **PostgreSQL** | Version 16 or later. Docker Compose handles this automatically. |
+| **Bank API credentials** | A [Plaid](https://plaid.com/) account (sandbox is free) or a [Teller](https://teller.io/) account — or both |
+
+<Note>
+  Plaid's sandbox environment is free and includes pre-populated test institutions with realistic transaction history. You don't need a production Plaid account to try Breadbox.
+</Note>
+
+You can also configure Plaid and Teller credentials after installation through the setup wizard — you don't need them before you start.
+
+## Next steps
+
+<CardGroup cols={2}>
+  <Card title="Install Breadbox" icon="download" href="/installation">
+    Set up Breadbox with Docker, a pre-built binary, or from source.
+  </Card>
+  <Card title="Get started" icon="rocket" href="/quickstart">
+    Go from zero to your first synced transaction in minutes.
+  </Card>
+</CardGroup>

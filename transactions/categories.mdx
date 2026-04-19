@@ -1,0 +1,159 @@
+---
+title: "Transaction categories and overrides"
+description: "Understand Breadbox's two-level category hierarchy, how categories are assigned, and how to override, manage, and import categories via the API."
+---
+
+Breadbox uses a two-level category hierarchy to classify every transaction. Categories come from your bank provider by default, but you can override them manually or have rules assign them automatically. This page explains how the system works and how to manage categories through the admin dashboard and REST API.
+
+## Two-level hierarchy
+
+Every transaction can carry two category fields:
+
+- **`category_primary`** — the top-level group, such as `FOOD_AND_DRINK` or `TRANSPORTATION`
+- **`category_detailed`** — a granular subcategory nested under the primary, such as `FOOD_AND_DRINK_GROCERIES` or `TRANSPORTATION_GAS_AND_FUEL`
+
+The detailed category always shares its parent's prefix. For example, all food-related subcategories start with `FOOD_AND_DRINK_`.
+
+## Where categories come from
+
+A transaction's category can be set by three sources, in increasing order of precedence:
+
+1. **Provider-assigned** — Plaid and Teller classify transactions automatically during sync using their own enrichment pipelines. These values populate `category_primary` and `category_detailed` on initial import.
+2. **Rule-assigned** — Breadbox's rules engine can override the provider category based on conditions you define. See [Auto-categorize transactions with rules](/transactions/rules).
+3. **Manually overridden** — You can set a category directly on any transaction from the dashboard or via the API. Manual overrides take the highest precedence and are protected from being overwritten by rules.
+
+## The `category_override` flag
+
+When you manually set a transaction's category, Breadbox marks it with `category_override = true`. This flag signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
+
+<Note>
+Rules that would otherwise reassign the category are skipped for any transaction where `category_override = true`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
+</Note>
+
+To clear a manual override and return to the provider default, call `DELETE /api/v1/transactions/{id}/category`. This removes the override and re-enables rule-based categorization on the next sync.
+
+## Overriding a category from the dashboard
+
+<Steps>
+  <Step title="Open the transaction">
+    Navigate to **Transactions** in the dashboard sidebar and click any transaction to open its detail view.
+  </Step>
+  <Step title="Edit the category">
+    Click the category field or the edit icon next to it. A dropdown appears showing all available categories.
+  </Step>
+  <Step title="Select a category">
+    Choose the category you want. The change is saved immediately and `category_override` is set to `true`.
+  </Step>
+</Steps>
+
+You can also override categories in bulk from the transactions list view using the bulk actions menu.
+
+## Managing categories via the API
+
+Breadbox lets you create your own categories, update existing ones, merge duplicates, and delete categories you no longer need.
+
+### List all categories
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/categories
+```
+
+### Override a transaction's category
+
+```bash
+curl -X PATCH \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"category_id": "cat_abc123"}' \
+  http://localhost:8080/api/v1/transactions/txn_xyz/category
+```
+
+### Reset a category to the provider default
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/transactions/txn_xyz/category
+```
+
+### Create a custom category
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Side Projects", "parent_slug": "income"}' \
+  http://localhost:8080/api/v1/categories
+```
+
+### Update a category
+
+```bash
+curl -X PUT \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"name": "Freelance Income"}' \
+  http://localhost:8080/api/v1/categories/cat_abc123
+```
+
+### Merge a category into another
+
+Merging reassigns all transactions from the source category to the target, then deletes the source.
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"target_id": "cat_target123"}' \
+  http://localhost:8080/api/v1/categories/cat_source456/merge
+```
+
+### Delete a category
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/categories/cat_abc123
+```
+
+### Batch-categorize multiple transactions
+
+You can set the category on up to 500 transactions in a single request.
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction_ids": ["txn_aaa", "txn_bbb", "txn_ccc"],
+    "category_id": "cat_abc123"
+  }' \
+  http://localhost:8080/api/v1/transactions/batch-categorize
+```
+
+## Importing and exporting categories as TSV
+
+You can export your entire category tree as a tab-separated values file, edit it externally, and re-import it. This is useful for bulk setup or migrating a category structure from another system.
+
+<CodeGroup>
+
+```bash Export categories
+curl -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/categories/export \
+  -o categories.tsv
+```
+
+```bash Import categories
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: text/tab-separated-values" \
+  --data-binary @categories.tsv \
+  http://localhost:8080/api/v1/categories/import
+```
+
+</CodeGroup>
+
+<Tip>
+Export your categories before making large structural changes. The TSV export gives you a backup you can re-import if needed.
+</Tip>

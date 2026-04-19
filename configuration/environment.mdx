@@ -1,0 +1,85 @@
+---
+title: "Configure Breadbox with environment variables"
+description: "Set environment variables to configure Breadbox, generate your encryption key, and understand how env vars override dashboard settings."
+---
+
+Breadbox reads its configuration from environment variables at startup. Most settings can also be managed through the setup wizard or admin dashboard without restarting, but environment variables always take precedence. This page covers every variable you can set, how to generate your encryption key, and how the two configuration sources interact.
+
+## Config precedence
+
+When a setting exists in more than one place, Breadbox resolves it in this order:
+
+```
+Environment variable → dashboard settings → default
+```
+
+If you set `PLAID_CLIENT_ID` as an environment variable, the dashboard's Plaid credentials field becomes read-only and displays a notice that the value is environment-controlled.
+
+<Note>
+  Provider credentials can also be configured through the setup wizard or admin dashboard — environment variables are optional but take precedence.
+</Note>
+
+## Required variables
+
+You must set these before starting Breadbox. The process exits with a descriptive error if they are missing.
+
+| Variable | Description | Required |
+|---|---|---|
+| `DATABASE_URL` | PostgreSQL connection string, e.g. `postgres://user:pass@localhost:5432/breadbox?sslmode=disable` | Yes |
+| `ENCRYPTION_KEY` | 32-byte key as a 64-character hex string, used for AES-256-GCM encryption of bank credentials | Yes (with Plaid or Teller) |
+
+### Generate your encryption key
+
+Run the following command once and save the output as the value of `ENCRYPTION_KEY`:
+
+```bash
+openssl rand -hex 32
+```
+
+<Warning>
+  Never change `ENCRYPTION_KEY` after bank connections have been created. All stored provider credentials (Plaid and Teller access tokens) are encrypted with this key. Changing it makes every existing credential permanently unreadable and forces all household members to re-link their bank accounts. Back up this value separately from your database — see the [backup guide](/configuration/backup).
+</Warning>
+
+## Optional variables
+
+These variables are not required. If omitted, Breadbox uses the value stored in the database or the built-in default.
+
+| Variable | Default | Description |
+|---|---|---|
+| `SERVER_PORT` | `8080` | HTTP listen port |
+| `ENVIRONMENT` | `local` | Set to `local` for local development (text logs, debug level) or `docker` for production (JSON logs, info level) |
+| `PLAID_CLIENT_ID` | (from dashboard) | Plaid API client ID |
+| `PLAID_SECRET` | (from dashboard) | Plaid API secret |
+| `PLAID_ENV` | (from dashboard) | Plaid environment: `sandbox`, `development`, or `production` |
+| `TELLER_APP_ID` | (from dashboard) | Teller application ID |
+
+## Dashboard-managed settings
+
+The following settings are configured through the setup wizard or the Settings page in the admin dashboard. They are stored in the database and take effect immediately — no restart required.
+
+- **Plaid credentials** — client ID, secret, and environment
+- **Sync interval** — how often Breadbox polls for new transactions: every 4, 8, 12, or 24 hours (default: 12)
+- **Webhook URL** — the public base URL where Plaid sends transaction webhook events
+
+If you set `PLAID_CLIENT_ID`, `PLAID_SECRET`, or `PLAID_ENV` as environment variables, the corresponding dashboard fields become read-only.
+
+## Example .env file
+
+Copy `.env.example` from the repository and fill in your values:
+
+```bash
+# Required
+DATABASE_URL=postgres://breadbox:breadbox@localhost:5432/breadbox?sslmode=disable
+ENCRYPTION_KEY=<output of openssl rand -hex 32>
+
+# Optional
+SERVER_PORT=8080
+ENVIRONMENT=local
+
+# Plaid (can be set here or in the admin dashboard)
+PLAID_CLIENT_ID=
+PLAID_SECRET=
+PLAID_ENV=sandbox
+```
+
+For Docker deployments, save this as `.docker.env` and set `ENVIRONMENT=docker`.

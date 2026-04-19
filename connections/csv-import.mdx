@@ -1,0 +1,180 @@
+---
+title: "Import transactions from CSV"
+description: "Upload a CSV export from any bank, map columns to Breadbox fields, and import transactions for institutions not covered by Plaid or Teller."
+---
+
+CSV import lets you bring transaction data into Breadbox from any financial institution, even if it isn't supported by Plaid or Teller. You download a CSV file directly from your bank's website and upload it through the Breadbox import wizard. There's no API credential setup required.
+
+## When to use CSV import
+
+Use CSV import when:
+
+- Your bank or credit union isn't available in Plaid or Teller.
+- You want to import historical transactions from before you linked a Plaid or Teller connection.
+- You're migrating data from another personal finance tool.
+- You have a one-time export you want to add to your history.
+
+<Note>
+  CSV import doesn't support automatic syncing. You need to manually download and re-import a new file each time you want to add transactions. If your bank is available on Plaid or Teller, those providers are a better choice for ongoing use.
+</Note>
+
+## Download a CSV from your bank
+
+Most banks let you export transactions from their website or mobile app. Look for an **Export**, **Download**, or **Statement** option in your transaction history or account activity section. Choose **CSV** or **Spreadsheet** format where available.
+
+The specific steps vary by institution. Common locations include:
+
+- Chase: **Account activity → Download account activity**
+- Bank of America: **Activity → Download**
+- Wells Fargo: **Account activity → Download transactions**
+- Capital One: **Transactions → Download**
+- Amex: **Statements & Activity → Download**
+
+Save the file to your computer before starting the import wizard.
+
+## Import wizard
+
+Start a CSV import from **Connections** → **Connect New Bank** → **CSV Import** in the admin dashboard.
+
+<Steps>
+  <Step title="Select a family member and upload your file">
+    Choose the family member this account belongs to from the dropdown. Then upload your CSV file. Breadbox accepts `.csv`, `.tsv`, and `.txt` files up to 10 MB. It automatically detects the delimiter (comma, tab, semicolon, or pipe) and handles encoding and byte-order marks.
+
+    Files must contain at least one data row in addition to a header row. Files with more than 50,000 rows are rejected.
+  </Step>
+  <Step title="Map columns and preview">
+    Breadbox reads the column headers from your file and asks you to map them to the required fields. If your bank matches one of the pre-built templates (Chase, Bank of America, Wells Fargo, Capital One, or Amex), the mapping is filled in automatically.
+
+    Set the **amount sign convention** to match how your bank exports amounts:
+    - **Positive = debit** (money out) — matches Plaid's convention and is the default.
+    - **Positive = credit** (money in) — Breadbox negates the amounts automatically so they're stored consistently.
+
+    Give the account a name (for example, "Chase Checking CSV"). This name appears in your connections list.
+
+    A preview table shows the first 10 rows with parsed dates and amounts. Any rows with unparseable values are flagged inline so you can correct the mapping before importing.
+  </Step>
+  <Step title="Review the summary and confirm">
+    Breadbox shows a summary: total row count, date range, account name, and family member. Click **Import** to start the import.
+  </Step>
+  <Step title="Review the results">
+    After the import completes, Breadbox shows how many transactions were added, how many matched existing records (and were updated), and how many rows were skipped due to errors such as missing required fields or unparseable dates.
+  </Step>
+</Steps>
+
+## Required and optional fields
+
+Breadbox requires three fields to import a transaction. All other fields are optional.
+
+**Required fields**
+
+| Field | What it maps to | Notes |
+|-------|-----------------|-------|
+| Date | Transaction date | See supported date formats below |
+| Amount | Transaction amount | See amount handling below |
+| Description | Transaction name | Trimmed; max 500 characters |
+
+**Optional fields**
+
+| Field | What it maps to | Notes |
+|-------|-----------------|-------|
+| Category | Primary category | Stored as-is; not mapped to Plaid categories |
+| Merchant name | Merchant name | Trimmed; max 200 characters |
+
+## Pre-built bank templates
+
+Breadbox includes templates for the following banks. When your column headers match a template, Breadbox auto-fills the column mapping for you.
+
+<Tabs>
+  <Tab title="Chase (credit card)">
+    **Date column:** Transaction Date  
+    **Amount column:** Amount  
+    **Description column:** Description  
+    **Category column:** Category  
+    **Sign convention:** Negative = debit (charges), Positive = credit (payments)  
+    **Date format:** MM/DD/YYYY
+  </Tab>
+  <Tab title="Chase (checking/savings)">
+    **Date column:** Posting Date  
+    **Amount column:** Amount  
+    **Description column:** Description  
+    **Sign convention:** Negative = debit, Positive = credit  
+    **Date format:** MM/DD/YYYY
+  </Tab>
+  <Tab title="Bank of America">
+    **Date column:** Date  
+    **Amount column:** Amount  
+    **Description column:** Description  
+    **Sign convention:** Negative = debit, Positive = credit  
+    **Date format:** MM/DD/YYYY
+  </Tab>
+  <Tab title="Wells Fargo">
+    **Note:** Wells Fargo CSVs have no header row. Breadbox detects this format by column count (5 columns) and the date format in the first column.  
+    **Column order:** Date, Amount, *, *, Description  
+    **Sign convention:** Negative = debit, Positive = credit  
+    **Date format:** MM/DD/YYYY
+  </Tab>
+  <Tab title="Capital One">
+    **Date column:** Transaction Date  
+    **Amount:** Uses separate Debit and Credit columns. Breadbox combines them: `amount = debit - credit`.  
+    **Description column:** Description  
+    **Category column:** Category  
+    **Sign convention:** Debit and Credit columns both contain positive values  
+    **Date format:** YYYY-MM-DD
+  </Tab>
+  <Tab title="Amex">
+    **Date column:** Date  
+    **Amount column:** Amount  
+    **Description column:** Description  
+    **Category column:** Category  
+    **Sign convention:** Positive = debit (charges), Negative = credit (payments)  
+    **Date format:** MM/DD/YYYY
+  </Tab>
+</Tabs>
+
+## Supported date formats
+
+Breadbox tries to detect the date format in your file automatically by sampling the first 20 date values. It picks the format that successfully parses at least 90% of them. If no format succeeds, you'll see an error asking you to check the date column mapping.
+
+Supported formats (in order of priority):
+
+1. `MM/DD/YYYY` — e.g., `01/15/2024`
+2. `YYYY-MM-DD` — e.g., `2024-01-15`
+3. `M/D/YYYY` — e.g., `1/5/2024`
+4. `MM-DD-YYYY` — e.g., `01-15-2024`
+5. `DD/MM/YYYY` — e.g., `15/01/2024`
+6. `YYYY/MM/DD` — e.g., `2024/01/15`
+7. `Mon DD, YYYY` — e.g., `Jan 15, 2024`
+8. `Month DD, YYYY` — e.g., `January 15, 2024`
+
+## Amount sign conventions
+
+When you upload a file, you set the sign convention to match how your bank exports amounts:
+
+- **Positive = debit** (default): amounts are stored as-is. Positive values mean money going out.
+- **Positive = credit**: Breadbox negates the amounts. Positive CSV values become negative in the database, representing money coming in.
+
+Breadbox always stores amounts using Plaid's convention — positive values are debits (money out), negative values are credits (money in). This keeps CSV transactions consistent with Plaid and Teller data.
+
+<Warning>
+  If you change the sign convention and re-import the same file, the transactions will be treated as new (different amounts → different identity hashes) and duplicated in your database. Make sure your sign convention is correct before importing.
+</Warning>
+
+## Deduplication
+
+Re-importing the same file is safe. Breadbox generates a unique identity for each transaction from its date, amount, and description. If a row with the same identity already exists, it's updated rather than inserted as a duplicate.
+
+This means you can re-import a file multiple times without worrying about duplicate transactions. However, if two transactions on the same day share the same amount and description — for example, two identical $5.00 charges at the same merchant — they'll be treated as one transaction.
+
+## Limitations compared to Plaid and Teller
+
+| Feature | Plaid / Teller | CSV |
+|---------|----------------|-----|
+| Automatic sync | Yes | No — manual upload only |
+| Balance tracking | Yes | No — balances are not imported |
+| Webhook support | Yes | No |
+| Re-authentication flow | Yes | Not applicable |
+| Deduplication precision | Exact (provider transaction ID) | Hash-based (date + amount + description) |
+
+## Add more transactions to an existing CSV connection
+
+After your first import, you don't need to create a new connection when you download a fresh CSV. From the connection detail page, CSV connections show an **Import More** button. This opens the import wizard with your connection pre-selected, so you skip the member selection and account naming steps. New transactions are added and existing ones are updated using the same deduplication logic.

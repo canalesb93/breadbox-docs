@@ -1,0 +1,93 @@
+---
+title: "Cursor-based pagination in the Breadbox API"
+description: "How Breadbox cursor pagination works, how to pass the cursor parameter, default and max limits, and a complete pagination loop example."
+---
+
+List endpoints in the Breadbox API use cursor-based pagination rather than offset-based pagination. This means you navigate through results by passing an opaque cursor token from one response into the next request, rather than specifying a page number or offset.
+
+Cursor pagination is stable: if new transactions are synced while you are iterating through pages, you will not see duplicates or skip records. This makes it the right choice for transaction data, which can be modified by background syncs at any time.
+
+## Response envelope
+
+Every paginated list response wraps results in a consistent envelope:
+
+```json
+{
+  "data": [ ... ],
+  "next_cursor": "eyJkYXRlIjoiMjAyNS0xMi0xNSIsImlkIjoiYWJjZGVmIn0",
+  "has_more": true
+}
+```
+
+<ResponseField name="data" type="array" required>
+  The current page of results. May be an empty array when no records match the filters.
+</ResponseField>
+
+<ResponseField name="next_cursor" type="string | null" required>
+  An opaque, base64url-encoded token. Pass this value as the `cursor` query parameter in your next request to retrieve the following page. `null` when there are no more pages.
+</ResponseField>
+
+<ResponseField name="has_more" type="boolean" required>
+  `true` if additional pages exist beyond the current one. Equivalent to `next_cursor !== null`. When `has_more` is `false`, you have retrieved all matching records.
+</ResponseField>
+
+## Request parameters
+
+<ParamField query="cursor" type="string">
+  Opaque pagination cursor from a previous response's `next_cursor` field. Omit this parameter to fetch the first page. Do not attempt to construct or parse cursors manually — treat them as opaque strings.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Number of records to return per page. Minimum `1`, maximum `500`. The default for most endpoints is `50`, but check each endpoint's documentation for its specific default.
+</ParamField>
+
+## How cursors work
+
+Internally, a cursor encodes a `(date, id)` pair that lets the database resume from the exact position where the previous page ended. This is why cursor pagination only works with the default date sort — if you switch to sorting by `amount` or `name`, pagination is not supported and you must fetch all results in a single request (using a high `limit`).
+
+If you provide a cursor that is malformed or refers to a record that no longer exists, the API returns a `400` error with code `INVALID_CURSOR`. In that case, restart pagination from the first page.
+
+## Fetching all pages
+
+To retrieve every record matching a set of filters, keep fetching pages until `has_more` is `false`:
+
+<CodeGroup>
+
+```bash First page
+curl -H "X-API-Key: bb_key" \
+  "http://localhost:8080/api/v1/transactions?limit=100&start_date=2025-01-01"
+```
+
+```bash Next page (use next_cursor from previous response)
+curl -H "X-API-Key: bb_key" \
+  "http://localhost:8080/api/v1/transactions?limit=100&start_date=2025-01-01&cursor=eyJ..."
+```
+
+</CodeGroup>
+
+A typical pagination loop in pseudocode:
+
+```python
+cursor = None
+all_transactions = []
+
+while True:
+    params = {"limit": 500, "start_date": "2025-01-01"}
+    if cursor:
+        params["cursor"] = cursor
+
+    response = get("/api/v1/transactions", params=params)
+    all_transactions.extend(response["data"])
+
+    if not response["has_more"]:
+        break
+
+    cursor = response["next_cursor"]
+```
+
+## Tips
+
+- **Use the maximum `limit` of 500** when you need to export all data — fewer round trips means faster completion.
+- **Do not cache cursors across sessions.** Cursors may become invalid after schema migrations or server restarts. Always start fresh from the first page in new sessions.
+- **Filters must be consistent across pages.** If you change filter parameters mid-pagination (for example, changing `start_date`), the cursor will produce incorrect results or a `400` error. Keep all parameters constant and only change `cursor` between requests.
+- **The `/transactions/count` endpoint** lets you know how many records a filter returns before you begin paginating — useful for progress tracking in long exports.

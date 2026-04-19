@@ -1,0 +1,135 @@
+{
+  "projectType": "saas",
+  "projectName": "Breadbox",
+  "projectDescription": "Self-hosted financial data aggregation for households — syncs bank accounts via Plaid, Teller, and CSV, stores everything in your own PostgreSQL database, and exposes it through a REST API and AI agent MCP server.",
+  "theme": "almond",
+  "primaryColor": "#7c7c7c",
+  "lightColor": "#070707",
+  "darkColor": "#d3d3d3",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Docs",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "installation",
+              "quickstart"
+            ]
+          },
+          {
+            "group": "Bank Connections",
+            "pages": [
+              "connections/overview",
+              "connections/plaid",
+              "connections/teller",
+              "connections/csv-import"
+            ]
+          },
+          {
+            "group": "Transactions",
+            "pages": [
+              "transactions/overview",
+              "transactions/categories",
+              "transactions/rules",
+              "transactions/review-queue"
+            ]
+          },
+          {
+            "group": "AI Integration",
+            "pages": [
+              "mcp/overview",
+              "mcp/setup",
+              "mcp/tools"
+            ]
+          },
+          {
+            "group": "Configuration",
+            "pages": [
+              "configuration/environment",
+              "configuration/api-keys",
+              "configuration/backup"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/pagination"
+            ]
+          },
+          {
+            "group": "Endpoints",
+            "pages": [
+              "api/accounts",
+              "api/transactions",
+              "api/categories",
+              "api/rules",
+              "api/connections",
+              "api/users",
+              "api/reports"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Bank sync via Plaid, Teller, and CSV import",
+    "MCP server for AI agent integration (Claude, any MCP-compatible agent)",
+    "REST API with cursor pagination, field selection, and filtering",
+    "Admin dashboard for connection management and transaction review",
+    "Transaction rules engine with recursive AND/OR/NOT conditions for auto-categorization",
+    "Review queue for triaging new and uncategorized transactions",
+    "Multi-user household support with per-member account assignment",
+    "API key authentication with full-access and read-only scopes",
+    "AES-256-GCM encryption for all provider credentials at rest",
+    "Single binary deployment — one Go binary serves API, MCP, dashboard, and webhooks"
+  ],
+  "publicApiSurface": [
+    "GET /api/v1/accounts",
+    "GET /api/v1/accounts/{id}",
+    "GET /api/v1/transactions",
+    "GET /api/v1/transactions/count",
+    "GET /api/v1/transactions/summary",
+    "GET /api/v1/transactions/merchants",
+    "GET /api/v1/transactions/{id}",
+    "PATCH /api/v1/transactions/{id}/category",
+    "POST /api/v1/transactions/batch-categorize",
+    "GET /api/v1/categories",
+    "POST /api/v1/categories",
+    "PUT /api/v1/categories/{id}",
+    "DELETE /api/v1/categories/{id}",
+    "GET /api/v1/users",
+    "GET /api/v1/connections",
+    "POST /api/v1/sync",
+    "GET /api/v1/rules",
+    "POST /api/v1/rules",
+    "PUT /api/v1/rules/{id}",
+    "POST /api/v1/rules/{id}/apply",
+    "POST /api/v1/rules/preview",
+    "GET /api/v1/reports",
+    "POST /api/v1/reports",
+    "POST /mcp (Streamable HTTP MCP endpoint)",
+    "MCP tool: list_accounts",
+    "MCP tool: query_transactions",
+    "MCP tool: count_transactions",
+    "MCP tool: list_categories",
+    "MCP tool: list_users",
+    "MCP tool: get_sync_status",
+    "MCP tool: trigger_sync",
+    "breadbox serve (CLI)",
+    "breadbox mcp-stdio (CLI)",
+    "breadbox create-admin (CLI)",
+    "breadbox migrate (CLI)",
+    "breadbox version (CLI)"
+  ]
+}

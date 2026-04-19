@@ -1,0 +1,89 @@
+---
+title: "Authenticate API requests with API keys"
+description: "How to create and use Breadbox API keys, understand read_only and full_access scopes, pass the X-API-Key header, and handle auth errors."
+---
+
+Every request to the Breadbox REST API must include a valid API key. Keys are created from the admin dashboard, scoped to control what operations a client can perform, and passed as a request header on every call. Breadbox never stores the full plaintext key — the key is shown once at creation and then hashed.
+
+## Getting an API key
+
+Create API keys from the admin dashboard under **Settings → API Keys**. Give each key a descriptive name so you can identify it later (for example, `"Home Assistant"` or `"Monthly report script"`). The full plaintext key is displayed exactly once when you create it — copy it to a safe location before closing the dialog.
+
+For detailed configuration steps, see the [API keys configuration guide](/configuration/api-keys).
+
+## Key format
+
+All Breadbox API keys begin with the `bb_` prefix followed by 32 cryptographically random bytes encoded in base62:
+
+```
+bb_4xK9mZ2nQpR7sT1vW3yA5bC8dE6fG0hJqLnPuVw
+```
+
+The total length is approximately 46 characters. Any string that does not start with `bb_` is immediately rejected.
+
+## Key scopes
+
+Each key is assigned one of two scopes at creation time:
+
+| Scope | Description |
+|-------|-------------|
+| `read_only` | Read access to all data endpoints. Cannot modify data, trigger syncs, or create resources. |
+| `full_access` | Full read and write access. Required for any endpoint marked **Write** in this documentation. |
+
+Choose the narrowest scope that meets your use case. AI agents that only query transaction history should use `read_only` keys. Agents or scripts that create rules, categorize transactions, or trigger syncs need `full_access`.
+
+## Passing the key
+
+Include the key in the `X-API-Key` HTTP header on every request:
+
+```
+X-API-Key: bb_your_api_key_here
+```
+
+<CodeGroup>
+
+```bash Read-only request
+curl -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/accounts
+```
+
+```bash Write request (requires full_access key)
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{}' \
+  http://localhost:8080/api/v1/sync
+```
+
+</CodeGroup>
+
+## Authentication errors
+
+| Scenario | HTTP Status | Error Code |
+|----------|-------------|------------|
+| `X-API-Key` header missing | `401 Unauthorized` | `MISSING_API_KEY` |
+| Key does not start with `bb_` | `401 Unauthorized` | `INVALID_API_KEY` |
+| Key does not match any active key | `401 Unauthorized` | `INVALID_API_KEY` |
+| Key has been revoked | `401 Unauthorized` | `REVOKED_API_KEY` |
+| Key scope is insufficient for the endpoint | `403 Forbidden` | `FORBIDDEN` |
+
+All authentication errors use the standard error envelope:
+
+```json
+{
+  "error": {
+    "code": "MISSING_API_KEY",
+    "message": "X-API-Key header is required."
+  }
+}
+```
+
+A `401` response means the key itself is invalid or absent. A `403` response means the key is valid but does not have the required scope — for example, a `read_only` key attempting a write operation.
+
+## Key management best practices
+
+- **One key per client.** Assign a separate key to each application or script that calls the API. This lets you revoke a single key without disrupting other clients.
+- **Use `read_only` by default.** Grant `full_access` only when the client genuinely needs to write data.
+- **Rotate keys periodically.** Create a new key, update the client, then revoke the old key from the dashboard.
+- **Never expose keys in client-side code or version control.** Treat API keys with the same care as passwords. If a key is compromised, revoke it immediately from **Settings → API Keys**.
+- **Store keys in environment variables or a secrets manager** rather than hardcoding them in configuration files.
