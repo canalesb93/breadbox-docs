@@ -1,88 +1,107 @@
 ---
-title: "Review and triage transactions"
-description: "Use Breadbox's review queue to triage newly synced transactions, approve or reject categorizations, and let AI agents participate in the review workflow."
+title: "Review workflow"
+description: "Understand how Breadbox's needs-review tag, seeded rule, and ephemeral-tag lifecycle combine into a configurable review workflow you can extend or turn off."
 ---
 
-Breadbox includes a built-in review queue that surfaces newly synced transactions for inspection. The queue is a coordination point between automated categorization and human oversight — you can work through it yourself in the dashboard, or configure AI agents to help triage transactions before they reach you.
+Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the `needs-review` tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
 
-## What the review queue is
+## How the workflow is assembled
 
-The review queue is not a separate database table. It is a filtered view of transactions that carry the `needs-review` tag. Any transaction tagged with `needs-review` is in the queue; removing the tag resolves it. This tag-based design means the same tagging and rule primitives that power the rest of Breadbox also power the review workflow.
+Three pieces make up the default experience:
 
-## How transactions enter the queue
+<Steps>
+  <Step title="A seeded `needs-review` tag">
+    Installed as an **ephemeral** tag — meaning the tag is expected to come off eventually, and every removal must include a short note that gets recorded on the transaction's activity timeline.
+  </Step>
+  <Step title="A seeded rule on `on_create`">
+    A system-created rule fires for every newly-synced transaction and applies the `needs-review` tag. No conditions — it matches everything by default.
+  </Step>
+  <Step title="A filter view in the dashboard">
+    `/reviews` in the admin UI redirects to `/transactions?tags=needs-review`. There is no separate "reviews" page; the transactions list is the queue.
+  </Step>
+</Steps>
 
-A seeded system rule fires on every `on_create` event (every newly synced transaction) and attaches the `needs-review` tag automatically. You do not need to configure anything for this to work — it is active by default.
+All three are **configurable**. The tag can be recolored or renamed, the rule can be narrowed or disabled, and you can layer your own tags on top for workflows Breadbox doesn't ship by default.
 
-Transactions enter the queue under one of four review types:
+## Resolving a review
 
-| Review type | When it applies |
-|-------------|-----------------|
-| `new_transaction` | A transaction was synced for the first time |
-| `uncategorized` | A transaction could not be matched to any category |
-| `manual` | You manually added the `needs-review` tag to a transaction |
-| `re_review` | A previously reviewed transaction was flagged again |
+To take a transaction out of the queue, remove the `needs-review` tag. Because it is ephemeral, removal requires a note — the note is saved as an annotation so anyone (or any agent) looking at the transaction later can see why the review was closed.
 
-## Processing reviews from the dashboard
+In the dashboard, the transaction detail view has a **Remove tag** action with a note prompt. An MCP-connected agent does the same thing in a single compound write via `update_transactions` — set the category, remove `needs-review` with a note, and optionally leave a comment, all in one operation.
 
-Open **Transactions** in the dashboard sidebar and filter by the `needs-review` tag to see your current queue. For each transaction, you can:
+Leaving the tag in place is the "skip" action — the transaction stays in the queue for next time. There is no separate reject or approve state; the decision is captured by whichever category ends up on the transaction plus the note you leave when the tag comes off.
 
-- **Approve** — Accept the current category assignment and remove the `needs-review` tag. The transaction is resolved.
-- **Reject** — Decline the current category and choose a different one before resolving.
-- **Skip** — Leave the transaction in the queue for later review without taking action.
+<Note>
+The REST API exposes `PATCH /api/v1/transactions/{id}/category` for category changes, but tag mutations currently live behind the admin UI and the MCP `update_transactions` tool. Day-to-day review work is done in the dashboard or by an agent — not via direct REST calls.
+</Note>
+
+## Making the workflow your own
 
 <Tip>
-Use bulk actions on the transactions list to approve or reject multiple transactions at once. This is especially useful after your first sync when hundreds of historical transactions land in the queue.
+The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions and its own lifecycle.
 </Tip>
 
-## Disabling the auto-review queue
+Common customizations:
 
-If you do not want every new transaction to enter the review queue automatically, disable the seeded `on_create` system rule:
+- **Narrow the auto-tag rule** so only transactions that *need* attention get flagged — for example, only uncategorized rows, only amounts above a threshold, or only accounts you actually reconcile.
+- **Add parallel tags** for specific workflows (e.g., a `high-amount` rule that tags anything over $500 in addition to `needs-review`), so you can filter to the subset you care about first.
+- **Disable the auto-tag rule entirely** if you don't want every new transaction on the queue by default.
+
+### Disabling the auto-tag rule
+
+The seeded rule is named **Auto-tag new transactions for review** and is owned by the `system` creator type. Find its ID from **Rules** in the dashboard (it is listed as system-created), or look it up via the API:
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/rules \
+  | jq '.rules[] | select(.name == "Auto-tag new transactions for review") | {id, short_id, enabled}'
+```
+
+Then disable it (either `id` or `short_id` works):
 
 ```bash
 curl -X PUT \
   -H "X-API-Key: bb_your_key" \
   -H "Content-Type: application/json" \
   -d '{"enabled": false}' \
-  http://localhost:8080/api/v1/rules/rule_system_on_create
+  http://localhost:8080/api/v1/rules/<rule_id>
 ```
 
-You can find the rule's ID from **Rules** in the dashboard or by listing rules via the API. System-seeded rules can be disabled but not deleted.
+System-seeded rules can be disabled but not deleted, so you can always turn the default back on.
 
 <Note>
-Disabling the `on_create` rule stops new transactions from being auto-tagged. Existing `needs-review` tags on transactions already in the queue are not affected.
+Disabling the rule only affects **future** syncs. Transactions already tagged `needs-review` stay tagged until you resolve them (or bulk-remove the tag).
 </Note>
 
-## AI agents and the review queue
+## AI agents in the workflow
 
-AI agents connected via MCP can participate directly in the review workflow. Agents use MCP tools to:
+Because the queue is just a tag filter, AI agents connected over MCP can participate using the same tools humans would:
 
-- List transactions with the `needs-review` tag
-- Inspect each transaction's details and activity timeline
-- Add or remove tags, including resolving `needs-review`
-- Update a transaction's category
+- `query_transactions(tags=["needs-review"])` to fetch the backlog
+- `count_transactions(tags=["needs-review"])` to check the size before diving in
+- `update_transactions` with a compound op (`category_slug` + `tags_to_remove` with a note + an optional `comment`) to resolve items in batches
+- Leave the tag in place when an agent isn't confident — that's the equivalent of "skipping"
 
-Because `needs-review` is an ephemeral tag, removing it requires a rationale note. This note is recorded in the transaction's annotation timeline so you can see why the agent resolved the review.
-
-A typical agent workflow looks like this:
+A typical agent loop:
 
 <Steps>
-  <Step title="Fetch the queue">
-    The agent calls `query_transactions` with a tag filter for `needs-review` to get the current backlog.
+  <Step title="Fetch the backlog">
+    `count_transactions(tags=["needs-review"])` to size it up, then `query_transactions(tags=["needs-review"], fields=core,category, limit=30)`.
   </Step>
-  <Step title="Evaluate each transaction">
-    For each transaction, the agent examines the name, merchant, amount, and any existing category. It applies your review guidelines (which you can configure in the Breadbox settings) to decide whether the category is correct.
+  <Step title="Decide per transaction">
+    For each row the agent inspects name, merchant, amount, and any pre-applied category. It applies your review guidelines (configurable in settings) to decide whether to accept the category, change it, or defer.
   </Step>
-  <Step title="Resolve or escalate">
-    If the agent is confident, it removes `needs-review` and optionally assigns a better category. If it is unsure, it leaves the tag in place and adds a comment explaining why it needs human review.
+  <Step title="Resolve in batches">
+    `update_transactions` with up to 50 compound ops — set category if needed, remove `needs-review` with a short rationale, optionally leave a comment.
   </Step>
   <Step title="Submit a report">
-    The agent submits a summary report via `POST /api/v1/reports` with a title and markdown body describing what it reviewed, what it changed, and what it flagged for you.
+    `POST /api/v1/reports` with a title and markdown body summarizing the session and surfacing anything that was deferred.
   </Step>
 </Steps>
 
 ## Agent reports
 
-AI agents can submit structured summaries to Breadbox using the reports API. A report includes a title and a markdown body — agents typically use this to summarize a review session, flag unusual transactions, or surface spending patterns worth your attention.
+Reports are separate from the review workflow itself — they're how an agent summarizes what it just did. A report is a title + markdown body that lands in the dashboard under **Reports** with an unread badge until you open it.
 
 ```bash
 curl -X POST \
@@ -90,19 +109,17 @@ curl -X POST \
   -H "Content-Type: application/json" \
   -d '{
     "title": "Weekly transaction review — April 14–20",
-    "body": "Reviewed 47 transactions. Resolved 41. Flagged 6 for manual review:\n\n- txn_abc: Unusually large charge at an unfamiliar merchant..."
+    "body": "Reviewed 47 transactions. Resolved 41. Deferred 6 (still tagged needs-review):\n\n- k7Xm9pQ2: Unusually large charge at an unfamiliar merchant..."
   }' \
   http://localhost:8080/api/v1/reports
 ```
 
-Reports appear in the admin dashboard under **Reports**. Unread reports are highlighted so you know when an agent has finished a session and left you something to look at.
-
 ```bash
-# Check how many unread reports are waiting
+# Check unread count from a dashboard widget or automation
 curl -H "X-API-Key: bb_your_key" \
   http://localhost:8080/api/v1/reports/unread-count
 ```
 
 <Note>
-See the [MCP overview](/mcp/overview) for instructions on connecting an AI agent to your Breadbox instance.
+See the [MCP overview](/mcp/overview) for how to connect an AI agent to your Breadbox instance.
 </Note>
