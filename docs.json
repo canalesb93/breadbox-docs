@@ -12,6 +12,16 @@
     "light": "#E26B4B",
     "dark": "#A63A24"
   },
+  "background": {
+    "color": {
+      "light": "#FCF9F3",
+      "dark": "#1A1612"
+    }
+  },
+  "banner": {
+    "content": "🚧 Breadbox is approaching V1. Some features described here are still in progress — see [#624](https://github.com/canalesb93/breadbox/issues/624) for the remaining gaps.",
+    "dismissible": true
+  },
   "navbar": {
     "primary": {
       "type": "github",

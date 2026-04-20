@@ -11,7 +11,7 @@ Unlike categories, tags are not hierarchical and a transaction can carry any num
 
 | Field | Description |
 |---|---|
-| `slug` | Stable URL-safe identifier (e.g., `needs-review`, `tax-deductible`). Used in rule actions, MCP tool calls, and the `?tags=` query filter. |
+| `slug` | Stable URL-safe identifier (e.g., `needs-review`, `tax-deductible`). Used in rule actions and MCP tool calls. |
 | `display_name` | Human-readable label shown in the dashboard. |
 | `description` | Optional short explanation of what the tag means. |
 | `color` | Hex color for the dashboard pill. |
@@ -61,27 +61,20 @@ A tag reaches a transaction one of four ways — and the activity timeline recor
 
 ## Querying by tag
 
-The `?tags=` query parameter and the `tags=` filter on MCP tools both accept a list of slugs. The default behavior is **all-of**: a transaction must carry every listed tag.
+Tag-based filters are available through the **MCP tools** (`query_transactions`, `count_transactions`) and the admin dashboard. The REST API does not currently expose tag filters on `GET /api/v1/transactions` — if you need to query by tag over HTTP, use MCP. See [issue #624](https://github.com/canalesb93/breadbox/issues/624) for the V1 parity plan.
 
-```bash
-# Transactions tagged needs-review
-curl -H "X-API-Key: bb_your_key" \
-  'http://localhost:8080/api/v1/transactions?tags=needs-review'
+MCP tools accept two filter shapes:
 
-# Transactions tagged needs-review AND high-amount
-curl -H "X-API-Key: bb_your_key" \
-  'http://localhost:8080/api/v1/transactions?tags=needs-review,high-amount'
+- **`tags`** — all-of semantics. A transaction must carry every listed slug.
+- **`any_tag`** — any-of semantics. A transaction must carry at least one.
+
+```
+query_transactions(tags=["needs-review"])                      # the review backlog
+query_transactions(tags=["needs-review", "high-amount"])       # both tags
+query_transactions(any_tag=["flagged", "disputed"])            # either tag
 ```
 
-For an **any-of** match, use `any_tag=` instead:
-
-```bash
-# Transactions tagged either flagged OR disputed
-curl -H "X-API-Key: bb_your_key" \
-  'http://localhost:8080/api/v1/transactions?any_tag=flagged,disputed'
-```
-
-The MCP `query_transactions` tool accepts the same parameters.
+In the dashboard, the transactions list page accepts `?tags=needs-review` as a URL parameter and renders the matching rows — this is what powers the `/reviews` redirect.
 
 ## Tags in rules
 
