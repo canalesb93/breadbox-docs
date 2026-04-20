@@ -1,0 +1,114 @@
+---
+title: "Tags"
+description: "Open-ended labels you attach to transactions — the primitive Breadbox uses to coordinate review, flagging, and other workflows between humans and agents."
+---
+
+Tags are open-ended labels attached to transactions. They are the primitive Breadbox uses for any workflow that asks "which transactions are in this state?" — the review queue is a tag view, and you can build your own (flagged, disputed, tax-deductible) the same way.
+
+Unlike categories, tags are not hierarchical and a transaction can carry any number of them at once.
+
+## Anatomy of a tag
+
+| Field | Description |
+|---|---|
+| `slug` | Stable URL-safe identifier (e.g., `needs-review`, `tax-deductible`). Used in rule actions, MCP tool calls, and the `?tags=` query filter. |
+| `display_name` | Human-readable label shown in the dashboard. |
+| `description` | Optional short explanation of what the tag means. |
+| `color` | Hex color for the dashboard pill. |
+| `lifecycle` | Either `persistent` or `ephemeral` — see below. |
+
+Each tag also has an 8-character `short_id` alongside its internal UUID, same as every other entity in Breadbox.
+
+## Persistent vs. ephemeral
+
+Lifecycle controls whether the tag is treated as a permanent label or a temporary flag.
+
+- **`persistent`** (the default) — the tag sticks to the transaction until you remove it. Good for durable labels like `tax-deductible`, `reimbursable`, `shared-with-partner`.
+- **`ephemeral`** — the tag is expected to come off. **Every removal requires a short note**, which is recorded as an annotation on the transaction's activity timeline. Good for workflow flags like `needs-review`, `disputed`, `pending-refund` — where the *act of resolving* the flag is itself information worth keeping.
+
+<Note>
+The note requirement is enforced at the service layer. If an agent tries to remove an ephemeral tag without supplying a rationale, the call is rejected before the tag comes off.
+</Note>
+
+## Seeded tags
+
+Breadbox ships with one tag out of the box:
+
+| Slug | Lifecycle | What it's for |
+|---|---|---|
+| `needs-review` | ephemeral | Applied to every newly-synced transaction by a seeded `on_create` rule. Removing it closes a review. See [the review workflow](/transactions/review-workflow). |
+
+Everything else is yours to define. Create new tags from the **Tags** page in the dashboard, or via the admin API.
+
+## How tags get applied
+
+A tag reaches a transaction one of four ways — and the activity timeline records which one:
+
+<Steps>
+  <Step title="Manual (user)">
+    From the transaction detail view in the dashboard, add or remove a tag directly. Recorded as `added_by_type = user`.
+  </Step>
+  <Step title="Agent (MCP)">
+    An AI agent connected over MCP calls `update_transactions` with `tags_to_add` or `tags_to_remove` (each entry can include an inline `note`). Recorded as `added_by_type = agent`.
+  </Step>
+  <Step title="Rule action">
+    A transaction rule with `add_tag` or `remove_tag` in its actions fires during sync (trigger `on_create`) or retroactively (trigger `on_apply`). Recorded as `added_by_type = rule`, with the rule's ID on the annotation so you can trace why the tag landed.
+  </Step>
+  <Step title="System">
+    Reserved for Breadbox itself — seeds, backfills, internal workflows. You won't normally apply system tags; they show up in the timeline when they do.
+  </Step>
+</Steps>
+
+## Querying by tag
+
+The `?tags=` query parameter and the `tags=` filter on MCP tools both accept a list of slugs. The default behavior is **all-of**: a transaction must carry every listed tag.
+
+```bash
+# Transactions tagged needs-review
+curl -H "X-API-Key: bb_your_key" \
+  'http://localhost:8080/api/v1/transactions?tags=needs-review'
+
+# Transactions tagged needs-review AND high-amount
+curl -H "X-API-Key: bb_your_key" \
+  'http://localhost:8080/api/v1/transactions?tags=needs-review,high-amount'
+```
+
+For an **any-of** match, use `any_tag=` instead:
+
+```bash
+# Transactions tagged either flagged OR disputed
+curl -H "X-API-Key: bb_your_key" \
+  'http://localhost:8080/api/v1/transactions?any_tag=flagged,disputed'
+```
+
+The MCP `query_transactions` tool accepts the same parameters.
+
+## Tags in rules
+
+Tags are both a **condition** and an **action** in the [rule DSL](/transactions/rules):
+
+- As a **condition**, rules can match on `tags contains "needs-review"` or `tags not_contains "disputed"` to gate which transactions they affect.
+- As an **action**, rules can `add_tag` or `remove_tag` to manage tag state automatically. A rule that adds a tag can be scheduled (trigger `on_create` during sync) or run retroactively against historical data.
+
+This is how you build workflow tags that behave like `needs-review`: define a tag, then write rules that apply or remove it under the conditions you care about.
+
+## Example: a disputed-charges workflow
+
+Suppose you want a dedicated queue for charges you intend to contest with your bank. The ingredients:
+
+<Steps>
+  <Step title="Create a `disputed` tag (ephemeral)">
+    From **Tags** in the dashboard, add a new tag with slug `disputed`, lifecycle `ephemeral`, and a description like "Charge we're contesting — remove with outcome note when resolved." Ephemeral means the note you leave when you take it off becomes part of the transaction's history.
+  </Step>
+  <Step title="Apply it when you see a bad charge">
+    Tag the transaction manually from the dashboard, or have an agent tag it by name pattern via `update_transactions`. No rule necessary — you apply it reactively.
+  </Step>
+  <Step title="Use `?tags=disputed` as your queue">
+    Same pattern as review: filter the transactions list to `tags=disputed` and the page becomes your dispute-tracking view. No new UI needed.
+  </Step>
+  <Step title="Resolve with a note">
+    When the bank refunds or rejects the dispute, remove the tag and record the outcome (\"Refunded $42.18 on 2026-04-14\"). Because the tag is ephemeral, the note is saved to the activity timeline and you can look back months later and see exactly how each dispute played out.
+  </Step>
+</Steps>
+
+The review workflow is the same shape — just with a different tag slug.

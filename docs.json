@@ -45,8 +45,9 @@
             "pages": [
               "transactions/overview",
               "transactions/categories",
+              "transactions/tags",
               "transactions/rules",
-              "transactions/review-queue"
+              "transactions/review-workflow"
             ]
           },
           {
@@ -93,5 +94,11 @@
         ]
       }
     ]
-  }
+  },
+  "redirects": [
+    {
+      "source": "/transactions/review-queue",
+      "destination": "/transactions/review-workflow"
+    }
+  ]
 }
