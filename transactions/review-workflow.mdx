@@ -1,6 +1,6 @@
 ---
 title: "Review workflow"
-description: "Understand how Breadbox's needs-review tag, seeded rule, and ephemeral-tag lifecycle combine into a configurable review workflow you can extend or turn off."
+description: "Understand how Breadbox's needs-review tag, seeded rule, and tag-based workflow combine into a configurable review workflow you can extend or turn off."
 ---
 
 Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the `needs-review` tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
@@ -11,7 +11,7 @@ Three pieces make up the default experience:
 
 <Steps>
   <Step title="A seeded `needs-review` tag">
-    Installed as an **ephemeral** tag — meaning the tag is expected to come off eventually, and every removal must include a short note that gets recorded on the transaction's activity timeline.
+    A workflow tag that is expected to come off once a transaction has been reviewed. When you remove it, you can include an optional note that gets recorded on the transaction's activity timeline.
   </Step>
   <Step title="A seeded rule on `on_create`">
     A system-created rule fires for every newly-synced transaction and applies the `needs-review` tag. No conditions — it matches everything by default.
@@ -25,7 +25,7 @@ All three are **configurable**. The tag can be recolored or renamed, the rule ca
 
 ## Resolving a review
 
-To take a transaction out of the queue, remove the `needs-review` tag. Because it is ephemeral, removal requires a note — the note is saved as an annotation so anyone (or any agent) looking at the transaction later can see why the review was closed.
+To take a transaction out of the queue, remove the `needs-review` tag. You can include an optional note when removing it — the note is saved as an annotation so anyone (or any agent) looking at the transaction later can see why the review was closed.
 
 In the dashboard, the transaction detail view has a **Remove tag** action with a note prompt. An MCP-connected agent does the same thing in a single compound write via `update_transactions` — set the category, remove `needs-review` with a note, and optionally leave a comment, all in one operation.
 
@@ -38,7 +38,7 @@ The REST API exposes `PATCH /api/v1/transactions/{id}/category` for category cha
 ## Making the workflow your own
 
 <Tip>
-The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions and its own lifecycle.
+The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions.
 </Tip>
 
 Common customizations:

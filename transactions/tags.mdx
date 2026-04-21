@@ -15,28 +15,20 @@ Unlike categories, tags are not hierarchical and a transaction can carry any num
 | `display_name` | Human-readable label shown in the dashboard. |
 | `description` | Optional short explanation of what the tag means. |
 | `color` | Hex color for the dashboard pill. |
-| `lifecycle` | Either `persistent` or `ephemeral` — see below. |
 
 Each tag also has an 8-character `short_id` alongside its internal UUID, same as every other entity in Breadbox.
 
-## Persistent vs. ephemeral
+## Tag removal notes
 
-Lifecycle controls whether the tag is treated as a permanent label or a temporary flag.
-
-- **`persistent`** (the default) — the tag sticks to the transaction until you remove it. Good for durable labels like `tax-deductible`, `reimbursable`, `shared-with-partner`.
-- **`ephemeral`** — the tag is expected to come off. **Every removal requires a short note**, which is recorded as an annotation on the transaction's activity timeline. Good for workflow flags like `needs-review`, `disputed`, `pending-refund` — where the *act of resolving* the flag is itself information worth keeping.
-
-<Note>
-The note requirement is enforced at the service layer. If an agent tries to remove an ephemeral tag without supplying a rationale, the call is rejected before the tag comes off.
-</Note>
+When you remove a tag from a transaction, you can optionally include a short note. If provided, the note is recorded as an annotation on the transaction's activity timeline — useful for workflow flags like `needs-review` or `disputed`, where the reason for resolution is worth keeping.
 
 ## Seeded tags
 
 Breadbox ships with one tag out of the box:
 
-| Slug | Lifecycle | What it's for |
-|---|---|---|
-| `needs-review` | ephemeral | Applied to every newly-synced transaction by a seeded `on_create` rule. Removing it closes a review. See [the review workflow](/transactions/review-workflow). |
+| Slug | What it's for |
+|---|---|
+| `needs-review` | Applied to every newly-synced transaction by a seeded `on_create` rule. Removing it closes a review. See [the review workflow](/transactions/review-workflow). |
 
 Everything else is yours to define. Create new tags from the **Tags** page in the dashboard, or via the admin API.
 
@@ -90,8 +82,8 @@ This is how you build workflow tags that behave like `needs-review`: define a ta
 Suppose you want a dedicated queue for charges you intend to contest with your bank. The ingredients:
 
 <Steps>
-  <Step title="Create a `disputed` tag (ephemeral)">
-    From **Tags** in the dashboard, add a new tag with slug `disputed`, lifecycle `ephemeral`, and a description like "Charge we're contesting — remove with outcome note when resolved." Ephemeral means the note you leave when you take it off becomes part of the transaction's history.
+  <Step title="Create a `disputed` tag">
+    From **Tags** in the dashboard, add a new tag with slug `disputed` and a description like "Charge we're contesting — remove with outcome note when resolved."
   </Step>
   <Step title="Apply it when you see a bad charge">
     Tag the transaction manually from the dashboard, or have an agent tag it by name pattern via `update_transactions`. No rule necessary — you apply it reactively.
@@ -100,7 +92,7 @@ Suppose you want a dedicated queue for charges you intend to contest with your b
     Same pattern as review: filter the transactions list to `tags=disputed` and the page becomes your dispute-tracking view. No new UI needed.
   </Step>
   <Step title="Resolve with a note">
-    When the bank refunds or rejects the dispute, remove the tag and record the outcome (\"Refunded $42.18 on 2026-04-14\"). Because the tag is ephemeral, the note is saved to the activity timeline and you can look back months later and see exactly how each dispute played out.
+    When the bank refunds or rejects the dispute, remove the tag and record the outcome (\"Refunded $42.18 on 2026-04-14\"). The note is saved to the activity timeline and you can look back months later and see exactly how each dispute played out.
   </Step>
 </Steps>
 
