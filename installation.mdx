@@ -1,9 +1,12 @@
 ---
-title: "Install Breadbox on Docker or bare metal"
+title: "How to Install Breadbox"
 description: "Install Breadbox using Docker Compose, a pre-built binary, or from source. All methods end at the same setup wizard at http://localhost:8080."
+sidebarTitle: "How to Install"
 ---
 
 Breadbox ships as a single Go binary that bundles the REST API, MCP server, admin dashboard, webhooks, and sync scheduler. You can run it with Docker Compose (recommended), download a pre-built binary, build from source with Go, or deploy it to a server with automatic HTTPS in one command. All installation methods end at the same first-run setup wizard.
+
+// TODO: Improve overall installation process, should be industry standard, professional and simple. We should offer various options with a tabbed view or an index to various sections
 
 ## Docker (recommended)
 
@@ -61,7 +64,7 @@ image: ghcr.io/canalesb93/breadbox:v0.1.0
 
 ## Binary download
 
-Pre-built binaries for Linux and macOS (amd64/arm64) are available on the [GitHub Releases](https://github.com/canalesb93/breadbox/releases) page. You'll need a running PostgreSQL 16+ instance before starting.
+Pre-built binaries for Linux and macOS (amd64/arm64) are available on the [GitHub Releases](https://github.com/canalesb93/breadbox/releases) page. You'll need a running PostgreSQL 16\+ instance before starting.
 
 ```bash
 # Download the binary for your platform (example: Linux amd64)
@@ -78,7 +81,7 @@ export ENCRYPTION_KEY="$(openssl rand -hex 32)"
 
 ## Go install
 
-Build from source using Go 1.24 or later. You'll need a running PostgreSQL 16+ instance.
+Build from source using Go 1.24 or later. You'll need a running PostgreSQL 16\+ instance.
 
 ```bash
 git clone https://github.com/canalesb93/breadbox.git && cd breadbox
@@ -115,7 +118,7 @@ docker compose up -d
 All Breadbox configuration is done through environment variables. Set these in your `.env` file or export them directly before running the binary.
 
 | Variable | Required | Description |
-|---|---|---|
+| --- | --- | --- |
 | `DATABASE_URL` | Yes | Full PostgreSQL connection string, e.g. `postgres://user:pass@host:5432/breadbox?sslmode=disable` |
 | `ENCRYPTION_KEY` | Yes | 32-byte key as a 64-character hex string. Generate with `openssl rand -hex 32`. Required when any bank provider is configured. |
 | `SERVER_PORT` | No | HTTP listen port. Defaults to `8080`. |

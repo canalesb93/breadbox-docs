@@ -1,6 +1,7 @@
 ---
 title: "Connect banks with Plaid"
 description: "Set up your Plaid developer account, enter credentials in the Breadbox setup wizard, and link your first bank account using the Plaid Link flow."
+sidebarTitle: "Plaid API"
 ---
 
 Plaid is the primary way to connect US bank accounts to Breadbox. It supports thousands of financial institutions, retrieves up to two years of transaction history on first connection, and keeps your data current through a combination of scheduled syncing and real-time webhooks. This page walks you through everything you need as a user to get a Plaid connection running.
@@ -16,10 +17,10 @@ You need a Plaid developer account before you can configure Breadbox. A free acc
 Plaid has three environments. You choose one during the Breadbox setup wizard, and it determines which banks you can connect and whether there are costs.
 
 | Environment | What it connects to | Cost |
-|-------------|---------------------|------|
+| --- | --- | --- |
 | Sandbox | Simulated bank data only. Use this to try Breadbox without linking a real bank. | Free |
 | Development | Real bank accounts. Limited to 100 live connections total. | Free |
-| Production | Real bank accounts. Unlimited connections. | ~$1.50 per connected bank per month |
+| Production | Real bank accounts. Unlimited connections. | ~\$1.50 per connected bank per month |
 
 <Note>
   Start with Development to test with your real bank accounts at no cost. Switch to Production only when you need more than 100 connections or are ready for a permanent setup.
@@ -125,7 +126,7 @@ Removing a connection:
 
 ## Production costs
 
-Plaid's Production environment is billed at approximately $1.50 per connected bank (called an "item") per month. Each bank you connect — regardless of how many accounts it has — counts as one item. The Development environment is free up to 100 items.
+Plaid's Production environment is billed at approximately \$1.50 per connected bank (called an "item") per month. Each bank you connect — regardless of how many accounts it has — counts as one item. The Development environment is free up to 100 items.
 
 <Note>
   Syncing more frequently does not increase your cost. Production billing is per item per month, not per API call.

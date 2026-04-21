@@ -1,6 +1,7 @@
 ---
-title: "Transaction categories and overrides"
 description: "Understand Breadbox's two-level category hierarchy, how categories are assigned, and how to override, manage, and import categories via the API."
+title: "Category System"
+sidebarTitle: "Categories"
 ---
 
 Breadbox uses a two-level category hierarchy to classify every transaction. Categories come from your bank provider by default, but you can override them manually or have rules assign them automatically. This page explains how the system works and how to manage categories through the admin dashboard and REST API.
@@ -27,7 +28,7 @@ A transaction's category can be set by three sources, in increasing order of pre
 When you manually set a transaction's category, Breadbox marks it with `category_override = true`. This flag signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
 
 <Note>
-Rules that would otherwise reassign the category are skipped for any transaction where `category_override = true`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
+  Rules that would otherwise reassign the category are skipped for any transaction where `category_override = true`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
 </Note>
 
 To clear a manual override and return to the provider default, call `DELETE /api/v1/transactions/{id}/category`. This removes the override and re-enables rule-based categorization on the next sync.
@@ -155,5 +156,5 @@ curl -X POST \
 </CodeGroup>
 
 <Tip>
-Export your categories before making large structural changes. The TSV export gives you a backup you can re-import if needed.
+  Export your categories before making large structural changes. The TSV export gives you a backup you can re-import if needed.
 </Tip>

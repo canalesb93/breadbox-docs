@@ -32,9 +32,10 @@
     "tabs": [
       {
         "tab": "Docs",
-        "groups": [
+        "pages": [
+          "quick-start",
           {
-            "group": "Get Started",
+            "group": "Overview",
             "pages": [
               "introduction",
               "installation",
@@ -45,9 +46,15 @@
             "group": "Bank Connections",
             "pages": [
               "connections/overview",
-              "connections/plaid",
-              "connections/teller",
-              "connections/csv-import"
+              {
+                "group": "Providers",
+                "expanded": true,
+                "pages": [
+                  "connections/plaid",
+                  "connections/teller",
+                  "connections/csv-import"
+                ]
+              }
             ]
           },
           {
@@ -102,6 +109,9 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "Guides"
       }
     ]
   },
