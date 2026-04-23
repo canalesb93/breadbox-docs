@@ -8,6 +8,8 @@ Breadbox ships as a single Go binary that bundles the REST API, MCP server, admi
 
 // TODO: Improve overall installation process, should be industry standard, professional and simple. We should offer various options with a tabbed view or an index to various sections. Use mintlify components to improve screen further and but mainly first improve overall install experience in the main repo. We should include either a section or a new page around making your breadbox instance remotely available and options to have it https protected. For many AI integrations MCP servers require https and 3rd party apps need to be able to reach the service. It's a big requirement. I currently use [exe.dev](http://exe.dev) to run my breadbox instance but would love more options to offer the user for a quick and easy setup (Vercel?? cloudfare tunnel?? idk). Again that _could_ be its own page but good to link from here since a lot of times you want to do the initial setup in the VM itself.
 
+// TODO: for main repo -- do we need a better way to handle the encryption key in the setup? I think it currently allows for users to easily lose it during start-up. Is there a better way? What is the standard way to handle this for a small service?
+
 ## Docker (recommended)
 
 Docker Compose is the fastest way to run Breadbox. It starts both Breadbox and PostgreSQL for you — no separate database setup required.

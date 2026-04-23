@@ -3,10 +3,12 @@ title: "MCP tools for querying financial data"
 description: "Reference for all seven MCP tools in Breadbox: parameters, example inputs, example outputs, and guidance on when to use each one."
 ---
 
+// TODO: Overall not a terrible page but could use improvements in some sense. It's not clea if  this page is suppose to be for users or for agents? Most users don't need to know the intricacies of the MCP tools but a good overview would be good. And agents don't need to read docs for MCP tools as the entire purpose of MCP tools are that they work at inference stage during an agent's work. So no need to look up instructions during a session as they're part of the session.
+
 Breadbox exposes seven MCP tools that give AI agents structured access to your financial data. Each tool is a thin, callable function — the agent invokes it with a JSON input, and gets back a JSON response it can reason over. This page documents every tool, its parameters, and example inputs and outputs.
 
 <Note>
-**Amount convention:** Amounts follow Plaid's convention. Positive values are debits (money leaving an account). Negative values are credits (money entering). When an agent summarizes spending, it should sum positive amounts only.
+  **Amount convention:** Amounts follow Plaid's convention. Positive values are debits (money leaving an account). Negative values are credits (money entering). When an agent summarizes spending, it should sum positive amounts only.
 </Note>
 
 ## Recommended agent workflow
@@ -34,7 +36,7 @@ Lists all connected bank accounts with their current balances. Call this early i
 **Input parameters**
 
 | Parameter | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `user_id` | string | No | Return only accounts owned by this family member. Omit to return all accounts. |
 
 <CodeGroup>
@@ -87,7 +89,7 @@ Lists all connected bank accounts with their current balances. Call this early i
 ```
 
 <Note>
-For credit accounts, `balance_current` represents the amount owed, not available funds. Do not sum balances across accounts with different `iso_currency_code` values.
+  For credit accounts, `balance_current` represents the amount owed, not available funds. Do not sum balances across accounts with different `iso_currency_code` values.
 </Note>
 
 ---
@@ -99,7 +101,7 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 **Input parameters**
 
 | Parameter | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `start_date` | string (YYYY-MM-DD) | No | Include transactions on or after this date. |
 | `end_date` | string (YYYY-MM-DD) | No | Include transactions on or before this date. |
 | `account_id` | string | No | Filter to a specific account. |
@@ -169,13 +171,13 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 When there are no more pages, the response includes `"has_more": false` and `"next_cursor": null`.
 
 <Warning>
-Each transaction object is roughly 50 tokens. At the default page size of 100, one call returns approximately 5,000 tokens of content. At the maximum of 500, a single call can reach 25,000 tokens. Use `count_transactions` first and apply filters to keep result sets manageable.
+  Each transaction object is roughly 50 tokens. At the default page size of 100, one call returns approximately 5,000 tokens of content. At the maximum of 500, a single call can reach 25,000 tokens. Use `count_transactions` first and apply filters to keep result sets manageable.
 </Warning>
 
 **Page size guidance**
 
 | Use case | Recommended `limit` |
-|---|---|
+| --- | --- |
 | Sampling or spot-checking | 25 |
 | Single-month analysis | 100 (default) |
 | Full dataset processing | 200–500 |
@@ -192,7 +194,7 @@ Counts matching transactions without returning any transaction data. Accepts the
 Same filters as `query_transactions`, minus `cursor`, `limit`, `sort_by`, and `sort_order`.
 
 | Parameter | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `start_date` | string (YYYY-MM-DD) | No | Count transactions on or after this date. |
 | `end_date` | string (YYYY-MM-DD) | No | Count transactions on or before this date. |
 | `account_id` | string | No | Filter to a specific account. |
@@ -336,7 +338,7 @@ None. Pass an empty object.
 **Status values**
 
 | Status | Meaning |
-|---|---|
+| --- | --- |
 | `active` | Connection is healthy and syncing normally. |
 | `error` | Last sync failed. Check `error_message` for details. |
 | `pending_reauth` | Connection requires user re-authentication (e.g., bank login changed). |
@@ -355,7 +357,7 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 **Input parameters**
 
 | Parameter | Type | Required | Description |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | `connection_id` | string | No | Sync only this connection. Omit to sync all active connections. |
 
 <CodeGroup>
@@ -384,7 +386,7 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 ```
 
 <Note>
-`trigger_sync` requires a full access API key. It is not available with a read-only key.
+  `trigger_sync` requires a full access API key. It is not available with a read-only key.
 </Note>
 
 **When to use it**

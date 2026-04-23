@@ -10,7 +10,7 @@ API keys authenticate requests to Breadbox's REST API and MCP server. Every exte
 Each key has one of two scopes:
 
 | Scope | Permissions |
-|---|---|
+| --- | --- |
 | `full_access` | Read and write — can query transactions, update categories, create rules, and submit agent reports |
 | `read_only` | Read only — can query accounts, transactions, and balances, but cannot modify any data |
 
@@ -28,7 +28,7 @@ Use `read_only` keys for AI agents unless the agent specifically needs to catego
   <Step title="Copy the key immediately">
     The full key is displayed once and never stored in plaintext. Copy it now and save it in a password manager or secrets vault.
 
-    ```
+    ```text
     bb_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5
     ```
 
@@ -44,7 +44,7 @@ Use `read_only` keys for AI agents unless the agent specifically needs to catego
 
 Every API key starts with the `bb_` prefix followed by a random string of characters, for example:
 
-```
+```text
 bb_a1b2c3d4e5f6g7h8i9j0k1l2m3n4o5
 ```
 
@@ -61,12 +61,14 @@ curl -H "X-API-Key: bb_your_api_key" \
 
 For MCP over HTTP, pass the same header when connecting your agent:
 
-```
+```text
 URL: https://your-host/mcp
 Header: X-API-Key: bb_your_api_key
 ```
 
 ## Create a key from the CLI
+
+// TODO: I think we should remove this option from the CLI
 
 If you prefer to create keys without the dashboard — for example, in a setup script — use the `api-keys` subcommand:
 
