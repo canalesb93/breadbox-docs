@@ -19,7 +19,7 @@
     }
   },
   "banner": {
-    "content": "🚧 Breadbox is approaching V1. Some features described here are still in progress — see [#624](https://github.com/canalesb93/breadbox/issues/624) for the remaining gaps.",
+    "content": "🚧 Breadbox is available Early Access. Some features described here may still be in-progress or innaccurate.",
     "dismissible": true
   },
   "navbar": {
@@ -123,5 +123,13 @@
       "source": "/transactions/review-queue",
       "destination": "/transactions/review-workflow"
     }
-  ]
+  ],
+  "search": {
+    "prompt": "Search..."
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
+  }
 }
