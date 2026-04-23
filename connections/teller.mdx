@@ -4,6 +4,8 @@ description: "Set up your Teller App ID and mTLS certificates, then link bank ac
 sidebarTitle: "Teller API"
 ---
 
+// TODO: Teller should be the provider we "subtly" push the users to try out first as its easier. Plaid is more complete but testing with production data is much harder than it is with Plaid. We should reflect this through out all of our documentation (where reasonable)
+
 Teller is an alternative to Plaid for connecting US bank accounts. It uses a different authentication model — mutual TLS (mTLS) certificates instead of API keys — but the experience from the admin dashboard is nearly identical to connecting with Plaid. Use Teller when your bank is supported by Teller but not Plaid, or when you prefer Teller's coverage for your institutions.
 
 ## What you need
@@ -23,7 +25,7 @@ Before configuring Teller in Breadbox, you need:
 Teller has three environments, similar to Plaid:
 
 | Environment | What it connects to | Cost | Notes |
-|-------------|---------------------|------|-------|
+| --- | --- | --- | --- |
 | Sandbox | Simulated bank data | Free | Unlimited test enrollments |
 | Development | Real bank accounts | Free | Limited to 100 cumulative enrollments |
 | Production | Real bank accounts | Paid | Unlimited |
@@ -39,7 +41,7 @@ Unlike Plaid, the Teller environment is selected during the Teller Connect enrol
 Teller credentials are supplied as environment variables. Set the following before starting Breadbox:
 
 | Variable | Description |
-|----------|-------------|
+| --- | --- |
 | `TELLER_APP_ID` | Your application ID from the Teller Dashboard |
 | `TELLER_CERT_PATH` | Absolute path to your `cert.pem` file |
 | `TELLER_KEY_PATH` | Absolute path to your `private-key.pem` file |

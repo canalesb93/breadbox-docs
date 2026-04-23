@@ -3,6 +3,13 @@ title: "Set up MCP for Claude and AI agents"
 description: "Step-by-step instructions for connecting Claude Desktop, Claude Code, or any MCP-compatible agent to your Breadbox instance."
 ---
 
+// TODO: Let's leverage mintlify to better structure this page and we should validate each flow by deploying an agent that does some web research to ensure its up to date. Would also love to add integration/instructions to:\
+- claude desktop via the UI (I can help adding images if you can setup the section for it)\
+- openclaw setup (autonomous agent setup that runs in its own VM)\
+- manus setup\
+- chatgpt and/or codex (if possible)\
+- gemini and/or gemini cli (if possible)
+
 Breadbox's MCP server is ready as soon as your instance is running — there's nothing extra to install or start. You configure your AI client to point at Breadbox and it connects using the MCP protocol. This page walks through setup for Claude Desktop, Claude Code, and any other MCP-compatible agent.
 
 ## Prerequisites
@@ -18,7 +25,7 @@ Use this option when Breadbox is running in Docker or on a remote server. Claude
 
 Open the Claude Desktop config file. On macOS, it is at:
 
-```
+```text
 ~/Library/Application Support/Claude/claude_desktop_config.json
 ```
 
@@ -107,12 +114,13 @@ Claude Code reads MCP configuration from `.mcp.json` in your project root, or fr
 
 Any agent that supports MCP over Streamable HTTP can connect to Breadbox. Point your client at the `/mcp` endpoint and include your API key:
 
-```
+```text
 URL:    https://your-host/mcp
 Header: X-API-Key: bb_your_api_key_here
 ```
 
 The endpoint responds to:
+
 - `POST /mcp` — JSON-RPC messages
 - `GET /mcp` — SSE stream (with session resumption support)
 - `DELETE /mcp` — terminates the session
@@ -122,7 +130,7 @@ The endpoint responds to:
 ## Connection URL reference
 
 | Deployment | Transport | URL or command |
-|---|---|---|
+| --- | --- | --- |
 | Docker Compose (local) | HTTP | `http://localhost:8080/mcp` |
 | Remote server | HTTP | `https://your-domain.com/mcp` |
 | Local binary | Stdio | `breadbox mcp-stdio` |
@@ -138,7 +146,7 @@ A **read-only** key gives the agent access to all query tools — listing accoun
 A **full access** key allows the agent to trigger manual syncs and submit reports in addition to reading data.
 
 <Note>
-For most analysis and Q&A use cases, a read-only key is sufficient and limits what the agent can affect. Use a full access key only when you want the agent to trigger syncs or submit reports on your behalf.
+  For most analysis and Q&A use cases, a read-only key is sufficient and limits what the agent can affect. Use a full access key only when you want the agent to trigger syncs or submit reports on your behalf.
 </Note>
 
 Stdio mode always has full access because it connects directly to the database.

@@ -6,7 +6,7 @@ sidebarTitle: "How to Install"
 
 Breadbox ships as a single Go binary that bundles the REST API, MCP server, admin dashboard, webhooks, and sync scheduler. You can run it with Docker Compose (recommended), download a pre-built binary, build from source with Go, or deploy it to a server with automatic HTTPS in one command. All installation methods end at the same first-run setup wizard.
 
-// TODO: Improve overall installation process, should be industry standard, professional and simple. We should offer various options with a tabbed view or an index to various sections
+// TODO: Improve overall installation process, should be industry standard, professional and simple. We should offer various options with a tabbed view or an index to various sections. Use mintlify components to improve screen further and but mainly first improve overall install experience in the main repo. We should include either a section or a new page around making your breadbox instance remotely available and options to have it https protected. For many AI integrations MCP servers require https and 3rd party apps need to be able to reach the service. It's a big requirement. I currently use [exe.dev](http://exe.dev) to run my breadbox instance but would love more options to offer the user for a quick and easy setup (Vercel?? cloudfare tunnel?? idk). Again that _could_ be its own page but good to link from here since a lot of times you want to do the initial setup in the VM itself.
 
 ## Docker (recommended)
 

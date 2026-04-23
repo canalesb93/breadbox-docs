@@ -50,8 +50,8 @@
                 "group": "Providers",
                 "expanded": true,
                 "pages": [
-                  "connections/plaid",
                   "connections/teller",
+                  "connections/plaid",
                   "connections/csv-import"
                 ]
               }
@@ -111,7 +111,10 @@
         ]
       },
       {
-        "tab": "Guides"
+        "tab": "Guides",
+        "pages": [
+          "automating-breadbox"
+        ]
       }
     ]
   },
