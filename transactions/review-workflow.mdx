@@ -31,15 +31,11 @@ In the dashboard, the transaction detail view has a **Remove tag** action with a
 
 Leaving the tag in place is the "skip" action — the transaction stays in the queue for next time. There is no separate reject or approve state; the decision is captured by whichever category ends up on the transaction plus the note you leave when the tag comes off.
 
-<Note>
-  The REST surface covers both sides of a review now: `PATCH /api/v1/transactions/{id}/category` for category changes, plus the [Tags API](/api/tags) (`POST /api/v1/transactions/{id}/tags` to attach, `DELETE /api/v1/transactions/{id}/tags/{slug}` to detach with an optional note). MCP's `update_transactions` remains the ergonomic path for agents — it bundles category + tag + comment into a single compound op — but direct REST works too if you prefer scripting without an MCP client.
-</Note>
+The REST surface covers both sides of a review: `PATCH /api/v1/transactions/{id}/category` for category changes, plus the [Tags API](/api/tags) (`POST /api/v1/transactions/{id}/tags` to attach, `DELETE /api/v1/transactions/{id}/tags/{slug}` to detach with an optional note). MCP's `update_transactions` remains the ergonomic path for agents — it bundles category + tag + comment into a single compound op — but direct REST works too if you prefer scripting without an MCP client.
 
 ## Making the workflow your own
 
-<Tip>
-  The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions.
-</Tip>
+The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions.
 
 Common customizations:
 
@@ -83,8 +79,4 @@ A typical agent loop:
   </Step>
 </Steps>
 
-Agents summarize each session via the [reports API](/api/reports) (or the [`submit_report` MCP tool](/mcp/reference/reports)). For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer).
-
-<Note>
-  See the [MCP overview](/mcp/overview) for how to connect an AI agent to your Breadbox instance.
-</Note>
+Agents summarize each session via the [reports API](/api/reports) (or the [`submit_report` MCP tool](/mcp/reference/reports)). For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer). To connect an AI agent to your Breadbox instance, see the [MCP overview](/mcp/overview).

@@ -28,13 +28,18 @@
       "href": "https://github.com/canalesb93/breadbox"
     }
   },
+  "icons": {
+    "library": "lucide"
+  },
   "navigation": {
     "tabs": [
       {
         "tab": "Docs",
+        "icon": "book-open",
         "pages": [
           {
             "group": "Overview",
+            "icon": "sparkles",
             "pages": [
               "introduction",
               "installation",
@@ -44,10 +49,12 @@
           },
           {
             "group": "Bank Connections",
+            "icon": "landmark",
             "pages": [
               "connections/overview",
               {
                 "group": "Providers",
+                "icon": "plug",
                 "expanded": true,
                 "pages": [
                   "connections/teller",
@@ -59,6 +66,7 @@
           },
           {
             "group": "Transactions",
+            "icon": "receipt",
             "pages": [
               "transactions/overview",
               "transactions/categories",
@@ -69,6 +77,7 @@
           },
           {
             "group": "AI Integration",
+            "icon": "bot",
             "pages": [
               "mcp/overview",
               "mcp/setup",
@@ -77,6 +86,7 @@
           },
           {
             "group": "Configuration",
+            "icon": "settings",
             "pages": [
               "configuration/environment",
               "configuration/api-keys",
@@ -87,9 +97,11 @@
       },
       {
         "tab": "API Reference",
+        "icon": "code",
         "groups": [
           {
             "group": "Overview",
+            "icon": "info",
             "pages": [
               "api/overview",
               "api/authentication",
@@ -98,6 +110,7 @@
           },
           {
             "group": "Endpoints",
+            "icon": "zap",
             "pages": [
               "api/accounts",
               "api/transactions",
@@ -113,9 +126,11 @@
       },
       {
         "tab": "MCP Reference",
+        "icon": "plug-zap",
         "groups": [
           {
             "group": "Overview",
+            "icon": "info",
             "pages": [
               "mcp/reference/overview",
               "mcp/reference/conventions"
@@ -123,6 +138,7 @@
           },
           {
             "group": "Data access (read)",
+            "icon": "search",
             "pages": [
               "mcp/reference/transactions",
               "mcp/reference/accounts",
@@ -134,6 +150,7 @@
           },
           {
             "group": "Mutations (write)",
+            "icon": "pencil",
             "pages": [
               "mcp/reference/sessions",
               "mcp/reference/categorization",
@@ -150,10 +167,12 @@
       },
       {
         "tab": "Guides",
+        "icon": "map",
         "pages": [
           "guides/overview",
           {
             "group": "Getting Started",
+            "icon": "rocket",
             "pages": [
               "guides/breadbox-in-a-nutshell",
               "guides/understanding-rules"
@@ -161,6 +180,7 @@
           },
           {
             "group": "Common Workflows",
+            "icon": "repeat",
             "pages": [
               "guides/single-routine-reviewer",
               "guides/multi-agent-reviewer",
@@ -172,6 +192,7 @@
           },
           {
             "group": "Advanced",
+            "icon": "flame",
             "pages": [
               "guides/on-demand-analysis",
               "guides/custom-dashboard-with-claude"
@@ -181,6 +202,7 @@
       },
       {
         "tab": "Changelog",
+        "icon": "history",
         "pages": ["changelog"]
       }
     ]

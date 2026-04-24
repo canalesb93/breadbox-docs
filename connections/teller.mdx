@@ -4,10 +4,6 @@ description: "Set up your Teller App ID and mTLS certificates, then link bank ac
 sidebarTitle: "Teller API"
 ---
 
-<Tip>
-  Just getting started? Teller is the easier path to test Breadbox with real bank data — no production approval process, and no paid tier to unlock live accounts.
-</Tip>
-
 Teller connects Breadbox to US bank accounts using mutual TLS (mTLS) certificates instead of API keys. The experience from the admin dashboard is nearly identical to connecting with Plaid, but the onboarding curve is gentler: you can link real accounts on the free Development tier immediately, without applying for production access. Use Teller when your bank is supported and you want the fastest path to real-data testing, or when you prefer Teller's coverage for your institutions.
 
 ## What you need
@@ -16,11 +12,7 @@ Before configuring Teller in Breadbox, you need:
 
 - A **Teller account** — create one at [teller.io](https://teller.io).
 - Your **App ID** (`TELLER_APP_ID`) from the Teller Dashboard.
-- A **certificate and private key** (`cert.pem` and `private-key.pem`) issued by Teller from the Teller Dashboard. These files authenticate your application to the Teller API.
-
-<Note>
-  The certificate and private key are application-level credentials shared across all your Teller connections. They do not contain any per-user bank credentials.
-</Note>
+- A **certificate and private key** (`cert.pem` and `private-key.pem`) issued by Teller from the Teller Dashboard. These files authenticate your application to the Teller API and are shared across all your Teller connections — they do not contain any per-user bank credentials.
 
 ## Teller environments
 

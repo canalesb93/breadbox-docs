@@ -9,11 +9,7 @@ Breadbox automatically pulls transactions from your connected bank accounts on a
 
 When you connect a bank account, Breadbox performs an initial sync that pulls your full available transaction history. After that, syncs run on the schedule you configure (every 4, 8, 12, or 24 hours) and also fire immediately whenever your bank pushes a webhook notification.
 
-Each sync fetches only the changes since the last run — new transactions, modifications to pending transactions, and removals. Breadbox processes these three lists atomically so your database stays consistent.
-
-<Note>
-  You can trigger a manual sync at any time from the admin dashboard under **Connections**, or by calling `POST /api/v1/sync` from the REST API.
-</Note>
+Each sync fetches only the changes since the last run — new transactions, modifications to pending transactions, and removals. Breadbox processes these three lists atomically so your database stays consistent. You can trigger a manual sync at any time from the admin dashboard under **Connections**, or by calling `POST /api/v1/sync` from the REST API.
 
 ## Amount convention
 
@@ -26,9 +22,9 @@ Breadbox passes Plaid's native sign convention through without modification:
 
 For example, a $12.50 coffee purchase is stored as `amount = 12.50`. A $1,000 paycheck deposit is stored as `amount = -1000.00`.
 
-<Warning>
+<Note>
   Never sum amounts across different currencies. Always check `iso_currency_code` before aggregating, and treat each currency separately.
-</Warning>
+</Note>
 
 ## Key transaction fields
 
@@ -50,9 +46,7 @@ Every transaction record includes the following fields:
 | `category_override` | boolean | `true` when a human has manually set the category. Agents and rules skip rows where this is `true`. |
 | `pending` | boolean | `true` if the transaction has not yet settled. `false` means posted. |
 
-<Tip>
-  The <Tooltip headline="Short ID" tip="8-character base62 alias accepted interchangeably with the full UUID `id` in any API or MCP tool input.">`short_id`</Tooltip> is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.
-</Tip>
+The <Tooltip headline="Short ID" tip="8-character base62 alias accepted interchangeably with the full UUID `id` in any API or MCP tool input.">`short_id`</Tooltip> is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.
 
 ## Pending vs. posted transactions
 
@@ -60,9 +54,7 @@ A transaction starts as **pending** when the bank reports it but it has not yet 
 
 When a pending transaction settles, the bank may issue a new transaction ID for the posted version. Breadbox links the posted record back to the pending one and soft-deletes the pending row automatically, so you see only one record per transaction.
 
-<Note>
-  Pending transactions are included in API responses and dashboard views by default. Use the `pending=false` query parameter to filter to posted transactions only.
-</Note>
+Pending transactions are included in API responses and dashboard views by default. Use the `pending=false` query parameter to filter to posted transactions only.
 
 ## Browsing transactions in the dashboard
 
