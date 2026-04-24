@@ -64,6 +64,14 @@ Returns a paginated list of transactions sorted by date descending by default. S
   `true` returns only pending transactions; `false` returns only posted. Omit to return both.
 </ParamField>
 
+<ParamField query="tags" type="string">
+  Comma-separated list of tag slugs. Returns only transactions that carry **every** listed tag (AND semantics). Example: `tags=needs-review,subscription`. See the [Tags API](/api/tags) for the full tag-management surface.
+</ParamField>
+
+<ParamField query="any_tag" type="string">
+  Comma-separated list of tag slugs. Returns transactions that carry **at least one** of the listed tags (OR semantics). Example: `any_tag=flagged,disputed`.
+</ParamField>
+
 <ParamField query="sort_by" type="string" default="date">
   Sort field. One of: `date`, `amount`, `name`. Cursor pagination only works with `date` sort.
 </ParamField>

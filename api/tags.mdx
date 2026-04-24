@@ -1,0 +1,221 @@
+---
+title: "Tags API"
+sidebarTitle: "Tags"
+description: "Reference for the Breadbox tag endpoints: list all tags, attach a tag to a transaction, and detach a tag from a transaction. Filtering transactions by tag is documented on the transactions page."
+---
+
+Tags are open-ended labels attached to transactions that coordinate work between humans and agents — for example, the seeded `needs-review` tag that marks transactions for triage. Each tag has a stable `slug` (machine identifier) and a human-readable `display_name`. The REST tag endpoints mirror the `list_tags`, `add_transaction_tag`, and `remove_transaction_tag` MCP tools.
+
+See also [Tags](/transactions/tags) for conceptual background and [Review workflow](/transactions/review-workflow) for how the `needs-review` tag drives the default review loop.
+
+<Note>
+  Tag record CRUD (creating, updating, deleting tag records themselves) is currently dashboard-only and MCP-only (`create_tag`, `update_tag`, `delete_tag`). REST endpoints for tag CRUD are not yet exposed — the tag endpoints below operate on the *assignment* between tags and transactions.
+</Note>
+
+---
+
+## List tags
+
+```text
+GET /api/v1/tags
+```
+
+Returns every registered tag. Response is not paginated — households typically have a small, finite set of tags.
+
+**Auth:** Read
+
+### Response
+
+```json
+{
+  "tags": [
+    {
+      "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
+      "short_id": "Kt4mNpQ8",
+      "slug": "needs-review",
+      "display_name": "Needs review",
+      "description": "Transactions flagged for human or agent review.",
+      "color": "#E26B4B",
+      "icon": "flag",
+      "created_at": "2025-11-01T09:00:00Z",
+      "updated_at": "2025-11-01T09:00:00Z"
+    },
+    {
+      "id": "t2b3c4d5-e6f7-890a-bcde-f12345678901",
+      "short_id": "Lv5nOqR9",
+      "slug": "subscription",
+      "display_name": "Subscription",
+      "description": "Recurring subscription charges.",
+      "color": null,
+      "icon": null,
+      "created_at": "2026-01-14T11:20:00Z",
+      "updated_at": "2026-03-04T08:14:00Z"
+    }
+  ]
+}
+```
+
+```bash
+curl -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/tags"
+```
+
+---
+
+## Attach a tag to a transaction
+
+```text
+POST /api/v1/transactions/{id}/tags
+```
+
+Attaches a tag (by its slug) to the given transaction. If the slug isn't yet registered as a tag record, Breadbox auto-creates it using the slug as the display name — safe for agent-driven workflows. Idempotent: repeating the same call returns `already_present: true` instead of erroring.
+
+An annotation of kind `tag_added` is written to the transaction's activity timeline and carries the actor identity (API key name) and the optional note.
+
+**Auth:** Write (full-access key)
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The transaction's Breadbox UUID or 8-character short ID.
+</ParamField>
+
+### Request body
+
+<ParamField body="slug" type="string" required>
+  The tag slug to attach (e.g., `"needs-review"`, `"subscription"`, `"disputed"`). Trimmed; must be non-empty. Unknown slugs are auto-created.
+</ParamField>
+
+<ParamField body="note" type="string">
+  Optional free-text note recorded on the `tag_added` annotation. Useful for explaining why the tag is being applied.
+</ParamField>
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{"slug":"subscription","note":"Confirmed monthly from Gmail receipt"}' \
+  "http://localhost:8080/api/v1/transactions/txn_abc12345/tags"
+```
+
+### Response
+
+```json
+{
+  "added": true,
+  "already_present": false,
+  "slug": "subscription",
+  "transaction_id": "txn_abc12345"
+}
+```
+
+When the tag was already attached, `added` is `false` and `already_present` is `true`.
+
+---
+
+## Detach a tag from a transaction
+
+```text
+DELETE /api/v1/transactions/{id}/tags/{slug}
+```
+
+Removes a tag assignment. An annotation of kind `tag_removed` is written with the optional note (useful for recording review resolution: _"verified as legitimate, not a duplicate"_). Idempotent: if the tag wasn't attached, `already_absent: true` is returned.
+
+**Auth:** Write (full-access key)
+
+### Path parameters
+
+<ParamField path="id" type="string" required>
+  The transaction's Breadbox UUID or 8-character short ID.
+</ParamField>
+
+<ParamField path="slug" type="string" required>
+  The tag slug to detach.
+</ParamField>
+
+### Query parameters
+
+<ParamField query="note" type="string">
+  Optional free-text note to record on the `tag_removed` annotation. If you prefer a JSON body, pass `{"note":"..."}` instead — both forms are accepted.
+</ParamField>
+
+```bash
+curl -X DELETE \
+  -H "X-API-Key: bb_your_key" \
+  "http://localhost:8080/api/v1/transactions/txn_abc12345/tags/needs-review?note=agent%20confirmed%20category"
+```
+
+### Response
+
+```json
+{
+  "removed": true,
+  "already_absent": false,
+  "slug": "needs-review",
+  "transaction_id": "txn_abc12345"
+}
+```
+
+---
+
+## Filtering transactions by tag
+
+The `/api/v1/transactions` and `/api/v1/transactions/count` endpoints accept two tag-filter query parameters. Both take a comma-separated list of slugs:
+
+- **`tags=a,b,c`** — AND semantics. Only transactions that carry *every* listed tag match.
+- **`any_tag=a,b,c`** — OR semantics. Transactions carrying at least *one* of the listed tags match.
+
+See [Transactions API — query parameters](/api/transactions) for the full filter vocabulary. Tag filters combine freely with date, account, user, and category filters.
+
+---
+
+## Response fields
+
+<ResponseField name="id" type="string (UUID)" required>
+  Breadbox-assigned UUID. Use this to reference the tag in other API calls.
+</ResponseField>
+
+<ResponseField name="short_id" type="string" required>
+  8-character base62 alias. Accepted interchangeably with `id` where tag IDs are used.
+</ResponseField>
+
+<ResponseField name="slug" type="string" required>
+  Stable machine identifier, e.g. `"needs-review"`. Used for filtering transactions and in annotations. Auto-generated from `display_name` if not provided at creation.
+</ResponseField>
+
+<ResponseField name="display_name" type="string" required>
+  Human-readable label shown in the admin dashboard.
+</ResponseField>
+
+<ResponseField name="description" type="string">
+  Optional description surfaced in tooltips and tag-detail views.
+</ResponseField>
+
+<ResponseField name="color" type="string">
+  Optional CSS color for dashboard styling. May be `null`.
+</ResponseField>
+
+<ResponseField name="icon" type="string">
+  Optional icon name (e.g., `"flag"`, `"sparkles"`). May be `null`.
+</ResponseField>
+
+<ResponseField name="created_at" type="string (ISO 8601)" required>
+  Timestamp when this tag record was first created.
+</ResponseField>
+
+<ResponseField name="updated_at" type="string (ISO 8601)" required>
+  Timestamp when this tag record was last updated.
+</ResponseField>
+
+---
+
+## Error codes
+
+| Condition | Status | Code |
+| --- | --- | --- |
+| Missing `X-API-Key` header | `401` | `MISSING_API_KEY` |
+| Key revoked or invalid | `403` | `INVALID_API_KEY` |
+| Write called with a read-only key | `403` | `FORBIDDEN` |
+| Transaction not found | `404` | `NOT_FOUND` |
+| Missing or empty `slug` | `400` | `INVALID_PARAMETER` |
+| Unexpected server error | `500` | `INTERNAL_ERROR` |

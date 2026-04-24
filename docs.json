@@ -102,6 +102,7 @@
               "api/accounts",
               "api/transactions",
               "api/categories",
+              "api/tags",
               "api/rules",
               "api/connections",
               "api/users",
