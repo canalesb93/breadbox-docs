@@ -6,7 +6,7 @@ description: "Use a Gmail MCP alongside Breadbox so an agent can confirm generic
 A lot of generic-looking transactions — utility bills, phone bills, insurance premiums — are recognizable to a human because they match an email receipt the biller sent the week prior. An agent with access to both Breadbox and Gmail can do the same cross-check. This guide walks through the pattern with a sample prompt you can adapt.
 
 <Note>
-  **Draft — review before publishing.** The Gmail MCP ecosystem is still evolving; the tool names and authentication flow below are illustrative. Verify against the specific Gmail MCP you install before shipping this to your household. The shape of the workflow — use Gmail to confirm a transaction amount — is solid; the specific tool calls may need a light rename.
+  The concrete tool names below (`search_threads`, `get_thread`) match **Claude's built-in Gmail connector** — the easiest path if you're already using Claude Desktop or claude.ai. Other Gmail MCP implementations (e.g. community `mcp-gmail` servers) expose similar primitives but may rename them. The workflow — Gmail search by query string, then fetch the top thread — is identical across MCPs; verify the exact tool names against whichever server you install.
 </Note>
 
 ## Why you'd want this
@@ -53,8 +53,8 @@ For each transaction in the batch:
    - `date`
 
 2. Search Gmail for a recent message from that merchant using your
-   Gmail MCP (e.g., `search_threads` with `q: "from:(pge.com) newer_than:14d"`
-   or an equivalent query). You want messages from the 14 days prior
+   Gmail MCP (e.g., `search_threads` with `query: "from:(pge.com) newer_than:14d"`
+   or an equivalent). You want messages from the 14 days prior
    to the transaction date.
 
 3. Open the most recent matching thread and look for:
@@ -116,17 +116,13 @@ Customize the merchant list to match the billers you actually use.
 
 ## The shape of the Gmail MCP call
 
-Different Gmail MCP implementations name their tools differently, but they all offer the same basic capabilities: search messages by query, fetch a specific thread, and optionally label or reply. The agent needs just the first two.
+Gmail MCPs expose a small surface — search by query, fetch a specific thread, and optionally label or reply. The agent needs the first two. The shapes below mirror Claude's built-in Gmail connector (`search_threads` and `get_thread`); community MCPs may rename the tools but keep the same param set and the same Gmail search syntax (`from:`, `newer_than:`, `subject:`, etc.).
 
-<Note>
-  **Draft — review before publishing.** Exact tool names depend on which Gmail MCP you run. Verify against your installed MCP's tool list; the query string syntax (`from:`, `newer_than:`, etc.) is Gmail's own and works with any MCP that exposes search as a pass-through.
-</Note>
-
-A typical search call (naming varies):
+A typical search call:
 
 ```json
 {
-  "q": "from:(billpay.pge.com) newer_than:14d",
+  "query": "from:(billpay.pge.com) newer_than:14d",
   "max_results": 5
 }
 ```
