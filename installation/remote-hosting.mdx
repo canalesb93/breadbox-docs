@@ -82,13 +82,17 @@ This page covers four ways to put a real URL in front of Breadbox, from easiest 
 
     ### Quick tunnel (testing, no account needed)
 
-    For a one-off disposable HTTPS URL — great for trying MCP from Claude Desktop before committing to anything:
+    For a one-off disposable HTTPS URL — useful for spot-checking that a remote client can reach Breadbox at all:
 
     ```bash
     cloudflared tunnel --url http://localhost:8080
     ```
 
-    The command prints a random `https://<random>.trycloudflare.com` URL and proxies it to your local Breadbox until you kill the process. Treat this as testing-only: the URL changes every run, and there's a 200-concurrent-request ceiling.
+    The command prints a random `https://<random>.trycloudflare.com` URL and proxies it to your local Breadbox until you kill the process. Treat this as testing-only: the URL changes every run, and there's a 200-in-flight-requests ceiling. Quick tunnels also require that **no `~/.cloudflared/config.yml` file exists** — if you've already set up a named tunnel, you'll need to rename the config file before the quick tunnel will start.
+
+    <Note>
+      **Cloudflare quick tunnels don't support Server-Sent Events (SSE)** — and Breadbox's MCP endpoint (`/mcp`) uses streamable HTTP with SSE. A quick tunnel is fine for sanity-checking plain HTTP against the admin dashboard or REST API, but you'll need a **named tunnel** (below) before any MCP client can actually connect.
+    </Note>
 
     ### Named tunnel (permanent URL on your own domain)
 
