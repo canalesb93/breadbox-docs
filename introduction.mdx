@@ -3,37 +3,41 @@ title: "What is Breadbox?"
 description: "Breadbox syncs your household’s financial data into a PostgreSQL database you control, then exposes it through a built-in MCP server and a REST API."
 ---
 
-Breadbox is an open-source, self-hosted, financial aggregator for households. It manages connections to your banks via a provider like [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database, and hands that data to the AI services you already use through a built-in <Tooltip tip="Model Context Protocol — the open standard for giving AI agents access to tools and data. See modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> server and a REST API.
+Breadbox is an open-source, self-hosted financial aggregator for households. It manages connections to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database you control, and hands that data to the AI apps you already use through a built-in <Tooltip tip="Model Context Protocol — the open standard for giving AI agents access to tools and data. See modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> server.
 
-Breadbox is not meant to be your financial dashboard, it is the infrastructure that can power your financial dashboard for the post-AI world.
+**Breadbox is not an agent.** It's the infrastructure that makes the agents you already trust — Claude, ChatGPT, Manus, Openclaw — dramatically more useful for personal finance. You host it, you own the data, you pick the agents.
 
 ## Why Breadbox?
 
-The best financial advisor is already the AI you use daily — an agent that knows you and your family has the context to help with categorization, budgeting, and anomaly detection. It just needs structured access to your data without your bank credentials.
+### Your agents already know you
 
-Breadbox bridges that gap: secure bank sync, a database you control, and a clean queryable interface for any tool or agent.
+Off-the-shelf categorization engines look at a merchant name and guess. The Claude or ChatGPT you use every day has *context* no automated categorizer will ever have — it knows your recurring subscriptions, your family's routines, the business you run, the thread where you argued about that "Costco gas" charge. Give it MCP access to Breadbox and it cross-references all of that to categorize, classify, and analyze your finances with an accuracy a rules-only system can't match.
+
+### The system gets smarter over time
+
+Every time an agent decides "Nav Canada charges are Travel, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). The next sync handles it automatically; the agent only looks at genuinely new or ambiguous transactions. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
+
+### And it's open source
+
+Breadbox is MIT-licensed and self-hosted. No SaaS middleman sitting between your agents and your bank data. Fork it, audit it, extend it — or run it as-is and rely on the community.
 
 ## Key benefits
 
-<Card title="Context-based Enrichment" icon="sparkles" horizontal href="/mcp/overview">
-  When setup correctly your agents can cross-reference other context you provide them to most accurately categorize and enrich your data.
-</Card>
-
 <CardGroup cols={2}>
   <Card title="AI-ready via MCP" icon="robot" href="/mcp/overview">
-    A built-in <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">MCP</Tooltip> server lets AI assistants like Claude, ChatGPT, Manus, and Openclaw query your financial data securely, without your bank credentials.
+    A built-in <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">MCP</Tooltip> server lets AI agents like Claude, ChatGPT, Manus, and Openclaw query and reason over your financial data — using the context they already have about you — without ever touching your bank credentials.
+  </Card>
+
+  <Card title="Self-improving rules" icon="sparkles" href="/transactions/rules">
+    Agents don't just categorize transactions — they can create and maintain rules tailored to *your* spending patterns. Over time your rule library handles more of the work automatically, letting agents focus on what's genuinely new.
   </Card>
 
   <Card title="Your data, your database" icon="database">
-    All transactions are stored in a PostgreSQL database you own. No vendor lock-in — export or delete at any time.
+    All transactions live in a PostgreSQL database you own. No vendor lock-in — export, audit, or delete at any time.
   </Card>
 
-  <Card title="Multi-user households" icon="users">
-    Support every family member under one Breadbox instance, with per-user account assignment and attribution-aware filtering.
-  </Card>
-
-  <Card title="REST API" icon="code" href="/api/overview">
-    Query transactions, accounts, and categories from any tool using a structured REST API with cursor pagination, field selection, and filtering.
+  <Card title="Open source & self-hosted" icon="code-branch" href="https://github.com/canalesb93/breadbox">
+    MIT-licensed, single Go binary. Run it on your own hardware, in a VPS, or anywhere Docker runs. Full source and issue tracker on GitHub.
   </Card>
 </CardGroup>
 
@@ -43,7 +47,7 @@ Breadbox bridges that gap: secure bank sync, a database you control, and a clean
 - **MCP server** for AI-agent integration — Streamable HTTP at `/mcp` and stdio
 - **REST API** with cursor pagination, field selection, and filtering
 - **Admin dashboard** for connection management, sync monitoring, and transaction review
-- **Transaction rules engine** with recursive AND/OR/NOT conditions for self-improving data enrichment
+- **Self-improving rules engine** — agents create and maintain rules with recursive AND/OR/NOT conditions; your pattern library grows smarter over time
 - **Category system** with a two-level hierarchy
 - **Tag-based workflows** — tags allow flexible coordination between humans and agents (e.g., the seeded `needs-review` tag lets an agent flag transactions for you to look at)
 - **Account linking** to deduplicate transactions across connections (e.g., dependent cards)

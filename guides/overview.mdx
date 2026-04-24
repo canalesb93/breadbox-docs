@@ -4,20 +4,23 @@ description: "The opinionated shape of how Breadbox is meant to be used day to d
 sidebarTitle: "Start here"
 ---
 
-Breadbox isn't a dashboard. It's infrastructure: a database of your household's financial data and an <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> surface that hands it to AI apps you already use. The whole system only earns its keep when an agent is doing the boring work for you and pinging you when something needs attention.
+Breadbox isn't a dashboard, and it isn't an agent. It's infrastructure: a database of your household's financial data and an <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> surface that hands that data to the AI apps you already trust. The whole system only earns its keep when an agent is doing the boring work for you and pinging you when something needs attention.
 
-This page is the opinionated walkthrough of that loop. The individual guides go deeper on specific patterns — use this as the map.
+The two properties that make this worth doing at all:
+
+- **Your agents bring their own context.** The Claude or ChatGPT that knows your family, your business, your subscriptions, your Gmail archive can categorize and analyze financial data with an accuracy a pattern-matcher can't touch.
+- **The system compounds.** Every ambiguous case an agent resolves can be persisted as a Breadbox [rule](/transactions/rules). Next sync Breadbox handles it automatically — the agent only sees what's genuinely new. Your rule library becomes a custom, self-improving model of your financial life.
 
 ## The basic loop
 
 Across every mature Breadbox setup we've seen, the same four pieces keep showing up:
 
 1. **Transactions flow in** from Plaid, Teller, or CSV — Breadbox's sync engine handles this on a schedule and via webhooks.
-2. **Rules pre-label** what they can. Anything reliably patterned (Amazon → Shopping, PG&E → Utilities, high-value transfers → `needs-review`) gets auto-categorized or auto-tagged at sync time. See [Rules](/transactions/rules) and the [Understanding Rules guide](/guides/understanding-rules).
-3. **An agent reviews the remainder** on a cadence — what the rules couldn't classify confidently, plus anything explicitly tagged for follow-up. The agent uses Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`) to work through a batch and clear the `needs-review` tag as it goes.
+2. **Rules pre-label** what they can. Everything reliably patterned — Amazon → Shopping, PG&E → Utilities, transfers over some threshold → `needs-review` — is auto-categorized or auto-tagged at sync time. The rule library grows as the agents below teach it; see [Rules](/transactions/rules) and the [Understanding Rules guide](/guides/understanding-rules).
+3. **An agent reviews the remainder** on a cadence — what the rules couldn't classify, plus anything explicitly tagged for follow-up. The agent leans on its own context (your subscriptions, your Gmail archive, the household habits it's picked up) plus Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`) to resolve the batch. When it finds a pattern it sees repeating, it creates a new rule so it never has to look at that case again.
 4. **You look at reports**, not transactions. The agent surfaces anomalies (unusual charges, broken subscriptions, new counterparties) in [reports](/mcp/reference/reports) or an out-of-band channel (Slack, email). Your role shrinks to resolving the genuinely ambiguous cases.
 
-Most households never need more than step 3 to be "one agent, once a day." Heavier setups split it across specialists or run it from a persistent autonomous agent like Openclaw.
+The first time you run this loop, the agent reviews a lot. A month in, most transactions are pre-labeled by rules the agent itself wrote; the agent's job narrows to "whatever's new or weird." That compounding effect is the whole point.
 
 ## Pick your review pattern
 
