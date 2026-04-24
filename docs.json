@@ -193,6 +193,10 @@
     {
       "source": "/quick-start",
       "destination": "/introduction"
+    },
+    {
+      "source": "/index",
+      "destination": "/introduction"
     }
   ],
   "search": {
