@@ -15,11 +15,13 @@ cp .env.example .env
 docker compose up -d breadbox db
 ```
 
-Once the containers are healthy, open your Breadbox URL — `http://localhost:8080` for local test runs — and the first-run wizard will walk you through creating your admin account, configuring a bank provider, and setting your sync interval.
+Once the containers are healthy, open your Breadbox URL and the first-run wizard will walk you through creating your admin account, configuring a bank provider, and setting your sync interval.
 
-<Tip>
-  `http://localhost:8080` is fine for kicking the tires, but most Breadbox instances live on a publicly reachable host so agents, webhooks, and family members can reach them. See [Remote Hosting](/installation/remote-hosting) for production setups.
-</Tip>
+<Warning>
+  **Plan for remote access from the start.** Breadbox's full value — MCP access from Claude, ChatGPT, Manus, Openclaw; real-time webhooks from Plaid/Teller; access from any of your devices — depends on a publicly reachable HTTPS URL. Before you finish the wizard, read [Remote Hosting](/installation/remote-hosting) and pick a host (exe.dev, Cloudflare Tunnel, Caddy on a VPS, Tailscale Funnel).
+
+  Running Breadbox only on `http://localhost:8080` makes sense in one narrow case: when a local autonomous agent (e.g., an Openclaw runner on the same machine) is the *only* client that will ever need to reach it. Otherwise, go remote.
+</Warning>
 
 ## Where to next
 

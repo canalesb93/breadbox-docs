@@ -4,11 +4,13 @@ description: "Give your Breadbox instance a public HTTPS URL so MCP clients and 
 sidebarTitle: "Remote Hosting"
 ---
 
-Running Breadbox on `http://localhost:8080` is fine for the first-run wizard and for poking around from the same machine. Most day-to-day use cases quickly outgrow that:
+Remote hosting is the intended default for Breadbox. Almost every integration that makes Breadbox useful assumes a public HTTPS URL:
 
-- **Cloud AI clients need HTTPS.** Claude Desktop, ChatGPT's MCP connectors, and most hosted agents will only talk to an MCP server over `https://`. A bare `localhost` URL doesn't work from a cloud-hosted model.
-- **Bank webhooks need a public URL.** Plaid and Teller push real-time updates (new transactions, reauth events) to a webhook URL you register with them. If Breadbox isn't reachable from the public internet, those webhooks are dropped and you fall back to polling.
-- **You probably want to read your data on the go.** Phone, laptop, a browser at work — any of those is a round-trip away from a box that's only listening on `localhost`.
+- **Cloud AI clients.** Claude (Desktop / web / mobile), ChatGPT, Manus, Openclaw, and most other MCP-speaking AI apps can only reach an MCP server over `https://` — a bare `localhost` is unreachable from a cloud-hosted model.
+- **Bank webhooks.** Plaid and Teller push real-time updates (new transactions, reauth events) to a webhook URL you register with them. Without a public URL those events are dropped and you fall back to polling.
+- **Reading from anywhere.** Phone, laptop, a browser at work — any of those assumes Breadbox is more than `localhost` on the one machine you installed it on.
+
+The one case where pure-localhost is legitimate: you're running a local autonomous agent (e.g., an Openclaw runner on the same box) that is the *only* client that will ever touch Breadbox. If that's not you, pick one of the options below.
 
 This page covers four ways to put a real URL in front of Breadbox, from easiest to most hands-on.
 

@@ -119,9 +119,11 @@ Breadbox ships as a single Go binary that bundles the REST API, MCP server, admi
   </Tab>
 </Tabs>
 
-<Tip>
-  `http://localhost:8080` is fine for the first-run wizard when you're installing on your own laptop. Once you want to use MCP from a cloud AI client (Claude Desktop, ChatGPT) or receive Plaid/Teller webhooks, you'll need a real HTTPS URL — see the [remote-hosting guide](/installation/remote-hosting).
-</Tip>
+<Warning>
+  **Remote hosting is the intended default.** Most of Breadbox's value — MCP access from Claude, ChatGPT, Manus, Openclaw, and other cloud AI clients, plus real-time webhooks from Plaid/Teller — requires a public HTTPS URL. Pick a host from the [remote-hosting guide](/installation/remote-hosting) (exe.dev, Cloudflare Tunnel, Caddy on a VPS, Tailscale Funnel) and do that setup alongside this install.
+
+  The exception: if the only agent touching Breadbox is a local autonomous runner (e.g., Openclaw on the same machine), you can run on `http://localhost:8080` indefinitely.
+</Warning>
 
 ## Production deployment
 

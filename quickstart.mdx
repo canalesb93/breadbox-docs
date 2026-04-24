@@ -24,13 +24,13 @@ Both the `breadbox` and `db` services should show a `running` or `healthy` statu
 
 ## Step 2: Open the setup wizard
 
-Open your Breadbox URL — `http://localhost:8080` if running locally, or your remote host. If this is your first launch, Breadbox redirects you to the setup wizard automatically.
+Open your Breadbox URL. If this is your first launch, Breadbox redirects you to the setup wizard automatically. The wizard runs once and collects everything Breadbox needs before you can connect a bank.
 
-The wizard runs once and collects everything Breadbox needs before you can connect a bank.
+<Warning>
+  **Configure remote hosting before (or during) the wizard.** Breadbox is designed to be reached from the cloud AI clients in your life (Claude, ChatGPT, Manus, Openclaw) and to receive real-time webhooks from Plaid/Teller — both of which require a public HTTPS URL. If you're just running a one-off evaluation on `http://localhost:8080`, that's fine; but plan on standing up remote hosting before you call the install "done." See [Remote Hosting](/installation/remote-hosting) for exe.dev, Cloudflare Tunnel, Caddy, and Tailscale Funnel walk-throughs.
 
-<Tip>
-  Running Breadbox on a public host gives agents, webhooks, and other services a stable URL to reach. See [Remote Hosting](/installation/remote-hosting) for production setups.
-</Tip>
+  The one legitimate localhost-only case is running Breadbox alongside a *local* autonomous agent (e.g., an Openclaw runner on the same box) that never needs external reach.
+</Warning>
 
 ## Step 3: Complete the setup wizard
 
@@ -53,10 +53,10 @@ The setup wizard has five steps. Work through them in order:
   <Step title="Set the sync interval">
     Choose how often Breadbox polls your banks for new transactions. The default is every 12 hours. You can change this at any time from the admin dashboard.
   </Step>
-  <Step title="Set a webhook URL (optional)">
-    Enter a public URL for your Breadbox instance if you want Plaid to push transaction updates to you in real time instead of waiting for the next scheduled poll.
+  <Step title="Set a webhook URL">
+    Enter the public URL of your Breadbox instance (e.g., `https://your-breadbox.example.com`). Plaid and Teller send real-time webhooks to `https://<your-host>/webhooks/<provider>` so transactions arrive in seconds instead of on the polling interval.
 
-    Leave this blank if you're running locally or don't have a public URL yet — polling-based sync works without it.
+    You can leave this blank temporarily if you're still setting up remote hosting — polling-only sync works without it — but come back and fill it in once your public URL is live. See [Remote Hosting](/installation/remote-hosting).
   </Step>
   <Step title="Finish">
     Review your settings and click **Complete setup**. Breadbox saves your configuration and redirects you to the admin dashboard.
@@ -90,7 +90,7 @@ curl -H "X-API-Key: bb_your_api_key" \
   "https://your-breadbox.example.com/api/v1/transactions?limit=5"
 ```
 
-(Use `http://localhost:8080` instead of `your-breadbox.example.com` if you're running Breadbox locally.)
+Replace `your-breadbox.example.com` with your actual host. If you're evaluating on the same machine, `http://localhost:8080` works — but plan to expose Breadbox publicly before integrating with any cloud AI client.
 
 A successful response looks like this:
 
