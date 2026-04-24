@@ -4,19 +4,11 @@ description: "The recommended one-liner installs Breadbox on macOS or Linux; alt
 sidebarTitle: "Install"
 ---
 
-Breadbox runs in minutes — after that, any MCP-compatible AI agent can query your bank data. The one-liner below handles Docker, generates your secrets, optionally wires up HTTPS, and starts the stack on your machine.
-
-<Tip>
-  **How long does this take?** The one-liner finishes in about 2 minutes. First-run setup (admin account + bank provider + first sync) takes another 5–10 minutes.
-</Tip>
+Breadbox runs in minutes — after that, any MCP-compatible AI agent can query your bank data. The one-liner below handles Docker, generates your secrets, optionally wires up HTTPS, and starts the stack on your machine. The one-liner itself finishes in about 2 minutes; first-run setup (admin account + bank provider + first sync) takes another 5–10 minutes.
 
 ## Quick install
 
-Run this on the machine where you want Breadbox to live (a VPS, a spare laptop, a NAS with Docker — anywhere `docker` can run):
-
-<Tip>
-  `breadbox.sh/install.sh` is a thin bootstrap shim that downloads the real installer from the [`canalesb93/breadbox` GitHub repo](https://github.com/canalesb93/breadbox/blob/main/deploy/install.sh). You can read the script before piping it to bash.
-</Tip>
+Run this on the machine where you want Breadbox to live — a VPS, a spare laptop, a NAS with Docker, anywhere `docker` can run. `breadbox.sh/install.sh` is a thin bootstrap shim that downloads the real installer from the [`canalesb93/breadbox` GitHub repo](https://github.com/canalesb93/breadbox/blob/main/deploy/install.sh); you can read the script before piping it to bash.
 
 ```bash
 curl -fsSL https://breadbox.sh/install.sh | bash
@@ -48,13 +40,11 @@ What the installer does, in order:
   </Step>
 </Steps>
 
-<Note>
-  If `breadbox.sh` is unreachable, the direct URL works the same way:
+If `breadbox.sh` is unreachable, the direct URL works the same way:
 
-  ```bash
-  curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | bash
-  ```
-</Note>
+```bash
+curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | bash
+```
 
 ### Non-interactive install
 
@@ -187,9 +177,7 @@ The one-liner above is the supported default. The methods below are for specific
     # Visit http://your-host:8080
     ```
 
-    <Note>
-      The module path is `breadbox` (not `github.com/...`), so `go install github.com/canalesb93/breadbox/cmd/breadbox@latest` is not supported. Clone the repo and `go install` locally.
-    </Note>
+    The module path is `breadbox` (not `github.com/...`), so `go install github.com/canalesb93/breadbox/cmd/breadbox@latest` is not supported — clone the repo and `go install` locally as shown above.
   </Tab>
 </Tabs>
 
@@ -209,9 +197,7 @@ The table below covers the essentials; the [environment variables reference](/co
 | `PLAID_SECRET` | No | Plaid API secret. Can also be set through the setup wizard. |
 | `TELLER_APP_ID` | No | Teller application ID. Can also be set through the setup wizard. |
 
-<Tip>
-  Not sure whether to use Plaid or Teller? **Start with Teller** — its free Development tier connects to real bank accounts with no production approval required. Plaid has broader US coverage but takes more setup. Either way, you can skip the credentials in `.env` and configure them from the setup wizard later. See [Bank Connections](/connections/overview) for the full comparison.
-</Tip>
+Not sure whether to use Plaid or Teller? **Start with Teller** — its free Development tier connects to real bank accounts with no production approval required; Plaid has broader US coverage but takes more setup. Either way, you can skip the credentials in `.env` and configure them from the setup wizard later. See [Bank Connections](/connections/overview) for the full comparison.
 
 ## Verify the install
 

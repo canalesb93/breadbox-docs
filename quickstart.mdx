@@ -4,11 +4,9 @@ description: "After you've installed Breadbox, use this guide to run the first-r
 sidebarTitle: "Onboarding"
 ---
 
-Onboarding picks up where [installation](/installation) leaves off. By the end of this guide, you'll have completed the first-run setup wizard, linked a bank account, watched the initial sync complete, and attached an AI agent over <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip>.
+Onboarding picks up where [installation](/installation) leaves off — this guide assumes Breadbox is already running and reachable at a URL you know (either a public HTTPS host per [Remote Hosting](/installation/remote-hosting) or `http://localhost:8080` for a local eval). If you haven't installed yet, start with [Install Breadbox](/installation).
 
-<Note>
-  This guide assumes Breadbox is already running and reachable at a URL you know — either a public HTTPS host (see [Remote Hosting](/installation/remote-hosting)) or `http://localhost:8080` for a local-only eval. If you haven't installed yet, start with [Install Breadbox](/installation).
-</Note>
+By the end of this guide you'll have completed the first-run setup wizard, linked a bank account, watched the initial sync complete, and attached an AI agent over <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip>.
 
 ## Step 1: Open the setup wizard
 
@@ -25,12 +23,8 @@ The wizard has five sub-steps. Work through them in order:
   <Step title="Configure a bank provider">
     You can do this later from the dashboard, but setting it up now lets you link a bank immediately.
 
-    - **Teller (recommended starter):** enter your **App ID** from the [Teller console](https://teller.io/) and the path to your client certificate and private key. Teller's Development tier is free and works with real bank data — no production approval process.
+    - **Teller (recommended starter):** enter your **App ID** from the [Teller console](https://teller.io/) and the path to your client certificate and private key. Teller's Development tier is free and works with real bank data — no production approval process, which makes it the fastest way to verify the setup end-to-end.
     - **Plaid:** paste your **Client ID** and **Secret** from the [Plaid dashboard](https://dashboard.plaid.com/). Use the Sandbox environment for simulated data or Production once you're approved.
-
-    <Tip>
-      If this is your first time, start with Teller or Plaid Sandbox — both let you verify the setup end-to-end without committing to production credentials.
-    </Tip>
   </Step>
   <Step title="Set the sync interval">
     Pick how often Breadbox polls your banks for new transactions. The default is 12 hours. You can change it at any time from the admin dashboard.
@@ -51,9 +45,7 @@ From the dashboard, go to **Connections → Add connection**. Pick the family me
 
 Your bank credentials go directly to Plaid or Teller — Breadbox never sees them. Once you finish the popup, Breadbox stores the encrypted access token and queues an initial sync.
 
-<Tip>
-  Want to manage multiple family members? Add them from **Settings → Users** before linking additional banks so each connection can be attributed to the right person.
-</Tip>
+If your household has multiple family members, add them from **Settings → Users** before linking additional banks so each connection can be attributed to the right person.
 
 ## Step 4: Wait for the initial sync
 
@@ -83,9 +75,7 @@ This is where Breadbox earns its keep. Point your AI app at Breadbox's `/mcp` en
   </Step>
 </Steps>
 
-<Note>
-  For ready-made agent workflows — automated weekly reviews, subscription tracking, cross-referencing Gmail receipts — see the [Guides](/guides/overview) tab.
-</Note>
+For ready-made agent workflows — automated weekly reviews, subscription tracking, cross-referencing Gmail receipts — see the [Guides](/guides/overview) tab.
 
 ## Step 6 (optional): Query the REST API
 
