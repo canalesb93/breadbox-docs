@@ -32,7 +32,7 @@ In the dashboard, the transaction detail view has a **Remove tag** action with a
 Leaving the tag in place is the "skip" action — the transaction stays in the queue for next time. There is no separate reject or approve state; the decision is captured by whichever category ends up on the transaction plus the note you leave when the tag comes off.
 
 <Note>
-  The REST API exposes `PATCH /api/v1/transactions/{id}/category` for category changes, but tag mutations currently live behind the admin UI and the MCP `update_transactions` tool. Day-to-day review work is done in the dashboard or by an agent — not via direct REST calls.
+  The REST surface covers both sides of a review now: `PATCH /api/v1/transactions/{id}/category` for category changes, plus the [Tags API](/api/tags) (`POST /api/v1/transactions/{id}/tags` to attach, `DELETE /api/v1/transactions/{id}/tags/{slug}` to detach with an optional note). MCP's `update_transactions` remains the ergonomic path for agents — it bundles category + tag + comment into a single compound op — but direct REST works too if you prefer scripting without an MCP client.
 </Note>
 
 ## Making the workflow your own
