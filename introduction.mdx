@@ -1,9 +1,9 @@
 ---
 title: "What is Breadbox?"
-description: "Breadbox syncs your household’s financial data into a PostgreSQL database you control, then exposes your data through a REST API and AI-ready MCP server."
+description: "Breadbox syncs your household’s financial data into a PostgreSQL database you control, then exposes it through a built-in MCP server and a REST API."
 ---
 
-Breadbox is an open-source, self-hosted, financial aggregator for households. It manages connections to your banks via a provider like [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database, and allows you to expose that data through a REST API and a built-in MCP server for the AI services that you already use.
+Breadbox is an open-source, self-hosted, financial aggregator for households. It manages connections to your banks via a provider like [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database, and hands that data to the AI services you already use through a built-in <Tooltip tip="Model Context Protocol — the open standard for giving AI agents access to tools and data. See modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> server and a REST API.
 
 Breadbox is not meant to be your financial dashboard, it is the infrastructure that can power your financial dashboard for the post-AI world.
 
@@ -20,27 +20,27 @@ Breadbox bridges that gap: secure bank sync, a database you control, and a clean
 </Card>
 
 <CardGroup cols={2}>
+  <Card title="AI-ready via MCP" icon="robot" href="/mcp/overview">
+    A built-in <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">MCP</Tooltip> server lets AI assistants like Claude, ChatGPT, Manus, and Openclaw query your financial data securely, without your bank credentials.
+  </Card>
+
   <Card title="Your data, your database" icon="database">
     All transactions are stored in a PostgreSQL database you own. No vendor lock-in — export or delete at any time.
   </Card>
 
-  <Card title="AI-ready via MCP" icon="robot">
-    A built-in Model Context Protocol server lets AI assistants like Claude query your financial data securely, without your bank credentials.
-  </Card>
-
-  <Card title="REST API" icon="code">
-    Query transactions, accounts, and categories from any tool using a structured REST API with cursor pagination, field selection, and filtering.
-  </Card>
-
   <Card title="Multi-user households" icon="users">
     Support every family member under one Breadbox instance, with per-user account assignment and attribution-aware filtering.
+  </Card>
+
+  <Card title="REST API" icon="code" href="/api/overview">
+    Query transactions, accounts, and categories from any tool using a structured REST API with cursor pagination, field selection, and filtering.
   </Card>
 </CardGroup>
 
 ## Features
 
 - **Bank sync** via Plaid, Teller, and CSV import (with more coming)
-- **MCP server** for AI agent integration (Streamable HTTP at `/mcp` and stdio)
+- **MCP server** for AI-agent integration — Streamable HTTP at `/mcp` and stdio
 - **REST API** with cursor pagination, field selection, and filtering
 - **Admin dashboard** for connection management, sync monitoring, and transaction review
 - **Transaction rules engine** with recursive AND/OR/NOT conditions for self-improving data enrichment
