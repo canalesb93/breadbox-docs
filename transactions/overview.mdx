@@ -46,6 +46,8 @@ Every transaction record includes the following fields:
 | `merchant_name` | string | Enriched, cleaned merchant name (e.g., `McDonald's`). May be `null` when the merchant cannot be identified. |
 | `category_primary` | string | High-level provider category (e.g., `FOOD_AND_DRINK`, `TRANSPORTATION`). |
 | `category_detailed` | string | Granular subcategory (e.g., `FOOD_AND_DRINK_RESTAURANTS`). |
+| `category_slug` | string | Breadbox category slug when rules or a human/agent has assigned one (e.g., `food_and_drink_groceries`). Takes precedence over the provider fields for display and filtering. |
+| `category_override` | boolean | `true` when a human has manually set the category. Agents and rules skip rows where this is `true`. |
 | `pending` | boolean | `true` if the transaction has not yet settled. `false` means posted. |
 
 <Tip>
@@ -75,8 +77,8 @@ Navigate to **Transactions** in the admin dashboard sidebar to browse, search, a
 
 For programmatic access, Breadbox offers two interfaces:
 
-- **REST API** — Use `GET /api/v1/transactions` with query parameters to filter, sort, and paginate. See the [API reference](/api/transactions) for the full parameter list.
-- **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions` and `count_transactions` to query data in natural language workflows. See the [MCP overview](/mcp/overview) for setup instructions.
+- **REST API** — Use `GET /api/v1/transactions` with query parameters to filter (date, account, user, category, amount, search), sort, paginate, and filter by tags (`tags=` / `any_tag=`). See [Transactions API](/api/transactions) for the full parameter list and [Tags API](/api/tags) for attaching and detaching tags.
+- **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions`, `count_transactions`, and `update_transactions` to query, categorize, tag, and summarize in natural-language workflows. See [MCP overview](/mcp/overview) for setup and [MCP Reference](/mcp/reference/overview) for the full tool list.
 
 ## Soft deletes
 
