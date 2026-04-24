@@ -209,3 +209,10 @@ Retroactive apply respects the same pipeline stage ordering as sync. It also res
 ## Respecting manual overrides
 
 If a transaction has been manually categorized (its `category_override` flag is `true`), a rule's `set_category` action is skipped for that transaction. The rule still runs — `add_tag` and `add_comment` actions fire normally — but the category is not changed. This means you can safely apply rules in bulk without worrying about undoing deliberate manual work.
+
+## Related reading
+
+- [Rules API](/api/rules) — REST endpoints for creating, listing, updating, deleting, applying, and previewing rules.
+- [MCP: rules (read)](/mcp/reference/rules) and [MCP: rules (write)](/mcp/reference/rules-write) — the equivalent tools agents use to create and maintain rules on your behalf.
+- [Categories](/transactions/categories) — how the two-level hierarchy that rules target is structured.
+- [Review workflow](/transactions/review-workflow) — how the seeded `needs-review` rule drives the default triage queue.

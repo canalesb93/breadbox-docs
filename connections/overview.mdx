@@ -69,6 +69,8 @@ From this page you can:
 - **Re-authenticate** connections that are in `error` or `pending_reauth` status. Breadbox opens the bank's secure login flow in the same browser session. Your stored transaction history is not affected.
 - **Remove** a connection to stop future syncing. Transaction data is kept.
 
+The same operations are available programmatically via the [Connections API](/api/connections).
+
 <Warning>
   Removing a Plaid or Teller connection immediately revokes Breadbox's access at the provider level and stops any billing for that connection. This action cannot be undone — you would need to re-link the bank to resume syncing.
 </Warning>
