@@ -15,7 +15,7 @@ Off-the-shelf categorization engines look at a merchant name and guess. The Clau
 
 ### The system gets smarter over time
 
-Every time an agent decides "Nav Canada charges are Travel, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). Breadbox auto-applies that rule on every subsequent sync — so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
+Every time an agent decides "PG&E charges are Utilities, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). Breadbox auto-applies that rule on every subsequent sync — so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
 
 ### It's free and open source
 
@@ -62,9 +62,10 @@ Before installing Breadbox, make sure you have the following:
 
 | Requirement | Details |
 | --- | --- |
-| **Docker** | Docker Engine \+ Docker Compose, or any Linux/macOS machine |
-| **PostgreSQL** | Version 16 or later. Docker Compose handles this automatically. |
-| **Bank API credentials** | A [Plaid](https://plaid.com/) or a [Teller](https://teller.io/) API keys — or both |
+| **A machine** | Any Linux or macOS host — a VPS, a spare laptop, a NAS with Docker, or your workstation for a local eval. |
+| **Docker** | Docker Engine \+ Docker Compose. The one-liner installer offers to bootstrap Docker on Linux if it's missing. |
+| **PostgreSQL** | Version 16 or later. Handled automatically by Docker Compose. |
+| **Bank API credentials** | [Plaid](https://plaid.com/) Client ID + Secret, or a [Teller](https://teller.io/) App ID — or both. |
 
 You can also configure Plaid and Teller credentials after installation through the setup wizard — you don't need them before you start.
 
