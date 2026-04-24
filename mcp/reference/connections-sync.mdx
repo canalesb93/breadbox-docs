@@ -29,34 +29,36 @@ None.
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "c1Xm9pQ2",
-      "institution_name": "Chase",
-      "provider": "plaid",
-      "status": "active",
-      "last_synced_at": "2026-04-23T14:32:00Z",
-      "error_message": null,
-      "accounts_count": 3,
-      "user_id": "u4Xm9pQ2",
-      "user_name": "Alice",
-      "created_at": "2026-01-15T09:00:00Z"
-    },
-    {
-      "id": "c2Yn0qR3",
-      "institution_name": "Bank of America",
-      "provider": "plaid",
-      "status": "pending_reauth",
-      "last_synced_at": "2026-04-18T09:15:00Z",
-      "error_message": "ITEM_LOGIN_REQUIRED: User must re-authenticate via Plaid Link.",
-      "accounts_count": 2,
-      "user_id": "u5Yn0qR3",
-      "user_name": "Bob",
-      "created_at": "2026-02-01T11:20:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "c1Xm9pQ2",
+    "institution_name": "Chase",
+    "institution_id": "ins_3",
+    "provider": "plaid",
+    "status": "active",
+    "last_synced_at": "2026-04-23T14:32:00Z",
+    "error_code": null,
+    "error_message": null,
+    "user_id": "u4Xm9pQ2",
+    "user_name": "Alice",
+    "created_at": "2026-01-15T09:00:00Z",
+    "updated_at": "2026-04-23T14:32:00Z"
+  },
+  {
+    "id": "c2Yn0qR3",
+    "institution_name": "Bank of America",
+    "institution_id": "ins_127",
+    "provider": "plaid",
+    "status": "pending_reauth",
+    "last_synced_at": "2026-04-18T09:15:00Z",
+    "error_code": "ITEM_LOGIN_REQUIRED",
+    "error_message": "User must re-authenticate via Plaid Link.",
+    "user_id": "u5Yn0qR3",
+    "user_name": "Bob",
+    "created_at": "2026-02-01T11:20:00Z",
+    "updated_at": "2026-04-18T09:15:00Z"
+  }
+]
 ```
 
 ### Status values
@@ -89,21 +91,22 @@ None.
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "L9Xm2pQr",
-      "primary_account_id": "a7Xm9pQ2",
-      "primary_account_name": "Amex Gold (Alice)",
-      "dependent_account_id": "a8Yn0qR3",
-      "dependent_account_name": "Amex Gold (Bob)",
-      "match_strategy": "date_amount_name",
-      "match_tolerance_days": 0,
-      "matched_count": 142,
-      "unmatched_primary_count": 3,
-      "unmatched_dependent_count": 7,
-      "created_at": "2026-01-20T16:45:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "L9Xm2pQr",
+    "primary_account_id": "a7Xm9pQ2",
+    "primary_account_name": "Amex Gold (Alice)",
+    "primary_user_name": "Alice",
+    "dependent_account_id": "a8Yn0qR3",
+    "dependent_account_name": "Amex Gold (Bob)",
+    "dependent_user_name": "Bob",
+    "match_strategy": "date_amount_name",
+    "match_tolerance_days": 0,
+    "enabled": true,
+    "match_count": 142,
+    "unmatched_dependent_count": 7,
+    "created_at": "2026-01-20T16:45:00Z",
+    "updated_at": "2026-04-23T12:00:00Z"
+  }
+]
 ```

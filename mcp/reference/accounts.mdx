@@ -39,45 +39,53 @@ Lists all bank accounts synced from Plaid, Teller, or CSV import. Each account b
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "a7Xm9pQ2",
-      "name": "Chase Checking",
-      "type": "depository",
-      "subtype": "checking",
-      "mask": "4321",
-      "balance_current": 2450.18,
-      "balance_available": 2380.00,
-      "balance_limit": null,
-      "iso_currency_code": "USD",
-      "institution_name": "Chase",
-      "user_id": "u4Xm9pQ2",
-      "user_name": "Alice",
-      "connection_id": "c1Xm9pQ2",
-      "provider": "plaid",
-      "is_dependent_linked": false
-    },
-    {
-      "id": "a8Yn0qR3",
-      "name": "Amex Gold",
-      "type": "credit",
-      "subtype": "credit card",
-      "mask": "1008",
-      "balance_current": -541.20,
-      "balance_available": null,
-      "balance_limit": 10000.00,
-      "iso_currency_code": "USD",
-      "institution_name": "American Express",
-      "user_id": "u4Xm9pQ2",
-      "user_name": "Alice",
-      "connection_id": "c2Yn0qR3",
-      "provider": "plaid",
-      "is_dependent_linked": false
-    }
-  ]
-}
+[
+  {
+    "id": "a7Xm9pQ2",
+    "name": "Chase Checking",
+    "official_name": "Chase Total Checking",
+    "type": "depository",
+    "subtype": "checking",
+    "mask": "4321",
+    "balance_current": 2450.18,
+    "balance_available": 2380.00,
+    "balance_limit": null,
+    "iso_currency_code": "USD",
+    "institution_name": "Chase",
+    "user_id": "u4Xm9pQ2",
+    "connection_id": "c1Xm9pQ2",
+    "connection_status": "active",
+    "is_dependent_linked": false,
+    "last_balance_update": "2026-04-23T12:00:00Z",
+    "created_at": "2026-01-15T00:00:00Z",
+    "updated_at": "2026-04-23T12:00:00Z"
+  },
+  {
+    "id": "a8Yn0qR3",
+    "name": "Amex Gold",
+    "official_name": "American Express Gold Card",
+    "type": "credit",
+    "subtype": "credit card",
+    "mask": "1008",
+    "balance_current": -541.20,
+    "balance_available": null,
+    "balance_limit": 10000.00,
+    "iso_currency_code": "USD",
+    "institution_name": "American Express",
+    "user_id": "u4Xm9pQ2",
+    "connection_id": "c2Yn0qR3",
+    "connection_status": "active",
+    "is_dependent_linked": false,
+    "last_balance_update": "2026-04-23T12:00:00Z",
+    "created_at": "2026-01-20T00:00:00Z",
+    "updated_at": "2026-04-23T12:00:00Z"
+  }
+]
 ```
+
+<Note>
+  `provider` lives on the connection, not the account — resolve it via `connection_id` if you need it. `user_name` is not part of this response; `query_transactions` surfaces the attributed user name on each transaction instead.
+</Note>
 
 <Note>
   For credit accounts, `balance_current` represents the amount owed, not available funds. Never sum balances across different `iso_currency_code` values.
@@ -106,20 +114,20 @@ None. Pass an empty object (or just `session_id` / `reason` if you want to assoc
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "u4Xm9pQ2",
-      "name": "Alice",
-      "email": "alice@example.com",
-      "role": "admin"
-    },
-    {
-      "id": "u5Yn0qR3",
-      "name": "Bob",
-      "email": "bob@example.com",
-      "role": "editor"
-    }
-  ]
-}
+[
+  {
+    "id": "u4Xm9pQ2",
+    "name": "Alice",
+    "email": "alice@example.com",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z"
+  },
+  {
+    "id": "u5Yn0qR3",
+    "name": "Bob",
+    "email": "bob@example.com",
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z"
+  }
+]
 ```

@@ -62,7 +62,7 @@ Lists transaction rules with optional filters. Agents should always call this be
 
 ```json
 {
-  "data": [
+  "rules": [
     {
       "id": "r9Xm2pQr",
       "name": "name: Starbucks → food_and_drink_coffee",
@@ -75,17 +75,22 @@ Lists transaction rules with optional filters. Agents should always call this be
         { "type": "set_category", "category_slug": "food_and_drink_coffee" }
       ],
       "trigger": "on_create",
+      "category_slug": "food_and_drink_coffee",
+      "category_display_name": "Coffee",
       "priority": 10,
       "enabled": true,
       "hit_count": 47,
       "last_hit_at": "2026-04-12T14:32:00Z",
+      "created_by_type": "user",
+      "created_by_id": "u4Xm9pQ2",
+      "created_by_name": "Alice",
       "created_at": "2026-01-15T09:00:00Z",
-      "created_by": "alice@example.com",
-      "expires_at": null
+      "updated_at": "2026-01-15T09:00:00Z"
     }
   ],
-  "next_cursor": null,
-  "has_more": false
+  "next_cursor": "",
+  "has_more": false,
+  "total": 1
 }
 ```
 
@@ -139,30 +144,30 @@ Dry-run a condition tree against existing transactions — no writes, no hit-cou
 {
   "match_count": 47,
   "total_scanned": 12540,
-  "sample": [
+  "sample_matches": [
     {
-      "id": "k7Xm9pQ2",
+      "transaction_id": "k7Xm9pQ2",
       "date": "2026-04-12",
       "amount": 6.85,
-      "merchant_name": "Starbucks",
       "name": "STARBUCKS STORE #4591",
-      "category": "food_and_drink_coffee"
+      "category_primary_raw": "FOOD_AND_DRINK",
+      "current_category_slug": "food_and_drink_coffee"
     },
     {
-      "id": "k8Yn0qR3",
+      "transaction_id": "k8Yn0qR3",
       "date": "2026-04-10",
       "amount": 12.40,
-      "merchant_name": "Starbucks",
       "name": "STARBUCKS STORE #4591",
-      "category": "food_and_drink_coffee"
+      "category_primary_raw": "FOOD_AND_DRINK",
+      "current_category_slug": "food_and_drink_coffee"
     },
     {
-      "id": "k9Zo1rS4",
+      "transaction_id": "k9Zo1rS4",
       "date": "2026-04-08",
       "amount": 5.25,
-      "merchant_name": "Starbucks",
       "name": "STARBUCKS MOBILE ORDER",
-      "category": "food_and_drink_coffee"
+      "category_primary_raw": "FOOD_AND_DRINK",
+      "current_category_slug": "food_and_drink_coffee"
     }
   ]
 }

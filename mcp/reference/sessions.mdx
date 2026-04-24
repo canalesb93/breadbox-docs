@@ -36,11 +36,14 @@ Starts an audit session and returns a `session_id` for use on subsequent write t
 {
   "id": "s9Xm2pQk",
   "purpose": "weekly transaction review",
-  "actor": "review-agent@example.com",
-  "created_at": "2026-04-23T14:32:00Z",
-  "completed_at": null
+  "api_key_name": "review-agent",
+  "created_at": "2026-04-23T14:32:00Z"
 }
 ```
+
+<Note>
+  The response identifies the session's owner via `api_key_name` (the API key that created it) — there is no separate `actor` field. Sessions do not track a `completed_at` timestamp; they stay live and accumulate tool calls, with `tool_call_count` and `last_call_at` surfacing in subsequent reads.
+</Note>
 
 ### Using the returned session_id
 

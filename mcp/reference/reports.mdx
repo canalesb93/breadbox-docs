@@ -66,13 +66,21 @@ Read `breadbox://report-format` for the full style guide and report templates (r
 {
   "id": "R9Xm2pQr",
   "title": "Reviewed 47 transactions this week — 3 recategorized, no suspicious activity.",
+  "body": "## Summary\n- Reviewed: 47 transactions (approved: 44, recategorized: 3)\n...",
   "priority": "info",
-  "author": "Review Agent",
   "tags": ["weekly-review"],
-  "session_id": "s9Xm2pQk",
+  "author": "Review Agent",
+  "created_by_type": "agent",
+  "created_by_id": "ak_01HT...",
+  "created_by_name": "Review Agent",
+  "read_at": null,
   "created_at": "2026-04-23T14:55:00Z"
 }
 ```
+
+<Note>
+  The session link is recorded server-side (the session row gets a `report_id`) but is not echoed back on this response — the submission carries `session_id` in, not out.
+</Note>
 
 ### Report priorities
 

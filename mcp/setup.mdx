@@ -1,6 +1,6 @@
 ---
 title: "Set up MCP for Claude and AI agents"
-description: "Connect Claude Desktop, Claude Code, Gemini CLI, opencode, Codex, and other MCP-compatible agents to your Breadbox instance."
+description: "Connect Claude (Desktop, web, mobile), Claude Code, opencode, Codex, ChatGPT, Manus, and other MCP-compatible agents to your Breadbox instance."
 ---
 
 Breadbox's MCP server is ready as soon as your instance is running — there's nothing extra to install or start. You configure your AI client to point at Breadbox over Streamable HTTP (with an API key) or over stdio (when the `breadbox` binary is local). This page gathers the setup flow for each supported client.
@@ -21,51 +21,45 @@ Breadbox's MCP server is ready as soon as your instance is running — there's n
 
 <Tabs>
   {/* ------------------------------------------------------------------ */}
-  {/* Claude Desktop — Settings UI                                       */}
-  {/* Source: https://support.claude.com/en/articles/11175166            */}
-  {/*         https://claude.ai/settings/connectors?modal=add-custom-connector */}
+  {/* Claude (Desktop / Web / Mobile) — unified UI                       */}
+  {/* Source: https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c */}
   {/* Verified: 2026-04                                                  */}
   {/* ------------------------------------------------------------------ */}
-  <Tab title="Claude Desktop (UI)">
-    Claude Desktop can add remote MCP servers from the **Settings** UI without editing any JSON. Use this if your Breadbox instance is reachable over HTTPS **and** you've exposed it behind an OAuth proxy — the in-app dialog only accepts a URL plus optional OAuth client ID / secret, so static API-key headers still require the config-file route (next tab).
+  <Tab title="Claude (UI)">
+    Claude (Desktop, web at claude.ai, and mobile) adds remote MCP servers through its **Connectors** UI — no config file required. The same flow works across all three surfaces. Reference: [Use connectors to extend Claude's capabilities](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c).
+
+    Custom connectors using remote MCP are available on **Free** (limited to one), **Pro**, **Max**, **Team**, and **Enterprise** plans.
 
     <Note>
       Image placeholders below — replace with real screenshots before publishing.
     </Note>
 
     <Steps>
-      <Step title="Open Settings → Connectors">
-        In Claude Desktop, open **Settings → Connectors**. Custom connectors are available on Pro, Max, Team, and Enterprise plans.
+      <Step title="Open Connectors">
+        Go to **Customize → Connectors** in settings. From a chat you can also click the **+** in the lower-left (or type `/`), hover over **Connectors**, and pick **Manage connectors**.
 
         <Frame>
-          <img src="/images/mcp/claude-desktop-connectors.png" alt="Claude Desktop: Settings → Connectors" />
+          <img src="/images/mcp/claude-connectors-list.png" alt="Claude: Customize → Connectors" />
         </Frame>
       </Step>
-      <Step title="Enable Developer mode (first-time only)">
-        Scroll to **Advanced** and toggle **Developer mode** on. Without this, the custom-connector option is hidden.
-
-        <Frame>
-          <img src="/images/mcp/claude-desktop-developer-mode.png" alt="Claude Desktop: enable Developer mode" />
-        </Frame>
-      </Step>
-      <Step title="Add custom connector">
-        Scroll to the bottom of the Connectors list and click **Add custom connector**. Fill in:
+      <Step title="Add a custom connector">
+        Click the **+** next to **Connectors** and choose **Add custom connector**. Fill in:
 
         - **Name**: `Breadbox`
-        - **Remote MCP server URL**: `https://your-breadbox-host/mcp`
-        - **Advanced settings** → leave OAuth fields empty unless you've put an OAuth proxy in front of Breadbox.
+        - **URL**: `https://your-breadbox-host/mcp`
+        - **Advanced settings** (optional): OAuth Client ID and secret, only if you've put an OAuth proxy in front of Breadbox.
 
         <Frame>
-          <img src="/images/mcp/claude-desktop-add-mcp.png" alt="Claude Desktop: Add custom connector dialog" />
+          <img src="/images/mcp/claude-add-custom-connector.png" alt="Claude: Add custom connector dialog" />
         </Frame>
       </Step>
-      <Step title="Approve and test">
-        Save, then start a new conversation. Click the **+** in the composer, pick **Connectors**, and confirm Breadbox's tools (`list_accounts`, `query_transactions`, …) appear.
+      <Step title="Approve and use">
+        Save. Start a new conversation, click the **+** in the composer, and attach the Breadbox connector. Claude prompts you to approve tool calls the first time each one runs. Team/Enterprise owners can restrict which Breadbox tools are allowed via **Tool permissions** (Always allow / Needs approval / Blocked) — Breadbox's read tools carry the `readOnlyHint` annotation so they can be distinguished from writes.
       </Step>
     </Steps>
 
     <Warning>
-      The UI dialog does **not** accept static HTTP headers. If your Breadbox is behind a plain `X-API-Key` (the default), use **Claude Desktop (config file)** below instead. The UI flow assumes OAuth.
+      The custom-connector dialog exposes a **URL** and optional **OAuth Client ID / secret** — it does **not** have a field for static HTTP headers. If your Breadbox is protected by a plain `X-API-Key` (the default), the UI path won't authenticate. Use **Claude Desktop (config file)** below for header auth, or front Breadbox with an OAuth proxy.
     </Warning>
   </Tab>
 
@@ -199,48 +193,6 @@ Breadbox's MCP server is ready as soon as your instance is running — there's n
               "type": "local",
               "command": ["breadbox", "mcp-stdio"],
               "enabled": true
-            }
-          }
-        }
-        ```
-      </Tab>
-    </Tabs>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* Gemini CLI                                                         */}
-  {/* Source: https://geminicli.com/docs/tools/mcp-server/               */}
-  {/*         https://github.com/google-gemini/gemini-cli/blob/main/docs/tools/mcp-server.md */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Gemini CLI">
-    Google's [Gemini CLI](https://github.com/google-gemini/gemini-cli) reads MCP servers from `~/.gemini/settings.json` (user-level) or `.gemini/settings.json` in the project root.
-
-    <Tabs>
-      <Tab title="Streamable HTTP">
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "httpUrl": "https://your-breadbox-host/mcp",
-              "headers": {
-                "X-API-Key": "$BREADBOX_API_KEY"
-              },
-              "timeout": 30000
-            }
-          }
-        }
-        ```
-
-        Gemini CLI expands `$VAR` references from your shell environment in the `headers` block. Export `BREADBOX_API_KEY` before launching.
-      </Tab>
-      <Tab title="Stdio">
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "command": "breadbox",
-              "args": ["mcp-stdio"]
             }
           }
         }

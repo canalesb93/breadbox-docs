@@ -121,7 +121,12 @@ Returns a paginated list of transactions matching the supplied filters. This is 
       "amount": 67.43,
       "name": "WHOLE FOODS MARKET #10452",
       "iso_currency_code": "USD",
-      "category": "food_and_drink_groceries",
+      "category": {
+        "slug": "food_and_drink_groceries",
+        "display_name": "Groceries",
+        "primary_slug": "food_and_drink",
+        "primary_display_name": "Food and Drink"
+      },
       "category_primary_raw": "FOOD_AND_DRINK",
       "category_detailed_raw": "FOOD_AND_DRINK_GROCERIES"
     }
@@ -216,20 +221,29 @@ Returns aggregated transaction totals grouped by category, month, week, day, or 
 
 ```json
 {
-  "data": [
+  "summary": [
     {
-      "group": "food_and_drink_groceries",
-      "total": 843.21,
-      "count": 34,
+      "category": "food_and_drink_groceries",
+      "total_amount": 843.21,
+      "transaction_count": 34,
       "iso_currency_code": "USD"
     },
     {
-      "group": "transportation_gas",
-      "total": 312.50,
-      "count": 18,
+      "category": "transportation_gas",
+      "total_amount": 312.50,
+      "transaction_count": 18,
       "iso_currency_code": "USD"
     }
-  ]
+  ],
+  "totals": {
+    "total_amount": 1155.71,
+    "transaction_count": 52
+  },
+  "filters": {
+    "start_date": "2026-03-01",
+    "end_date": "2026-04-01",
+    "group_by": "category"
+  }
 }
 ```
 
@@ -308,26 +322,36 @@ Lists distinct merchants with aggregated stats — count, total, average, and da
 
 ```json
 {
-  "data": [
+  "merchants": [
     {
-      "merchant_name": "Netflix",
-      "count": 3,
-      "total": 42.00,
-      "average": 14.00,
-      "first_seen": "2026-01-15",
-      "last_seen": "2026-03-15",
+      "merchant": "Netflix",
+      "transaction_count": 3,
+      "total_amount": 42.00,
+      "avg_amount": 14.00,
+      "first_date": "2026-01-15",
+      "last_date": "2026-03-15",
       "iso_currency_code": "USD"
     },
     {
-      "merchant_name": "Whole Foods Market",
-      "count": 12,
-      "total": 843.21,
-      "average": 70.27,
-      "first_seen": "2026-01-03",
-      "last_seen": "2026-03-28",
+      "merchant": "Whole Foods Market",
+      "transaction_count": 12,
+      "total_amount": 843.21,
+      "avg_amount": 70.27,
+      "first_date": "2026-01-03",
+      "last_date": "2026-03-28",
       "iso_currency_code": "USD"
     }
-  ]
+  ],
+  "totals": {
+    "merchant_count": 2,
+    "transaction_count": 15,
+    "total_amount": 885.21
+  },
+  "filters": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-04-01",
+    "min_count": 3
+  }
 }
 ```
 
@@ -354,17 +378,18 @@ Returns all comments attached to a transaction, ordered chronologically. Agents 
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "c4Xp2mQr",
-      "transaction_id": "k7Xm9pQ2",
-      "content": "Shared grocery run — split with roommate.",
-      "author": "alice@example.com",
-      "created_at": "2026-03-29T10:12:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "c4Xp2mQr",
+    "transaction_id": "k7Xm9pQ2",
+    "content": "Shared grocery run — split with roommate.",
+    "author_type": "user",
+    "author_id": "u4Xm9pQ2",
+    "author_name": "Alice",
+    "created_at": "2026-03-29T10:12:00Z",
+    "updated_at": "2026-03-29T10:12:00Z"
+  }
+]
 ```
 
 ---
@@ -390,19 +415,23 @@ Lists transaction pairs matched by an account link. Used to audit which primary-
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "M4Xp9mQr",
-      "link_id": "L9Xm2pQr",
-      "primary_transaction_id": "k7Xm9pQ2",
-      "dependent_transaction_id": "n3Xr5mQp",
-      "confidence": "auto",
-      "matched_fields": ["date", "amount"],
-      "created_at": "2026-03-28T08:15:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "M4Xp9mQr",
+    "account_link_id": "L9Xm2pQr",
+    "primary_transaction_id": "k7Xm9pQ2",
+    "dependent_transaction_id": "n3Xr5mQp",
+    "match_confidence": "auto",
+    "matched_on": ["date", "amount"],
+    "primary_txn_name": "WHOLE FOODS MARKET #10452",
+    "primary_txn_merchant": "Whole Foods",
+    "dependent_txn_name": "WHOLE FOODS #10452",
+    "dependent_txn_merchant": "Whole Foods",
+    "amount": 67.43,
+    "date": "2026-03-28",
+    "created_at": "2026-03-28T08:15:00Z"
+  }
+]
 ```
 
 ---
@@ -428,35 +457,44 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "a1Xm2pQ9",
-      "transaction_id": "k7Xm9pQ2",
-      "kind": "tag_added",
-      "actor": "system",
-      "payload": { "slug": "needs-review" },
-      "created_at": "2026-03-28T06:00:00Z"
+[
+  {
+    "id": "a1Xm2pQ9",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "tag_added",
+    "actor_type": "system",
+    "actor_name": "system",
+    "tag_id": "t1Xm9pQ2",
+    "payload": { "slug": "needs-review" },
+    "created_at": "2026-03-28T06:00:00Z"
+  },
+  {
+    "id": "a2Yn3qR0",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "category_set",
+    "actor_type": "agent",
+    "actor_name": "Review Agent",
+    "session_id": "s9Xm2pQk",
+    "payload": {
+      "category_slug": "food_and_drink_groceries",
+      "note": "clearly groceries"
     },
-    {
-      "id": "a2Yn3qR0",
-      "transaction_id": "k7Xm9pQ2",
-      "kind": "category_set",
-      "actor": "review-agent",
-      "payload": {
-        "category_slug": "food_and_drink_groceries",
-        "note": "clearly groceries"
-      },
-      "created_at": "2026-03-29T10:12:00Z"
-    },
-    {
-      "id": "a3Zo4rS1",
-      "transaction_id": "k7Xm9pQ2",
-      "kind": "tag_removed",
-      "actor": "review-agent",
-      "payload": { "slug": "needs-review", "note": "clearly groceries" },
-      "created_at": "2026-03-29T10:12:00Z"
-    }
-  ]
-}
+    "created_at": "2026-03-29T10:12:00Z"
+  },
+  {
+    "id": "a3Zo4rS1",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "tag_removed",
+    "actor_type": "agent",
+    "actor_name": "Review Agent",
+    "session_id": "s9Xm2pQk",
+    "tag_id": "t1Xm9pQ2",
+    "payload": { "slug": "needs-review", "note": "clearly groceries" },
+    "created_at": "2026-03-29T10:12:00Z"
+  }
+]
 ```
+
+<Note>
+  The event type lives in `kind` — values are `comment`, `rule_applied`, `tag_added`, `tag_removed`, and `category_set`. Actor identity is split across `actor_type` (`user` / `agent` / `system`), `actor_name`, and optional `actor_id`. When a write tool passed a `session_id`, it's echoed here so you can group events by session. Rule applications set `rule_id`; tag events set `tag_id`.
+</Note>

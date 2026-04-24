@@ -29,42 +29,53 @@ None. Pass an empty object.
 ### Example output
 
 ```json
-{
-  "data": [
-    {
-      "id": "c1Xm9pQ2",
-      "slug": "food_and_drink",
-      "display_name": "Food and Drink",
-      "icon": "utensils",
-      "color": "#C8482E",
-      "parent_slug": null,
-      "sort_order": 10,
-      "hidden": false,
-      "children": [
-        {
-          "id": "c2Yn0qR3",
-          "slug": "food_and_drink_groceries",
-          "display_name": "Groceries",
-          "icon": "shopping-basket",
-          "color": "#C8482E",
-          "parent_slug": "food_and_drink",
-          "sort_order": 0,
-          "hidden": false
-        },
-        {
-          "id": "c3Zo1rS4",
-          "slug": "food_and_drink_restaurant",
-          "display_name": "Restaurants",
-          "icon": "utensils-crossed",
-          "color": "#C8482E",
-          "parent_slug": "food_and_drink",
-          "sort_order": 10,
-          "hidden": false
-        }
-      ]
-    }
-  ]
-}
+[
+  {
+    "id": "c1Xm9pQ2",
+    "slug": "food_and_drink",
+    "display_name": "Food and Drink",
+    "icon": "utensils",
+    "color": "#C8482E",
+    "parent_id": null,
+    "sort_order": 10,
+    "is_system": true,
+    "hidden": false,
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z",
+    "children": [
+      {
+        "id": "c2Yn0qR3",
+        "slug": "food_and_drink_groceries",
+        "display_name": "Groceries",
+        "icon": "shopping-basket",
+        "color": "#C8482E",
+        "parent_id": "c1Xm9pQ2",
+        "parent_slug": "food_and_drink",
+        "parent_display_name": "Food and Drink",
+        "sort_order": 0,
+        "is_system": true,
+        "hidden": false,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "c3Zo1rS4",
+        "slug": "food_and_drink_restaurant",
+        "display_name": "Restaurants",
+        "icon": "utensils-crossed",
+        "color": "#C8482E",
+        "parent_id": "c1Xm9pQ2",
+        "parent_slug": "food_and_drink",
+        "parent_display_name": "Food and Drink",
+        "sort_order": 10,
+        "is_system": true,
+        "hidden": false,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z"
+      }
+    ]
+  }
+]
 ```
 
 ---
