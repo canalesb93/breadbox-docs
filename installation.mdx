@@ -191,6 +191,10 @@ Handy flags:
 - `--json` — structured output for scripting.
 - `--skip-external` — skip DNS and outbound HTTP (air-gapped installs).
 
+<Note>
+  `breadbox doctor` is read-only and safe to run repeatedly. It does **not** boot the HTTP server and does **not** probe Plaid or Teller with your credentials — it only validates that your env vars, database, and locally-encrypted tokens are internally consistent. To verify a Plaid/Teller connection is actually talking to the provider, trigger a sync from the admin dashboard.
+</Note>
+
 ## After installing
 
 Once Breadbox is running, open `http://your-host:8080` (or your HTTPS domain if you set one) to complete the first-run setup wizard. The wizard walks you through creating your admin account and configuring bank provider credentials.
