@@ -138,8 +138,21 @@ Common thresholds to configure (tune to your household):
 
 ### Notification channels
 
+Openclaw exposes a `message()` tool that routes outbound messages through any channel the gateway manages — Slack, Telegram, Discord, WhatsApp, iMessage (via BlueBubbles), and others. The call shape is consistent across channels:
+
+```json
+{
+  "channel": "discord",
+  "action": "send",
+  "to": "channel:<channel-id>",
+  "message": "Breadbox alert: ..."
+}
+```
+
+Swap `"channel": "discord"` for `slack`, `telegram`, etc., and set `to` to whatever channel/user identifier that platform uses (`channel:<id>`, `user:<id>`, `thread:<id>`). The agent prompt below uses that shape directly.
+
 <Note>
-  Draft — verify with current Openclaw docs before publishing. Openclaw routes outbound messages through the same channels it manages for inbound traffic: Slack, Telegram, Discord, WhatsApp, iMessage (via BlueBubbles), and others. The exact `messages_send` call syntax and the channel routing config depend on how your Openclaw gateway is configured. See [https://docs.openclaw.ai](https://docs.openclaw.ai) for the current outbound messaging reference. The agent prompt below uses a generic `notify_human` placeholder that you should replace with the appropriate Openclaw channel call.
+  Channel routing — which channel ID belongs to "the household alerts channel" — is gateway-specific and configured where you set up your Openclaw tenant. See [https://docs.openclaw.ai](https://docs.openclaw.ai) for the current per-channel reference if you need a different target format.
 </Note>
 
 ### Alert agent prompt (paste-ready)
@@ -173,9 +186,13 @@ On each run:
       Reason: [why it triggered]
       Review: https://your-breadbox-host/transactions/[ID]"
 
-4. Send the alert through Openclaw's configured notification channel
-   (replace this instruction with the actual Openclaw messages_send
-   call for your channel — Slack, Telegram, Discord, etc.).
+4. Send the alert using Openclaw's `message()` tool. Example:
+     message({
+       "channel": "<slack | discord | telegram | ...>",
+       "action": "send",
+       "to": "channel:<household-alerts-channel-id>",
+       "message": "<the alert text composed above>"
+     })
 
 5. Do NOT modify transaction tags or categories in this step.
    Alerts are read-only. The human decides what to do next.
