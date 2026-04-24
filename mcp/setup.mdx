@@ -124,10 +124,31 @@ Restart Claude Desktop after saving.
 {/* ------------------------------------------------------------------ */}
 ### Claude Code
 
-Claude Code reads MCP configuration from `.mcp.json` in your project root, or from `~/.config/claude/mcp.json` for a user-level config that applies to all projects.
+Claude Code has three scope options for MCP server config:
+
+| Scope | Where it's stored | Shared via git |
+| --- | --- | --- |
+| **Local** (default) | `~/.claude.json`, scoped to this project | No |
+| **Project** | `.mcp.json` in your project root | Yes |
+| **User** | `~/.claude.json`, applies to all projects | No |
+
+The easiest way to add Breadbox is with the `claude mcp add` CLI — it writes to the right file for the scope you pick. Choose project scope (`--scope project`) if you want the config committed alongside your code; local scope if you want it private.
 
 <Tabs>
-  <Tab title="Streamable HTTP">
+  <Tab title="CLI (recommended)">
+    ```bash
+    # Remote Streamable HTTP with X-API-Key header
+    claude mcp add --transport http --scope project --header "X-API-Key: bb_your_api_key_here" breadbox https://your-breadbox-host/mcp
+
+    # Stdio against a local binary
+    claude mcp add --transport stdio --scope project breadbox -- breadbox mcp-stdio
+    ```
+
+    <Note>
+      All flags (`--transport`, `--scope`, `--header`, `--env`) must appear **before** the server name. The `--` separator is only required for stdio, to divide the server name from the command and its args.
+    </Note>
+  </Tab>
+  <Tab title="Project .mcp.json (Streamable HTTP)">
     ```json
     {
       "mcpServers": {
@@ -142,7 +163,7 @@ Claude Code reads MCP configuration from `.mcp.json` in your project root, or fr
     }
     ```
   </Tab>
-  <Tab title="Stdio">
+  <Tab title="Project .mcp.json (Stdio)">
     ```json
     {
       "mcpServers": {
