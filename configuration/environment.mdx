@@ -23,6 +23,10 @@ If you set `PLAID_CLIENT_ID` as an environment variable, the dashboard's Plaid c
 
 You must set these before starting Breadbox. The process exits with a descriptive error if they are missing.
 
+<Tip>
+  After setting env vars, run `breadbox doctor` to verify everything resolves cleanly — it checks `DATABASE_URL`, the encryption key, provider credentials, and more without booting the server. See [Verify the install](/installation#verify-the-install).
+</Tip>
+
 | Variable | Description | Required |
 |---|---|---|
 | `DATABASE_URL` | PostgreSQL connection string, e.g. `postgres://user:pass@localhost:5432/breadbox?sslmode=disable` | Yes |
