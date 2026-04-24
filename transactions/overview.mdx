@@ -51,7 +51,7 @@ Every transaction record includes the following fields:
 | `pending` | boolean | `true` if the transaction has not yet settled. `false` means posted. |
 
 <Tip>
-  The `short_id` is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.
+  The <Tooltip headline="Short ID" tip="8-character base62 alias accepted interchangeably with the full UUID `id` in any API or MCP tool input.">`short_id`</Tooltip> is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.
 </Tip>
 
 ## Pending vs. posted transactions

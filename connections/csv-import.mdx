@@ -81,52 +81,52 @@ Breadbox requires three fields to import a transaction. All other fields are opt
 
 Breadbox includes templates for the following banks. When your column headers match a template, Breadbox auto-fills the column mapping for you.
 
-<Tabs>
-  <Tab title="Chase (credit card)">
+<AccordionGroup>
+  <Accordion title="Chase (credit card)" icon="credit-card">
     **Date column:** Transaction Date\
     **Amount column:** Amount\
     **Description column:** Description\
     **Category column:** Category\
     **Sign convention:** Negative = debit (charges), Positive = credit (payments)\
     **Date format:** MM/DD/YYYY
-  </Tab>
-  <Tab title="Chase (checking/savings)">
+  </Accordion>
+  <Accordion title="Chase (checking/savings)" icon="building-columns">
     **Date column:** Posting Date\
     **Amount column:** Amount\
     **Description column:** Description\
     **Sign convention:** Negative = debit, Positive = credit\
     **Date format:** MM/DD/YYYY
-  </Tab>
-  <Tab title="Bank of America">
+  </Accordion>
+  <Accordion title="Bank of America" icon="building-columns">
     **Date column:** Date\
     **Amount column:** Amount\
     **Description column:** Description\
     **Sign convention:** Negative = debit, Positive = credit\
     **Date format:** MM/DD/YYYY
-  </Tab>
-  <Tab title="Wells Fargo">
+  </Accordion>
+  <Accordion title="Wells Fargo" icon="building-columns">
     **Note:** Wells Fargo CSVs have no header row. Breadbox detects this format by column count (5 columns) and the date format in the first column.\
     **Column order:** Date, Amount, \*, \*, Description\
     **Sign convention:** Negative = debit, Positive = credit\
     **Date format:** MM/DD/YYYY
-  </Tab>
-  <Tab title="Capital One">
+  </Accordion>
+  <Accordion title="Capital One" icon="arrows-left-right">
     **Date column:** Transaction Date\
     **Amount:** Uses separate Debit and Credit columns. Breadbox combines them: `amount = debit - credit`.\
     **Description column:** Description\
     **Category column:** Category\
     **Sign convention:** Debit and Credit columns both contain positive values\
     **Date format:** YYYY-MM-DD
-  </Tab>
-  <Tab title="Amex">
+  </Accordion>
+  <Accordion title="Amex" icon="credit-card">
     **Date column:** Date\
     **Amount column:** Amount\
     **Description column:** Description\
     **Category column:** Category\
     **Sign convention:** Positive = debit (charges), Negative = credit (payments)\
     **Date format:** MM/DD/YYYY
-  </Tab>
-</Tabs>
+  </Accordion>
+</AccordionGroup>
 
 ## Supported date formats
 

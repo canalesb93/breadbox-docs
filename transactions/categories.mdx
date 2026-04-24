@@ -25,7 +25,7 @@ A transaction's category can be set by three sources, in increasing order of pre
 
 ## The `category_override` flag
 
-When you manually set a transaction's category, Breadbox marks it with `category_override = true`. This flag signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
+When you manually set a transaction's category, Breadbox marks it with <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>. This flag signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
 
 <Note>
   Rules that would otherwise reassign the category are skipped for any transaction where `category_override = true`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
