@@ -9,7 +9,7 @@ Breadbox isn't a dashboard, and it isn't an agent. It's infrastructure: a databa
 The two properties that make this worth doing at all:
 
 - **Your agents bring their own context.** The Claude or ChatGPT that knows your family, your business, your subscriptions, your Gmail archive can categorize and analyze financial data with an accuracy a pattern-matcher can't touch.
-- **The system compounds.** Every ambiguous case an agent resolves can be persisted as a Breadbox [rule](/transactions/rules). Next sync Breadbox handles it automatically — the agent only sees what's genuinely new. Your rule library becomes a custom, self-improving model of your financial life.
+- **The system compounds.** Every ambiguous case an agent resolves can be persisted as a Breadbox [rule](/transactions/rules). Breadbox auto-applies those rules on every subsequent sync, so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, self-improving model of your financial life, maintained by the agents you already use.
 
 ## The basic loop
 
@@ -17,10 +17,10 @@ Across every mature Breadbox setup we've seen, the same four pieces keep showing
 
 1. **Transactions flow in** from Plaid, Teller, or CSV — Breadbox's sync engine handles this on a schedule and via webhooks.
 2. **Rules pre-label** what they can. Everything reliably patterned — Amazon → Shopping, PG&E → Utilities, transfers over some threshold → `needs-review` — is auto-categorized or auto-tagged at sync time. The rule library grows as the agents below teach it; see [Rules](/transactions/rules) and the [Understanding Rules guide](/guides/understanding-rules).
-3. **An agent reviews the remainder** on a cadence — what the rules couldn't classify, plus anything explicitly tagged for follow-up. The agent leans on its own context (your subscriptions, your Gmail archive, the household habits it's picked up) plus Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`) to resolve the batch. When it finds a pattern it sees repeating, it creates a new rule so it never has to look at that case again.
+3. **An agent reviews the batch** on a cadence. It looks at what the rules pre-labeled (to verify) plus anything explicitly tagged for follow-up. As it works, it leans on its own context — your subscriptions, your email receipts, the household habits it has picked up — plus Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`). When it spots a pattern it sees repeating, it writes a new rule so Breadbox pre-categorizes that case on every future sync.
 4. **You look at reports**, not transactions. The agent surfaces anomalies (unusual charges, broken subscriptions, new counterparties) in [reports](/mcp/reference/reports) or an out-of-band channel (Slack, email). Your role shrinks to resolving the genuinely ambiguous cases.
 
-The first time you run this loop, the agent reviews a lot. A month in, most transactions are pre-labeled by rules the agent itself wrote; the agent's job narrows to "whatever's new or weird." That compounding effect is the whole point.
+The first time you run this loop, every transaction gets the agent's full attention. A month in, most are already pre-categorized by rules the agent itself wrote — so the review pass becomes mostly fast confirmations, and the agent spends its real thought on the outliers. That compounding effect is the point.
 
 ## Pick your review pattern
 

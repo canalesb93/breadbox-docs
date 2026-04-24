@@ -11,15 +11,11 @@ Breadbox is an open-source, self-hosted financial aggregator for households. It 
 
 ### Your agents already know you
 
-Off-the-shelf categorization engines look at a merchant name and guess. The Claude or ChatGPT you use every day has *context* no automated categorizer will ever have — it knows your recurring subscriptions, your family's routines, the business you run, the thread where you argued about that "Costco gas" charge. Give it MCP access to Breadbox and it cross-references all of that to categorize, classify, and analyze your finances with an accuracy a rules-only system can't match.
+Off-the-shelf categorization engines look at a merchant name and guess. The Claude or ChatGPT you use every day has *context* no automated categorizer will ever have — it knows your recurring subscriptions, your family's routines, the business you run, and — if you connect a Gmail or email MCP alongside Breadbox — can cross-reference the actual receipts sitting in your inbox to confirm what a charge really was. Give it that kind of access and it categorizes, classifies, and analyzes your finances with an accuracy a rules-only system can't match.
 
 ### The system gets smarter over time
 
-Every time an agent decides "Nav Canada charges are Travel, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). The next sync handles it automatically; the agent only looks at genuinely new or ambiguous transactions. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
-
-### And it's open source
-
-Breadbox is MIT-licensed and self-hosted. No SaaS middleman sitting between your agents and your bank data. Fork it, audit it, extend it — or run it as-is and rely on the community.
+Every time an agent decides "Nav Canada charges are Travel, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). Breadbox auto-applies that rule on every subsequent sync — so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
 
 ## Key benefits
 
@@ -37,7 +33,7 @@ Breadbox is MIT-licensed and self-hosted. No SaaS middleman sitting between your
   </Card>
 
   <Card title="Open source & self-hosted" icon="code-branch" href="https://github.com/canalesb93/breadbox">
-    MIT-licensed, single Go binary. Run it on your own hardware, in a VPS, or anywhere Docker runs. Full source and issue tracker on GitHub.
+    Single Go binary, open source on GitHub. Run it on your own hardware, in a VPS, or anywhere Docker runs — no SaaS middleman between your agents and your bank data.
   </Card>
 </CardGroup>
 
