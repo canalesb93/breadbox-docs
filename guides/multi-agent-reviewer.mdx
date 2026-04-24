@@ -127,7 +127,7 @@ Instead of routing via a coordinator, each specialist queries its own tag _direc
 **Cons**
 - Routing is spread across rule definitions. If you want to change how P2P is routed, you edit rules (one more layer than a prompt tweak).
 - Rules can't reason about context the way an LLM can. Edge cases — a Zelle that's actually a rent payment, for instance — will slip through to the wrong specialist.
-- The fallback generalist has to be robust enough to handle anything that fell out of the rule mesh.
+- The fallback generalist has to be capable of handling anything that fell out of the rule mesh.
 
 ## Which to choose
 

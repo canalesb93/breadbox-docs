@@ -139,7 +139,7 @@ That third transaction now shows up in both the P2P specialist queue and the unm
 ## Where this pattern falls down
 
 <Note>
-  The agent can easily misattribute when a household member starts a new recurring relationship (a new babysitter, a new rent situation). Expect the first few transactions to a new counterparty to always land in `p2p-unmapped` — that's working as intended.
+  The agent will often misattribute when a household member starts a new recurring relationship (a new babysitter, a new rent situation). Expect the first few transactions to a new counterparty to always land in `p2p-unmapped` — that's working as intended.
 </Note>
 
 If you have a large amount of P2P traffic, consider maintaining a "counterparty memory" file in your agent's long-term memory or project knowledge — a short list of known counterparties with their category mapping. The agent consults this first before doing the full cross-reference. We haven't prescribed a specific shape for that memory, since most households don't have enough counterparty traffic to justify it.
