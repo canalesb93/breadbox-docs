@@ -1,41 +1,64 @@
 ---
-title: "Guides"
-description: "Practical, opinionated workflows that combine Breadbox's primitives — Categories, Tags, and Rules — with AI agents over MCP."
+title: "Using Breadbox with AI agents"
+description: "The opinionated shape of how Breadbox is meant to be used day to day: data flows in, one or more agents review it on a cadence, you step in only when something needs a human."
+sidebarTitle: "Start here"
 ---
 
-The Guides tab is where the rest of the documentation stops being a reference and starts being a playbook. Breadbox ships a small, composable set of primitives — a two-level category hierarchy, open-ended tags, a rule engine, and an MCP server — and most of the value comes from wiring them together into a workflow that matches how your household actually wants to handle its transaction history. These guides walk through the combinations that have worked well for us and for the people we've watched use Breadbox day to day.
+Breadbox isn't a dashboard. It's infrastructure: a database of your household's financial data and an <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> surface that hands it to AI apps you already use. The whole system only earns its keep when an agent is doing the boring work for you and pinging you when something needs attention.
 
-Each guide is self-contained: it names the problem, sketches a shape of the solution, and gives you an example you can paste into an agent prompt or a curl command. None of this is mandatory — Breadbox will run just fine if you only ever look at the dashboard — but if you want to get leverage out of the AI tooling, start here.
+This page is the opinionated walkthrough of that loop. The individual guides go deeper on specific patterns — use this as the map.
 
-## How this tab is organized
+## The basic loop
+
+Across every mature Breadbox setup we've seen, the same four pieces keep showing up:
+
+1. **Transactions flow in** from Plaid, Teller, or CSV — Breadbox's sync engine handles this on a schedule and via webhooks.
+2. **Rules pre-label** what they can. Anything reliably patterned (Amazon → Shopping, PG&E → Utilities, high-value transfers → `needs-review`) gets auto-categorized or auto-tagged at sync time. See [Rules](/transactions/rules) and the [Understanding Rules guide](/guides/understanding-rules).
+3. **An agent reviews the remainder** on a cadence — what the rules couldn't classify confidently, plus anything explicitly tagged for follow-up. The agent uses Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`) to work through a batch and clear the `needs-review` tag as it goes.
+4. **You look at reports**, not transactions. The agent surfaces anomalies (unusual charges, broken subscriptions, new counterparties) in [reports](/mcp/reference/reports) or an out-of-band channel (Slack, email). Your role shrinks to resolving the genuinely ambiguous cases.
+
+Most households never need more than step 3 to be "one agent, once a day." Heavier setups split it across specialists or run it from a persistent autonomous agent like Openclaw.
+
+## Pick your review pattern
+
+The three patterns below are ordered by increasing autonomy. Start at the top and move down only when the one above isn't enough.
 
 <CardGroup cols={3}>
-  <Card title="Getting Started" icon="rocket" href="/guides/breadbox-in-a-nutshell">
-    Orient yourself to the primitives. Read these first if you've just finished the installation and want the shortest possible explanation of what the pieces are and why they matter.
+  <Card title="One agent, on demand" icon="user" href="/guides/single-routine-reviewer">
+    You open Claude (or another MCP client) when you have a few minutes, ask it to walk the `needs-review` backlog, and approve its suggestions. Simplest possible setup.
   </Card>
-  <Card title="Common Workflows" icon="wand-magic-sparkles" href="/guides/single-routine-reviewer">
-    Concrete setups for the most frequent jobs: running a reviewer agent, splitting work across specialists, categorizing peer-to-peer transfers, cross-referencing Gmail, and tracking subscriptions.
+  <Card title="Specialists per tag" icon="users" href="/guides/multi-agent-reviewer">
+    You split review across agents — one handles subscriptions, another handles peer-to-peer, another handles general categorization. Good when a single prompt starts feeling overloaded.
   </Card>
-  <Card title="Advanced" icon="chart-line" href="/guides/on-demand-analysis">
-    Ad-hoc analysis and building your own UI on top of Breadbox with Claude. These are the "stretch" patterns — useful once the basics are humming.
+  <Card title="Always-on autonomous agent" icon="robot" href="/guides/openclaw-recurring-workflows">
+    Openclaw (or similar) runs on a VM, wakes up on a cron, drains the backlog, and pings you via Slack/email when something needs attention. Set-and-forget, with escape valves.
   </Card>
 </CardGroup>
 
-## What's in each group
+## Tactical recipes
 
-**Getting Started** covers the vocabulary. If terms like _pipeline stage_, _condition tree_, or _seeded `needs-review` tag_ don't mean anything yet, start with [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) and then [Understanding Rules](/guides/understanding-rules).
+Pattern-specific guides for narrower jobs that don't neatly fit into "review everything":
 
-**Common Workflows** starts with the single-agent review loop and then branches out. [Single Routine Reviewer](/guides/single-routine-reviewer) is the baseline — one agent, one schedule, the `needs-review` tag. [Multi-Agent Reviewer](/guides/multi-agent-reviewer) shows two ways to split the work once a single agent isn't enough. [Zelle / Venmo Analysis](/guides/zelle-venmo-analysis), [Gmail Cross-Referencing](/guides/gmail-cross-referencing), and [Tracking Subscriptions](/guides/tracking-subscriptions) each tackle a narrow job that's hard to automate with rules alone but falls within reach once an agent is involved.
+- [**Zelle / Venmo analysis**](/guides/zelle-venmo-analysis) — agents for categorizing peer-to-peer transfers with opaque descriptions.
+- [**Gmail cross-referencing**](/guides/gmail-cross-referencing) — combine Breadbox with a Gmail MCP to confirm ambiguous bills against your inbox.
+- [**Tracking subscriptions**](/guides/tracking-subscriptions) — detect recurring charges, tag them, and flag when the amount drifts.
+- [**On-demand analysis**](/guides/on-demand-analysis) — the "hey Claude, how much did we spend on coffee last quarter" style of ad-hoc query.
+- [**Custom dashboard with Claude**](/guides/custom-dashboard-with-claude) — hand Claude the API and let it build you a React artifact you can live in.
 
-**Advanced** covers the ad-hoc and the exploratory. [On-Demand Analysis](/guides/on-demand-analysis) is for the "hey Claude, how much did we spend on coffee last quarter?" style of question. [Custom Dashboard with Claude](/guides/custom-dashboard-with-claude) shows how to hand Claude the API and let it build you a React artifact you can live in.
+## New to the primitives?
 
-## What to expect
+If terms like _pipeline stage_, _condition tree_, or _seeded `needs-review` tag_ don't mean anything yet, detour through these first:
 
-- Every guide links back to the underlying reference docs. If you want the full surface area for a primitive, click through to `/transactions/*` or `/mcp/*`.
-- Examples use real MCP tool names (`query_transactions`, `update_transactions`, `count_transactions`, etc.) and real Breadbox API endpoints. Paste them into your agent's system prompt or adapt them to your setup.
-- Amounts in every example follow Plaid convention: **positive = money out**, negative = money in. Summarize "spending" by summing positive amounts only.
-- Some workflows lean on capabilities that aren't yet stable (third-party MCPs, in-flight features). Those sections are marked with a draft note so you know to verify before relying on them.
+- [**Breadbox in a nutshell**](/guides/breadbox-in-a-nutshell) — Categories, Tags, Rules, and how they compose.
+- [**Understanding Rules**](/guides/understanding-rules) — the DSL primer with worked examples.
+
+## Conventions used in these guides
+
+- Every guide links back to the underlying reference docs — click through to `/transactions/*`, `/mcp/reference/*`, or `/api/*` for the full surface.
+- Examples use real MCP tool names and real API endpoints. Paste them into an agent prompt or adapt to your setup.
+- Amounts follow Plaid convention — **positive = money out**, negative = money in. Summarize "spending" by summing positive amounts only.
+- Some guides lean on capabilities that aren't yet stable (third-party MCPs, in-flight features). Those sections carry a draft note — verify before relying on them.
 
 <Note>
-  These guides assume you've already installed Breadbox, connected at least one bank, and generated an API key with MCP access. If any of that is new to you, start at [What is Breadbox?](/introduction) and follow through [Installation](/installation) and [Getting Started](/quickstart).
+  These guides assume Breadbox is installed, at least one bank is connected, and you've generated an API key. If any of that is new, start at [What is Breadbox?](/introduction), then [Install](/installation), then [Onboarding](/quickstart).
 </Note>
