@@ -46,7 +46,7 @@ This page covers four ways to put a real URL in front of Breadbox, from easiest 
 
         ```bash
         ssh <vmname>.exe.xyz
-        curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | sudo bash
+        curl -fsSL https://breadbox.sh/install.sh | bash
         ```
 
         Or use any other method from the [installation guide](/installation) — Docker Compose, binary download, or `go install`.
@@ -121,9 +121,11 @@ This page covers four ways to put a real URL in front of Breadbox, from easiest 
       <Step title="Write ~/.cloudflared/config.yml">
         ```yaml
         tunnel: <YOUR-TUNNEL-UUID>
-        credentials-file: /root/.cloudflared/<YOUR-TUNNEL-UUID>.json
+        credentials-file: /home/<user>/.cloudflared/<YOUR-TUNNEL-UUID>.json
         url: http://localhost:8080
         ```
+
+        Point `credentials-file` at the actual JSON file `cloudflared tunnel create` wrote — it lives under whatever `$HOME/.cloudflared/` is for the user running `cloudflared`. If you're running as root, the path is `/root/.cloudflared/...`.
       </Step>
       <Step title="Route DNS to the tunnel">
         ```bash
