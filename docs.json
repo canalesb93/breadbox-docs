@@ -33,7 +33,6 @@
       {
         "tab": "Docs",
         "pages": [
-          "quick-start",
           {
             "group": "Overview",
             "pages": [
@@ -189,6 +188,10 @@
     {
       "source": "/automating-breadbox",
       "destination": "/guides/overview"
+    },
+    {
+      "source": "/quick-start",
+      "destination": "/introduction"
     }
   ],
   "search": {
