@@ -8,6 +8,10 @@ Tag CRUD. In most cases agents don't need these — adding a tag to a transactio
 
 All tools on this page are **Write** scope and require `session_id` + `reason`.
 
+<Note>
+  Tag-record CRUD is MCP-only today. The REST equivalents for `POST/PUT/DELETE /api/v1/tags` are not yet exposed. The REST [Tags API](/api/tags) covers listing tags and attaching/detaching them from transactions; tag-record management stays on the admin dashboard and these MCP tools.
+</Note>
+
 ---
 
 ## create_tag

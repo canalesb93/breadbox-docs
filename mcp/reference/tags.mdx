@@ -6,6 +6,8 @@ description: "MCP read tool for listing tags. Tag writes live on the Tag writes 
 
 Tags are open-ended labels attached to transactions. Each tag has a stable `slug` (for queries and rules) and a `display_name` (for humans). The review queue is just transactions tagged `needs-review` — a system-seeded rule auto-tags every new transaction during sync, and agents close reviews by removing the tag via [`update_transactions`](/mcp/reference/transactions-write#update_transactions).
 
+The same read surface is also exposed over REST at [`GET /api/v1/tags`](/api/tags).
+
 ---
 
 ## list_tags

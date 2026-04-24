@@ -18,7 +18,7 @@ Run this on the machine where you want Breadbox to live (a VPS, a spare laptop, 
 curl -fsSL https://breadbox.sh/install.sh | bash
 ```
 
-The installer detects your OS (macOS or Linux) and architecture (`amd64` / `arm64`), checks for Docker (and offers to install it on Linux via `get.docker.com` when missing), prompts for an optional public domain, generates an `ENCRYPTION_KEY` and database password, writes a version-pinned `docker-compose.prod.yml`, starts the stack, and — on success — offers to register a launchd agent (macOS) or systemd unit (Linux) so Breadbox restarts on boot.
+The installer detects your OS (macOS or Linux) and architecture (`amd64` / `arm64`), checks for Docker (and offers to install it on Linux via `get.docker.com` when missing), prompts for an optional public domain, generates an `ENCRYPTION_KEY` and database password, writes a version-pinned `docker-compose.prod.yml`, starts the stack, and — on success — offers to register a launchd agent (macOS) or systemd unit (Linux) so Breadbox restarts on boot. The final step runs `breadbox doctor` inside the container to verify the install.
 
 <Note>
   `breadbox.sh/install.sh` is a thin bootstrap shim that fetches the real installer from the `canalesb93/breadbox` GitHub repo. If you'd rather skip the shim (or if `breadbox.sh` isn't reachable), the direct URL works the same way:
@@ -171,6 +171,25 @@ All Breadbox configuration is done through environment variables. Set these in y
 <Tip>
   You can leave `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `TELLER_APP_ID` out of your `.env` file and configure them later through the admin setup wizard.
 </Tip>
+
+## Verify the install
+
+Run `breadbox doctor` at any time to check config and connectivity without booting the server:
+
+```bash
+# Docker install: exec into the container
+docker compose exec breadbox breadbox doctor
+
+# Binary / go install: run against your env directly
+breadbox doctor
+```
+
+The command walks a fixed list of pre-flight checks — config-load, database connection, migrations, `ENCRYPTION_KEY`, Plaid/Teller configuration, bank-connection credentials decrypting, an admin account exists, scheduler cron expressions parse, and (when `PUBLIC_URL`/`DOMAIN` is set) your public URL resolves and `/health/ready` responds. Exits non-zero if anything fails so install scripts and CI can gate on it.
+
+Handy flags:
+
+- `--json` — structured output for scripting.
+- `--skip-external` — skip DNS and outbound HTTP (air-gapped installs).
 
 ## After installing
 
