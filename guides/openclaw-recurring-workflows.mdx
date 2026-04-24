@@ -246,13 +246,17 @@ Example title: `"Triage — 2026-04-23: 42 reviewed, 3 deferred, 1 anomaly flagg
 
 ## Cost, safety, and failure modes
 
+<Warning>
+  An autonomous agent with a **full-access** Breadbox API key can recategorize hundreds of transactions, rewrite rules, and retag your entire backlog in a single unattended cycle. Start **read-only**, observe at least five cycles through the dashboard Reports and Annotations pages, and promote to full access only after you trust the behavior.
+</Warning>
+
 ### Start read-only
 
 Configure Openclaw's Breadbox API key as **read-only** for the first few cycles. Watch the reports in the Breadbox dashboard — verify the agent is querying the right transactions, making sensible decisions, and correctly identifying what to defer. Promote to **full access** only after you trust the behavior. See [Read-only vs. read-write](/mcp/setup#read-only-vs-read-write).
 
 ### Guard against runaway writes
 
-A misconfigured agent with full-access scope can recategorize hundreds of transactions in one pass. Safeguards:
+Even after a promotion to full access, a few defaults limit blast radius per cycle:
 
 - Keep `limit=30` per page on `query_transactions`. Smaller batches = smaller blast radius per cycle.
 - Review `submit_report` output for the first few weeks. If the deferred count is unexpectedly high or low, inspect the annotations before giving the agent more autonomy.
