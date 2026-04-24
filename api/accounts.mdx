@@ -1,5 +1,6 @@
 ---
-title: "Accounts"
+title: "Accounts API"
+sidebarTitle: "Accounts"
 description: "Reference for the Breadbox accounts endpoints: list all accounts and retrieve a single account with current balance, type, and institution details."
 ---
 
@@ -9,7 +10,7 @@ The accounts endpoints return the bank accounts Breadbox has synced from your co
 
 ## List all accounts
 
-```
+```text
 GET /api/v1/accounts
 ```
 
@@ -20,56 +21,54 @@ Returns all bank accounts known to Breadbox, ordered alphabetically by instituti
 ### Query parameters
 
 <ParamField query="user_id" type="string (UUID)">
-  Filter to accounts assigned to a specific family member. Accepts the user's full UUID or short ID. If omitted, all accounts across all users are returned. An unknown `user_id` returns an empty `data` array rather than a `404`.
+  Filter to accounts assigned to a specific family member. Accepts the user's full UUID or short ID. If omitted, all accounts across all users are returned. An unknown `user_id` returns an empty array rather than a `404`.
 </ParamField>
 
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
-      "short_id": "Xk3mPqR7",
-      "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
-      "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
-      "user_name": "Alex Canales",
-      "name": "Platinum Checking",
-      "official_name": "Chase Total Checking®",
-      "type": "depository",
-      "subtype": "checking",
-      "mask": "4821",
-      "iso_currency_code": "USD",
-      "balance_current": 3241.87,
-      "balance_available": 3191.87,
-      "balance_limit": null,
-      "institution_name": "Chase",
-      "is_dependent_linked": false,
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2026-02-28T14:30:00Z"
-    },
-    {
-      "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
-      "short_id": "Yt4nQsS8",
-      "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
-      "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
-      "user_name": "Alex Canales",
-      "name": "Sapphire Reserve",
-      "official_name": "Chase Sapphire Reserve®",
-      "type": "credit",
-      "subtype": "credit card",
-      "mask": "7743",
-      "iso_currency_code": "USD",
-      "balance_current": 1842.50,
-      "balance_available": 18157.50,
-      "balance_limit": 20000.00,
-      "institution_name": "Chase",
-      "is_dependent_linked": false,
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2026-02-28T14:30:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "a1b2c3d4-e5f6-7890-abcd-ef1234567890",
+    "short_id": "Xk3mPqR7",
+    "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
+    "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
+    "user_name": "Alex Canales",
+    "name": "Platinum Checking",
+    "official_name": "Chase Total Checking®",
+    "type": "depository",
+    "subtype": "checking",
+    "mask": "4821",
+    "iso_currency_code": "USD",
+    "balance_current": 3241.87,
+    "balance_available": 3191.87,
+    "balance_limit": null,
+    "institution_name": "Chase",
+    "is_dependent_linked": false,
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  },
+  {
+    "id": "b2c3d4e5-f6a7-8901-bcde-f12345678901",
+    "short_id": "Yt4nQsS8",
+    "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
+    "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
+    "user_name": "Alex Canales",
+    "name": "Sapphire Reserve",
+    "official_name": "Chase Sapphire Reserve®",
+    "type": "credit",
+    "subtype": "credit card",
+    "mask": "7743",
+    "iso_currency_code": "USD",
+    "balance_current": 1842.50,
+    "balance_available": 18157.50,
+    "balance_limit": 20000.00,
+    "institution_name": "Chase",
+    "is_dependent_linked": false,
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2026-02-28T14:30:00Z"
+  }
+]
 ```
 
 ### Example
@@ -83,7 +82,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get a single account
 
-```
+```text
 GET /api/v1/accounts/{id}
 ```
 
@@ -210,7 +209,7 @@ curl -H "X-API-Key: bb_your_key" \
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing `X-API-Key` header | `401` | `MISSING_API_KEY` |
 | Invalid or revoked key | `401` | `INVALID_API_KEY` / `REVOKED_API_KEY` |
 | `user_id` is not a valid UUID | `400` | `INVALID_PARAMETER` |

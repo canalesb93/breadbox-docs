@@ -9,7 +9,7 @@ Breadbox reads its configuration from environment variables at startup. Most set
 
 When a setting exists in more than one place, Breadbox resolves it in this order:
 
-```
+```text
 Environment variable → dashboard settings → default
 ```
 
@@ -22,6 +22,10 @@ If you set `PLAID_CLIENT_ID` as an environment variable, the dashboard's Plaid c
 ## Required variables
 
 You must set these before starting Breadbox. The process exits with a descriptive error if they are missing.
+
+<Tip>
+  After setting env vars, run `breadbox doctor` to verify everything resolves cleanly — it checks `DATABASE_URL`, the encryption key, provider credentials, and more without booting the server. See [Verify the install](/installation#verify-the-install).
+</Tip>
 
 | Variable | Description | Required |
 |---|---|---|

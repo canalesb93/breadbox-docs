@@ -1,0 +1,122 @@
+---
+title: "Build a custom dashboard with Claude"
+description: "Hand Claude the Breadbox API (or MCP) and have it generate a React artifact that renders your transaction data however you want it — a personal spending dashboard in a single prompt."
+---
+
+The Breadbox admin UI is intentionally generic. It shows you every transaction, every category, every tag — it doesn't make judgments about which view matters most to _your_ household. If you want a specific dashboard (a month-over-month grocery trend, a per-user burn-down, a "how close are we to our restaurant budget" gauge), the fastest way to get one is to ask Claude to build it.
+
+Claude.ai's Artifacts feature and Claude Desktop can both generate React components that render live data. With the Breadbox REST API (or MCP), a single prompt gets you a working dashboard.
+
+<Note>
+  **Draft — review before publishing.** Claude's Artifacts environment and the exact capabilities of the React sandbox (which libraries are available, how secrets are handled) evolve regularly. The prompt pattern below is stable; specific library imports and auth shapes may need a light update when you actually build this. Confirm against the latest Artifacts documentation before sharing.
+</Note>
+
+## The pattern
+
+You'll feed Claude three things in the prompt:
+
+1. **What the dashboard should show.** "Last 90 days of grocery spending, grouped by week, as a line chart."
+2. **How to get the data.** The Breadbox API endpoint (`/api/v1/transactions`) with the right filter parameters, plus an API key.
+3. **How you want it rendered.** React component, specific library preferences (Recharts, Tremor, plain HTML), any styling hints.
+
+Claude generates a single React artifact. You open it, it fetches from your Breadbox API, it renders. If it's wrong, you iterate in the chat.
+
+## An example prompt
+
+<CodeGroup>
+
+```text Dashboard prompt
+I have a self-hosted Breadbox instance running at
+http://localhost:8080. It exposes a REST API that requires an
+`X-API-Key` header. I want you to build a React artifact that
+renders a dashboard for my household spending.
+
+The API key is: bb_your_key_here
+(I'll replace this with an env-var in the artifact myself — for
+now just accept it as a prop.)
+
+The dashboard should show, for the last 90 days:
+
+1. A line chart: total spending per week, in USD. Use only
+   transactions with `iso_currency_code: "USD"`. Filter out
+   pending transactions. Amounts follow Plaid convention — sum
+   positive amounts only.
+2. A horizontal bar chart: top 10 merchants by total spend in the
+   same window, with bar length proportional to total.
+3. A table: top 5 single transactions by amount, with columns
+   for date, merchant name, amount, and category.
+
+API shape:
+- GET /api/v1/transactions?start_date=2026-01-23&end_date=2026-04-23
+  returns { "transactions": [...], "next_cursor": "...", "has_more": bool }
+- Each transaction has: id, date, merchant_name, name, amount,
+  iso_currency_code, category_primary, category_detailed, pending.
+
+Use Recharts for the charts. Keep the layout three vertical
+sections with clear headings. Handle pagination — fetch until
+`has_more` is false, capped at 20 pages for safety. Show a loading
+state while fetching.
+
+Give me the artifact as a single self-contained React component.
+```
+
+</CodeGroup>
+
+Claude returns a React component that fetches, paginates, aggregates, and renders. You copy it into Artifacts (or it appears there directly if you're in Claude.ai) and you have a dashboard.
+
+## Iterating on it
+
+The prompt above is a starting point. Typical follow-up prompts once you have v1:
+
+- "Add a date-range picker at the top so I can change the window."
+- "Split the weekly line chart by user — one line per household member."
+- "Add a tag filter — let me type a tag and recompute the totals."
+- "I don't like Recharts. Rebuild this with Tremor."
+
+Claude rewrites the artifact in place. The whole loop is maybe 5-10 minutes per iteration.
+
+## Using MCP instead of the REST API
+
+If you'd rather not expose your API key to the Artifacts sandbox, you can have Claude reason over the data via MCP (inside the chat, not in the artifact) and then generate a static React component containing the data inline. You lose live refresh — the data is baked in — but you avoid putting a live key in a browser sandbox.
+
+```text
+Instead of having the artifact fetch from my API, I want you to:
+1. Call the Breadbox MCP tools from here in the chat to gather the
+   data (query_transactions for the last 90 days, filtering to
+   USD and non-pending).
+2. Aggregate the results into weekly totals and top-merchants and
+   top-transactions in your reasoning.
+3. Generate a React artifact with the aggregated data hardcoded as
+   a constant at the top. The artifact only renders — it doesn't
+   fetch.
+
+That way the artifact is a static snapshot I can share without
+exposing my API key.
+```
+
+Trade-off: the snapshot is stale the moment you close the chat. For a living dashboard, the first approach (live fetch with a key) is better; for a point-in-time report you want to share, the second is safer.
+
+## What Claude is good (and not good) at
+
+**Good at:**
+- Fetching, paginating, and aggregating JSON from a documented endpoint.
+- Picking a chart library, writing the JSX, handling loading states.
+- Iterating on layout and styling in response to feedback.
+- Catching obvious gotchas (currency mixing, pending transactions) when you mention them.
+
+**Not good at:**
+- Guessing what you actually want without an explicit prompt. "Build me a dashboard" alone will give you something generic.
+- Complex data transformations (joins across many endpoints, statistical analysis) — if you need that, do it in a separate step in the chat and then feed the aggregated result to the artifact.
+- Authentication flows beyond a single API key header.
+
+Start with a tight prompt, evaluate the output, iterate. Most of the time you'll have something useful in one or two passes.
+
+## Self-hosting the result
+
+Once you have a React component you like, you don't have to keep using Artifacts. Drop the component into a Vite + React project (or a Next.js app, or even a single HTML file using the CDN builds of React + Recharts) and serve it wherever you want. Your Breadbox instance and the dashboard can run side by side on the same machine.
+
+## Related reading
+
+- [API overview](/api/overview) — the REST endpoints Claude is fetching from.
+- [Transactions API](/api/transactions) — the specific endpoint, all its filters and the response shape.
+- [On-demand analysis](/guides/on-demand-analysis) — for one-off questions where a full dashboard is overkill.

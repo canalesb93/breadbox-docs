@@ -1,0 +1,150 @@
+---
+title: "MCP conventions"
+sidebarTitle: "Conventions"
+description: "Amount sign, compact IDs, cursor pagination, session_id/reason requirements, compound ops, and error shape — the cross-cutting rules every Breadbox MCP tool follows."
+---
+
+Every tool in the reference follows the same handful of conventions. Reading this page once saves repeating them forty times.
+
+## Amounts
+
+Breadbox uses the Plaid sign convention. It applies everywhere — REST, MCP, and the admin UI.
+
+- **Positive amount** — money leaving the account (debits, purchases, fees, payments out).
+- **Negative amount** — money entering the account (credits, deposits, refunds, transfers in).
+
+A grocery charge of $42.50 appears as `42.50`. A direct deposit of $2,500 appears as `-2500.00`.
+
+Every amount field ships with an `iso_currency_code` sibling (`"USD"`, `"EUR"`, etc.). Agents summing amounts must filter to one currency first — the server does not convert between them.
+
+## Compact IDs
+
+Entity IDs returned by MCP tools are 8-character base62 strings:
+
+```text
+k7Xm9pQ2
+Wm5kTrU9
+```
+
+Behind the scenes every row has both a full UUID and a short ID. The MCP response pipeline walks the JSON, replaces every `id` with the sibling `short_id` value, and drops the `short_id` field to save tokens. The REST API returns both unchanged.
+
+Tool inputs accept either form. `transaction_id: "k7Xm9pQ2"` and `transaction_id: "a1b2c3d4-..."` resolve to the same row.
+
+## Dates and date ranges
+
+- All dates are `YYYY-MM-DD` strings. No timezones — dates align with how the institution posted the transaction.
+- Where a tool takes `start_date` and `end_date`, `start_date` is inclusive and `end_date` is exclusive. January 2025 in full is `start_date=2025-01-01&end_date=2025-02-01`.
+- Some tools have sensible defaults — `transaction_summary` defaults to the last 30 days; `merchant_summary` defaults to the last 90 days. See the tool's reference page.
+
+## Cursor pagination
+
+Tools that return lists (`query_transactions`, `list_transaction_rules`) use opaque cursor pagination:
+
+```json
+{
+  "data": [ ... ],
+  "next_cursor": "eyJkYXRlIjoiMjAyNS0wMS0yNSIsImlkIjoiV201a1RyVTkifQ",
+  "has_more": true
+}
+```
+
+When `has_more` is `true`, pass the returned `next_cursor` on the next call to get the next page. When it's `false`, `next_cursor` is `null` and there's nothing more to fetch.
+
+Cursors are bound to the query shape — changing filters mid-pagination will produce meaningless results. Start a new query if you need to change filters.
+
+## session_id and reason
+
+Every write tool requires two fields:
+
+- `session_id` — obtained once at the start of a task via `create_session`.
+- `reason` — a brief, per-call rationale.
+
+Read tools accept both as optional. Including them associates the read with a session in the audit log.
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "categorizing clearly valid grocery charge",
+  "transaction_id": "k7Xm9pQ2",
+  "category_slug": "food_and_drink_groceries"
+}
+```
+
+The server rejects writes that omit either field before the handler runs.
+
+## Compound operations
+
+`update_transactions` is Breadbox's preferred write primitive. One call carries up to 50 per-transaction operations, and each operation is a bundle: set a category, add tags, remove tags, and attach a comment — all in one atomic database transaction per row. Every change lands as a single linked annotation in the activity timeline.
+
+Compared to calling `categorize_transaction` + `add_transaction_tag` + `remove_transaction_tag` + `add_transaction_comment` separately, compound ops:
+
+- Write fewer annotations (one linked event per operation, not four independent events).
+- Round-trip once instead of four times.
+- Give you per-row success/failure accounting in the response.
+
+The tool details are on [Transaction writes](/mcp/reference/transactions-write).
+
+<Note>
+  **When to use single-action tools.** `add_transaction_tag` / `remove_transaction_tag` / `add_transaction_comment` / `categorize_transaction` still exist for one-off edits and for clients that don't need compound semantics. The rule of thumb: if you're touching more than one transaction or doing more than one thing to one transaction, reach for `update_transactions`.
+</Note>
+
+## Error shape
+
+Tool errors come back as an MCP call result with `isError: true` and a text content block carrying JSON:
+
+```json
+{ "error": "session_id is required for write operations; call create_session first" }
+```
+
+The handler never panics and never throws — every error path returns this envelope. There is no structured error code the way REST returns `{"error": {"code": "..."}}`; MCP clients match on the message string or the presence of `isError`.
+
+## Amount filters and sign
+
+Filters like `min_amount` and `max_amount` follow the same sign convention as the stored amounts.
+
+- Find debits over $100: `min_amount=100`.
+- Find credits only: `max_amount=-0.01`.
+- Find everything between $10 and $500 debits: `min_amount=10&max_amount=500`.
+
+Zero is a valid filter value — the underlying fields are pointer types, so `min_amount=0` actually filters, rather than being treated as "unset".
+
+## Search modes
+
+Tools that accept `search` also accept `search_mode`:
+
+- `contains` (default) — plain substring match. `star` matches `Starbucks`.
+- `words` — all words must appear, word-boundary aware. `century link` matches `CenturyLink`.
+- `fuzzy` — trigram similarity, tolerates typos. `starbuks` matches `Starbucks`.
+
+Comma-separated values in `search` are ORed. `search=starbucks,dunkin` matches either.
+
+`exclude_search` uses the same syntax to filter results out.
+
+## Tag filters
+
+`query_transactions` and `count_transactions` accept two tag filters:
+
+- `tags` — array, AND semantics. All tags must be present.
+- `any_tag` — array, OR semantics. At least one tag must match.
+
+The review queue is just `tags=["needs-review"]`.
+
+## Fields aliases
+
+`query_transactions` accepts a `fields` parameter to prune the response:
+
+- `minimal` — `name`, `amount`, `date`
+- `core` — `id`, `date`, `amount`, `name`, `iso_currency_code`
+- `category` — `category`, `category_primary_raw`, `category_detailed_raw`
+- `timestamps` — `created_at`, `updated_at`, `datetime`, `authorized_datetime`
+
+`id` is always included. Comma-separate aliases and custom field names: `fields=core,category`.
+
+## Limits
+
+- List tools default to `limit=50`, max 500.
+- `update_transactions` caps at 50 operations per call.
+- `batch_categorize_transactions` caps at 500 items.
+- `batch_create_rules` caps at 100 items.
+
+Exceeding a cap returns an error; the server does not silently truncate.

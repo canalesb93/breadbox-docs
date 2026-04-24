@@ -3,7 +3,7 @@ title: "Give AI agents access to your finances with Breadbox MCP"
 description: "Breadbox exposes your household financial data to AI agents via the Model Context Protocol, letting Claude query accounts, transactions, and more."
 ---
 
-Breadbox includes a built-in [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server that lets AI agents like Claude read your financial data directly — no copy-pasting exports, no custom scripts. Once connected, an agent can analyze spending patterns, detect unusual transactions, answer questions about your accounts, and submit structured reports, all against live data that you control and host yourself.
+Breadbox includes a built-in <Tooltip headline="MCP" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">Model Context Protocol</Tooltip> (MCP) server that lets AI agents like Claude, ChatGPT, Manus, and Openclaw read your financial data directly — no copy-pasting exports, no custom scripts. Once connected, an agent can analyze spending patterns, detect unusual transactions, answer questions about your accounts, write rules that keep improving your categorization, and submit structured reports — all against live data that you control and host yourself.
 
 ## What MCP is
 
@@ -21,7 +21,7 @@ Breadbox supports two ways to connect an MCP client.
 
 The server advertises two capability types: **tools** and **resources**.
 
-**Tools** are callable functions the agent uses to query your data — listing accounts, searching transactions, counting results, and triggering syncs. See the [tools reference](/mcp/tools) for the full list.
+**Tools** are callable functions the agent uses to query and change your data — listing accounts, searching transactions, counting results, categorizing, tagging, creating rules, triggering syncs, and submitting reports. Around 40 tools in total; see the [MCP Reference](/mcp/reference/overview) tab for the complete enumeration, or [MCP tools](/mcp/tools) for a human walkthrough of the ones you're most likely to grant access to.
 
 **Resources** are passive context documents the agent can read to orient itself before taking action.
 
@@ -39,7 +39,8 @@ With an MCP connection to Breadbox, an agent can:
 
 - Summarize monthly spending by category across all accounts or per family member
 - Flag transactions that look unusual given your typical patterns
-- Identify uncategorized transactions and suggest categories based on your existing data
+- Identify uncategorized transactions and suggest categories based on your existing data and the agent's own context (inbox, calendar, household history)
+- **Write and maintain categorization rules** so patterns it figures out once get applied automatically on every future sync
 - Answer questions like "how much did we spend on groceries last quarter?"
 - Trigger a manual sync to pull the latest transactions before running an analysis
 - Submit a formatted spending report for your records
@@ -56,9 +57,9 @@ HTTP transport requires a valid API key in every request. Generate one from the 
 
 <CardGroup cols={2}>
   <Card title="Set up MCP" icon="plug" href="/mcp/setup">
-    Connect Claude Desktop, Claude Code, or any MCP-compatible agent to Breadbox.
+    Connect Claude (Desktop, web, mobile), Claude Code, ChatGPT, Openclaw, Manus, or any other MCP-compatible agent to Breadbox.
   </Card>
-  <Card title="Tools reference" icon="wrench" href="/mcp/tools">
-    Full reference for every MCP tool: parameters, example inputs, and example outputs.
+  <Card title="MCP reference" icon="wrench" href="/mcp/reference/overview">
+    Complete reference for every MCP tool Breadbox exposes — parameters, example inputs, example outputs, and scope labels.
   </Card>
 </CardGroup>

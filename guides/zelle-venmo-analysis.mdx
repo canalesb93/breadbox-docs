@@ -1,0 +1,151 @@
+---
+title: "Zelle / Venmo analysis"
+description: "Instructing an agent to categorize peer-to-peer transfers when the bank description is opaque — cross-referencing timing, amounts, and frequency, and asking humans for help when the signal isn't there."
+---
+
+Peer-to-peer transfers are the hardest transactions in a typical household to categorize automatically. The description is usually something like "ZELLE TO JOHN SMITH" or "VENMO *CASHOUT" — no merchant, no category hint, no context. Rules can only get you so far. The reasonable ceiling for a good rule is "tag it as P2P"; from there an agent (or a human) has to make the actual call.
+
+This guide describes the shape of the work and gives you an agent prompt tuned for it.
+
+## Why this is hard
+
+A typical Zelle row might look like:
+
+```text
+name            "ZELLE PAYMENT TO JOHN M   REF 1234ABCD"
+merchant_name   null
+amount          450.00
+account_name    "Chase Checking"
+category_primary "TRANSFER_OUT"
+```
+
+There's no way to tell from that row alone whether John is a roommate being paid for rent, a contractor being paid for a one-off job, a friend being reimbursed for dinner, or a kid getting allowance. The answer usually lives in:
+
+1. **Timing** — rent lands on the 1st; allowance on a predictable cadence; dinner is irregular.
+2. **Amount regularity** — rent is always the same amount; dinner reimbursements vary.
+3. **Counterparty history** — if John appears only once every six months, he's probably not a recurring bill.
+4. **External context** — a text message, a shared expense tracker, or a human's memory.
+
+The first three an agent can reason about. The fourth has to be solved by asking.
+
+## The prompt pattern
+
+Give the agent three jobs: look the transaction up in a richer context (its own history plus other recent P2P rows), decide if the signal is strong enough, and either categorize or defer to a human.
+
+<CodeGroup>
+
+```text P2P specialist system prompt
+You are the peer-to-peer transfer specialist. You only handle transactions
+that a routing rule has tagged `p2p-review` (Zelle, Venmo, Cash App, Apple
+Cash, bank-to-bank transfers with opaque descriptions).
+
+Each run:
+
+1. `query_transactions(tags=["p2p-review"], fields="core,category",
+   limit=30)`. Work in batches of 30.
+
+2. For each target transaction, build context by cross-referencing:
+   - Other transactions with the same counterparty: call
+     `query_transactions` with a `search` filter for the counterparty
+     name (e.g., "JOHN M") over the last 180 days. Note how many
+     appear, what amounts, and what cadence.
+   - Other transactions on the same date or within 2 days at similar
+     amounts — they may be a split (dinner bill) or a reimbursement
+     (someone paid back).
+   - Any comments or annotations already on the transaction (the
+     household may have left a note on a prior transfer to the same
+     person).
+
+3. Decide one of:
+   a) STRONG SIGNAL — the counterparty appears monthly at the same
+      amount → categorize as the implied category (rent, utilities,
+      childcare, etc.) and remove `p2p-review` with a note explaining
+      the pattern (e.g., "John M paid $450 monthly since Jan — treated
+      as rent.").
+   b) MODERATE SIGNAL — recurring counterparty but variable amount →
+      apply a generic category (e.g., `transfer_out`), remove
+      `p2p-review`, and add a comment describing what you observed so
+      the household can challenge it later.
+   c) NO SIGNAL — first-time counterparty, no context → leave
+      `p2p-review` in place, add a `p2p-unmapped` tag with a note
+      describing the counterparty and amount, and skip to the next
+      transaction.
+
+4. Never guess a specific category (groceries, dining, etc.) from a
+   single P2P transfer. Peer-to-peer is not the same primitive as a
+   merchant purchase — without external context you don't know what
+   the money was for.
+
+5. At the end of the run, submit a report listing:
+   - How many p2p transactions you resolved (strong/moderate).
+   - How many went to `p2p-unmapped` — these are what the household
+     needs to look at.
+   - Any counterparty patterns you noticed (e.g., "New recurring
+     counterparty: Jane D, $120/month starting March — looks like a
+     subscription to something").
+```
+
+</CodeGroup>
+
+## The `p2p-unmapped` tag as a human queue
+
+The key move is separating the agent's verdict from the household's. When the agent can't decide, it leaves the transaction on `p2p-review` (so it stays in the specialist queue for next time) _and_ adds `p2p-unmapped` so a human can find it quickly.
+
+In the dashboard, the household can filter to `/transactions?tags=p2p-unmapped` once a week, categorize each one by hand, and either remove both tags themselves or leave a comment explaining the context. If they leave a comment, the agent picks it up on the next pass and learns — next time a Zelle to the same counterparty shows up, the earlier comment is part of the context it reads.
+
+## A light rule to pre-tag the queue
+
+Here's the routing rule you'd pair with this agent. It sends anything with a Zelle/Venmo/Cash App/Apple Cash substring into `p2p-review` at sync time, so the agent has a clean queue to work.
+
+```json
+{
+  "name": "Route P2P transfers to the specialist queue",
+  "conditions": {
+    "or": [
+      { "field": "name", "op": "contains", "value": "ZELLE" },
+      { "field": "name", "op": "contains", "value": "VENMO" },
+      { "field": "name", "op": "contains", "value": "CASH APP" },
+      { "field": "name", "op": "matches", "value": "(?i)APPLE\\s*CASH" }
+    ]
+  },
+  "actions": [
+    { "type": "add_tag", "tag_slug": "p2p-review" }
+  ],
+  "trigger": "on_create",
+  "stage": "baseline"
+}
+```
+
+Keep this at `baseline` stage so any more specific rule you write (e.g., "known rent counterparty") can layer on top at `standard` or `refinement`.
+
+## A worked example
+
+Consider three transactions the agent sees in a single batch:
+
+| Date | Name | Amount | Other context |
+|---|---|---|---|
+| 2026-04-01 | ZELLE PAYMENT TO JOHN M REF 1234 | $1,800 | John M appears every month, always $1,800, back 8 months |
+| 2026-04-14 | ZELLE PAYMENT TO SARAH K REF 5678 | $42.75 | Sarah K appears twice ever, amounts $38.10 and $42.75 |
+| 2026-04-19 | ZELLE PAYMENT TO MIKE A REF 9012 | $600 | Mike A doesn't appear anywhere else |
+
+The agent's reasoning:
+
+- **John M → strong signal.** 8 months of identical amounts on the 1st → rent. Categorize as `rent_and_utilities_rent`, remove `p2p-review` with the note "Recurring monthly payment to John M, consistent with rent since Aug 2025."
+- **Sarah K → moderate signal.** Two prior occurrences, variable amounts, irregular cadence → probably dinner splits. Categorize as `food_and_drink_restaurants`, remove `p2p-review`, leave a comment: "Likely a dinner split — Sarah K has two prior matches at similar amounts."
+- **Mike A → no signal.** First appearance, meaningful amount → leave `p2p-review` in place, add `p2p-unmapped` with note "First-time counterparty Mike A at $600. Household review needed."
+
+That third transaction now shows up in both the P2P specialist queue and the unmapped human queue. Whichever side resolves it first wins.
+
+## Where this pattern falls down
+
+<Note>
+  The agent will often misattribute when a household member starts a new recurring relationship (a new babysitter, a new rent situation). Expect the first few transactions to a new counterparty to always land in `p2p-unmapped` — that's working as intended.
+</Note>
+
+If you have a large amount of P2P traffic, consider maintaining a "counterparty memory" file in your agent's long-term memory or project knowledge — a short list of known counterparties with their category mapping. The agent consults this first before doing the full cross-reference. We haven't prescribed a specific shape for that memory, since most households don't have enough counterparty traffic to justify it.
+
+## Related reading
+
+- [Multi-agent reviewer flows](/guides/multi-agent-reviewer) — how this specialist fits into a larger team.
+- [Understanding rules](/guides/understanding-rules) — rule syntax for the pre-tagging step.
+- [MCP tools](/mcp/tools) — `query_transactions` with `search` and date filters, `update_transactions` for the compound write.

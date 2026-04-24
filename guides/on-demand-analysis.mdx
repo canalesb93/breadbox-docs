@@ -1,0 +1,129 @@
+---
+title: "On-demand analysis"
+description: "Ask Claude about your spending — prompt patterns that work, and the two gotchas (currency mixing, attribution) to watch for in the answers."
+---
+
+Not everything has to be a scheduled agent. A lot of the value of having your financial data in Breadbox comes from being able to ask ad-hoc questions: "how much did we spend on groceries last quarter?", "is our entertainment budget trending up?", "what's the biggest single transaction from each of the last six months?". Any MCP-connected chat — Claude Desktop, Claude.ai's MCP connector, a custom client — can answer these if you ask well.
+
+This guide collects prompt patterns that work, and two traps to avoid.
+
+## Prompt patterns that work
+
+### 1. Start with a narrow window
+
+Claude is happiest when you give it a bounded question. "How much did we spend last month?" is clearer than "how's our spending looking?" A good prompt names:
+
+- A time range (last month, Q1 2026, the last 90 days).
+- A category or merchant if you have one in mind.
+- A dimension you care about (totals, trends, outliers).
+
+<CodeGroup>
+
+```text Good ad-hoc prompts
+"How much did we spend on food_and_drink_restaurants last month?
+Break it down by user."
+
+"Show me the top 10 single transactions by amount from March 2026.
+Include merchant name, amount, and account."
+
+"What recurring merchants appeared in every month of Q1? Give me a
+table of merchant, month, and amount."
+
+"Compare groceries spending for March 2026 vs March 2025. Is it
+trending up?"
+
+"Which account has the highest balance right now? Don't sum across
+currencies."
+```
+
+</CodeGroup>
+
+### 2. Let Claude discover before it computes
+
+For anything where the right filter isn't obvious, ask Claude to call `list_categories` or `list_users` first. That grounds the answer in values that actually exist in your data, rather than Claude guessing a category slug that doesn't match anything.
+
+```text
+Before you query, call list_categories and list_users so you know
+what valid values exist. Then compute the answer using only the
+categories and users you found.
+```
+
+### 3. Ask for the query plan
+
+For big questions, ask Claude to lay out its plan before making the calls. This lets you catch an unfortunate filter ("they'll sum across all currencies") before it happens.
+
+```text
+Before calling any MCP tool, describe the sequence of queries you'd
+run and what you expect each to return. Then wait for me to confirm
+before executing.
+```
+
+### 4. Ask for the _shape_ of the answer
+
+"Give me a table" or "give me a chart" or "summarize as three bullets" help constrain the response. Claude will pick reasonable defaults, but a specified shape makes the answer easier to act on.
+
+## Two gotchas to watch for
+
+### Currency mixing
+
+Every Breadbox amount carries an `iso_currency_code`. If any of your accounts is in a different currency than the rest — a euro-denominated card, a CAD checking account — summing raw amounts will give a meaningless number.
+
+Claude _usually_ notices this and groups by currency. But not always. Whenever you ask for a total, add one of:
+
+- "Don't sum across different currencies — tell me the totals per currency."
+- "Filter to USD only before summing."
+
+If the answer comes back as a single number without naming a currency, that's a smell.
+
+### Attribution
+
+Breadbox supports attributing transactions to a specific household member different from the account owner — for example, a child's purchases on a shared card attributed to the child, not the parent who owns the card. Transaction queries use `COALESCE(attributed_user_id, account_owner_user_id)` to resolve the effective user, so per-user totals "do the right thing" by default. But ad-hoc questions that slice by account and then by user can double-count if you're not careful.
+
+If you ask "how much did Alice spend last month," Claude filters by `user_id` correctly. If you ask "how much spending happened on the Chase Amex last month, broken down by user," the answer will respect attribution too. But if you ask "whose transactions are on the Chase Amex," the answer might surprise you — attributed transactions show a different user than the account owner.
+
+When in doubt, ask Claude to say whether it's using account ownership or attribution to decide who a transaction belongs to.
+
+### One more, minor: pending transactions
+
+By default `query_transactions` returns both pending and posted. Pending transactions may change amount or disappear entirely. For "what did we spend" questions, ask Claude to pass `pending: false` so the numbers reflect what's actually cleared.
+
+## A full ad-hoc session
+
+Here's what a well-formed on-demand analysis looks like from start to finish:
+
+<CodeGroup>
+
+```text User
+"How much did we spend on groceries last quarter (Jan-Mar 2026)?
+Break it down by user, and give me a table. Use USD only. Don't
+include pending transactions."
+```
+
+```text Claude's plan (before executing)
+I'll:
+1. Call list_categories to find the grocery category slugs available.
+2. Call list_users to get the user IDs.
+3. Call count_transactions with category_detailed=FOOD_AND_DRINK_GROCERIES,
+   start_date=2026-01-01, end_date=2026-03-31, pending=false. If the
+   count is manageable (<500), proceed.
+4. Call query_transactions with the same filters, paginated as needed.
+5. Sum positive amounts grouped by user_name, excluding any where
+   iso_currency_code != "USD".
+6. Return a table: user | total_spent | transaction_count.
+```
+
+</CodeGroup>
+
+That level of explicitness — what Claude is about to do, what filters it's using, how it handles edge cases — is what you're after. If it's missing, ask for it.
+
+## Where this fits in the bigger picture
+
+On-demand analysis isn't a replacement for the tagging and categorizing workflows in the rest of this tab — it rides on top of them. The cleaner your categories and tags are, the more trustworthy an ad-hoc answer gets. If subscriptions are all tagged, "what are our subscriptions costing per year" is a two-second question. If they're not, Claude has to invent a heuristic and may under- or over-count.
+
+Invest in the structure first; the ad-hoc queries come for free.
+
+## Related reading
+
+- [Single Routine Reviewer](/guides/single-routine-reviewer) — keeps your categories clean so ad-hoc queries are accurate.
+- [Tracking Subscriptions](/guides/tracking-subscriptions) — the setup that makes subscription questions trivial to answer.
+- [MCP tools](/mcp/tools) — reference for all the tools Claude calls on your behalf.

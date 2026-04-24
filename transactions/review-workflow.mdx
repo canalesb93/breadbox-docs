@@ -3,7 +3,7 @@ title: "Review workflow"
 description: "Understand how Breadbox's needs-review tag, seeded rule, and tag-based workflow combine into a configurable review workflow you can extend or turn off."
 ---
 
-Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the `needs-review` tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
+Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
 
 ## How the workflow is assembled
 
@@ -31,46 +31,26 @@ In the dashboard, the transaction detail view has a **Remove tag** action with a
 
 Leaving the tag in place is the "skip" action — the transaction stays in the queue for next time. There is no separate reject or approve state; the decision is captured by whichever category ends up on the transaction plus the note you leave when the tag comes off.
 
-<Note>
-The REST API exposes `PATCH /api/v1/transactions/{id}/category` for category changes, but tag mutations currently live behind the admin UI and the MCP `update_transactions` tool. Day-to-day review work is done in the dashboard or by an agent — not via direct REST calls.
-</Note>
+The REST surface covers both sides of a review: `PATCH /api/v1/transactions/{id}/category` for category changes, plus the [Tags API](/api/tags) (`POST /api/v1/transactions/{id}/tags` to attach, `DELETE /api/v1/transactions/{id}/tags/{slug}` to detach with an optional note). MCP's `update_transactions` remains the ergonomic path for agents — it bundles category + tag + comment into a single compound op — but direct REST works too if you prefer scripting without an MCP client.
 
 ## Making the workflow your own
 
-<Tip>
 The same primitives that power `needs-review` power any review-style workflow you want. Create a `flagged` tag for follow-ups, a `disputed` tag for charges to contest with your bank, a `tax-deductible` tag for end-of-year collection — each with its own rule conditions.
-</Tip>
 
 Common customizations:
 
-- **Narrow the auto-tag rule** so only transactions that *need* attention get flagged — for example, only uncategorized rows, only amounts above a threshold, or only accounts you actually reconcile.
-- **Add parallel tags** for specific workflows (e.g., a `high-amount` rule that tags anything over $500 in addition to `needs-review`), so you can filter to the subset you care about first.
+- **Narrow the auto-tag rule** so only transactions that _need_ attention get flagged — for example, only uncategorized rows, only amounts above a threshold, or only accounts you actually reconcile.
+- **Add parallel tags** for specific workflows (e.g., a `high-amount` rule that tags anything over \$500 in addition to `needs-review`), so you can filter to the subset you care about first.
 - **Disable the auto-tag rule entirely** if you don't want every new transaction on the queue by default.
 
 ### Disabling the auto-tag rule
 
-The seeded rule is named **Auto-tag new transactions for review** and is owned by the `system` creator type. Find its ID from **Rules** in the dashboard (it is listed as system-created), or look it up via the API:
-
-```bash
-curl -H "X-API-Key: bb_your_key" \
-  http://localhost:8080/api/v1/rules \
-  | jq '.rules[] | select(.name == "Auto-tag new transactions for review") | {id, short_id, enabled}'
-```
-
-Then disable it (either `id` or `short_id` works):
-
-```bash
-curl -X PUT \
-  -H "X-API-Key: bb_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": false}' \
-  http://localhost:8080/api/v1/rules/<rule_id>
-```
+The seeded rule is named **Auto-tag new transactions for review** and is owned by the `system` creator type. You can disable the seeded rule from **Rules** in the admin UI (or, if you're scripting, via the rules API — see [Rules API](/api/rules)).
 
 System-seeded rules can be disabled but not deleted, so you can always turn the default back on.
 
 <Note>
-Disabling the rule only affects **future** syncs. Transactions already tagged `needs-review` stay tagged until you resolve them (or bulk-remove the tag).
+  Disabling the rule only affects **future** syncs. Transactions already tagged `needs-review` stay tagged until you resolve them (or bulk-remove the tag).
 </Note>
 
 ## AI agents in the workflow
@@ -79,7 +59,7 @@ Because the queue is just a tag filter, AI agents connected over MCP can partici
 
 - `query_transactions(tags=["needs-review"])` to fetch the backlog
 - `count_transactions(tags=["needs-review"])` to check the size before diving in
-- `update_transactions` with a compound op (`category_slug` + `tags_to_remove` with a note + an optional `comment`) to resolve items in batches
+- `update_transactions` with a compound op (<Tooltip headline="category_slug" tip="Breadbox's internal category slug (e.g. `food_and_drink_groceries`). Takes precedence over raw provider fields for display and filtering." cta="See categories" href="/transactions/categories">`category_slug`</Tooltip> \+ `tags_to_remove` with a note \+ an optional `comment`) to resolve items in batches
 - Leave the tag in place when an agent isn't confident — that's the equivalent of "skipping"
 
 A typical agent loop:
@@ -95,31 +75,8 @@ A typical agent loop:
     `update_transactions` with up to 50 compound ops — set category if needed, remove `needs-review` with a short rationale, optionally leave a comment.
   </Step>
   <Step title="Submit a report">
-    `POST /api/v1/reports` with a title and markdown body summarizing the session and surfacing anything that was deferred.
+    The agent submits a short Markdown summary via the [reports API](/api/reports) so the household can see what was done and what was deferred.
   </Step>
 </Steps>
 
-## Agent reports
-
-Reports are separate from the review workflow itself — they're how an agent summarizes what it just did. A report is a title + markdown body that lands in the dashboard under **Reports** with an unread badge until you open it.
-
-```bash
-curl -X POST \
-  -H "X-API-Key: bb_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Weekly transaction review — April 14–20",
-    "body": "Reviewed 47 transactions. Resolved 41. Deferred 6 (still tagged needs-review):\n\n- k7Xm9pQ2: Unusually large charge at an unfamiliar merchant..."
-  }' \
-  http://localhost:8080/api/v1/reports
-```
-
-```bash
-# Check unread count from a dashboard widget or automation
-curl -H "X-API-Key: bb_your_key" \
-  http://localhost:8080/api/v1/reports/unread-count
-```
-
-<Note>
-See the [MCP overview](/mcp/overview) for how to connect an AI agent to your Breadbox instance.
-</Note>
+Agents summarize each session via the [reports API](/api/reports) (or the [`submit_report` MCP tool](/mcp/reference/reports)). For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer). To connect an AI agent to your Breadbox instance, see the [MCP overview](/mcp/overview).

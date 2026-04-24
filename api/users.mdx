@@ -1,5 +1,6 @@
 ---
-title: "Users"
+title: "Users API"
+sidebarTitle: "Users"
 description: "Reference for the Breadbox users endpoint: list all family members used to organize accounts and filter transactions by household member."
 ---
 
@@ -9,7 +10,7 @@ Users in Breadbox represent family members within a household — they are organ
 
 ## List users
 
-```
+```text
 GET /api/v1/users
 ```
 
@@ -17,33 +18,27 @@ Returns all family members configured in Breadbox. The response is not paginated
 
 **Auth:** Read
 
-### Query parameters
-
-None.
-
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
-      "short_id": "Kp2qRs3t",
-      "name": "Alex Canales",
-      "email": "alex@example.com",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2025-11-01T09:00:00Z"
-    },
-    {
-      "id": "u2b3c4d5-e6f7-890a-bcde-f12345678901",
-      "short_id": "Lq3rSt4u",
-      "name": "Jordan Canales",
-      "email": null,
-      "created_at": "2025-11-15T12:00:00Z",
-      "updated_at": "2025-11-15T12:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
+    "short_id": "Kp2qRs3t",
+    "name": "Alex Canales",
+    "email": "alex@example.com",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  },
+  {
+    "id": "u2b3c4d5-e6f7-890a-bcde-f12345678901",
+    "short_id": "Lq3rSt4u",
+    "name": "Jordan Canales",
+    "email": null,
+    "created_at": "2025-11-15T12:00:00Z",
+    "updated_at": "2025-11-15T12:00:00Z"
+  }
+]
 ```
 
 ```bash
@@ -85,7 +80,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 Users are the top-level ownership entity in Breadbox. The relationship flows downward:
 
-```
+```text
 User → Connections → Accounts → Transactions
 ```
 
@@ -100,6 +95,6 @@ Use the `user_id` query parameter on `GET /api/v1/accounts` and `GET /api/v1/tra
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing `X-API-Key` header | `401` | `MISSING_API_KEY` |
 | Invalid or revoked key | `401` | `INVALID_API_KEY` / `REVOKED_API_KEY` |

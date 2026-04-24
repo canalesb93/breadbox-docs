@@ -1,0 +1,166 @@
+---
+title: "Tag write MCP reference"
+sidebarTitle: "Tag writes"
+description: "Create, update, and delete tags. Attaching tags to transactions lives on Transaction writes."
+---
+
+Tag CRUD. In most cases agents don't need these — adding a tag to a transaction auto-registers it. Use these when you need to set a custom display name, color, icon, or description up front, or to rename/retire a tag.
+
+All tools on this page are **Write** scope and require `session_id` + `reason`.
+
+<Note>
+  Tag-record CRUD is MCP-only today. The REST equivalents for `POST/PUT/DELETE /api/v1/tags` are not yet exposed. The REST [Tags API](/api/tags) covers listing tags and attaching/detaching them from transactions; tag-record management stays on the admin dashboard and these MCP tools.
+</Note>
+
+---
+
+## create_tag
+
+Register a new tag in the system. Use when you need to set `display_name`, `color`, `icon`, or `description` up front. Most of the time agents can skip this — [`add_transaction_tag`](/mcp/reference/transactions-write#add_transaction_tag) or [`update_transactions`](/mcp/reference/transactions-write#update_transactions) with a new slug auto-creates the tag.
+
+### Parameters
+
+<ParamField path="slug" type="string" required>
+  Tag slug. Regex: `^[a-z0-9][a-z0-9\-:]*[a-z0-9]$`. Examples: `needs-review`, `subscription:monthly`.
+</ParamField>
+
+<ParamField path="display_name" type="string" required>
+  Human-readable name.
+</ParamField>
+
+<ParamField path="description" type="string">
+  Optional description.
+</ParamField>
+
+<ParamField path="color" type="string">
+  CSS color used for chip rendering (e.g. `#4f46e5`).
+</ParamField>
+
+<ParamField path="icon" type="string">
+  Lucide icon name (e.g. `inbox`).
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "setting up recurring-charges tracking",
+  "slug": "subscription:monthly",
+  "display_name": "Monthly Subscription",
+  "description": "Recurring monthly charge.",
+  "color": "#8B5CF6",
+  "icon": "refresh-cw"
+}
+```
+
+### Example output
+
+```json
+{
+  "id": "t2Yn0qR3",
+  "slug": "subscription:monthly",
+  "display_name": "Monthly Subscription",
+  "description": "Recurring monthly charge.",
+  "color": "#8B5CF6",
+  "icon": "refresh-cw",
+  "created_at": "2026-04-23T14:40:00Z"
+}
+```
+
+---
+
+## update_tag
+
+Update a tag's mutable fields (`display_name`, `description`, `color`, `icon`). Slug is immutable — to rename, create a new tag, bulk re-tag affected transactions, and delete the old one.
+
+Identify the tag by UUID, short ID, or slug.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Tag UUID, short ID, or slug.
+</ParamField>
+
+<ParamField path="display_name" type="string">
+  New display name.
+</ParamField>
+
+<ParamField path="description" type="string">
+  New description.
+</ParamField>
+
+<ParamField path="color" type="string">
+  New color. Pass empty string to clear.
+</ParamField>
+
+<ParamField path="icon" type="string">
+  New icon. Pass empty string to clear.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "updating color to match household convention",
+  "id": "subscription:monthly",
+  "color": "#4f46e5"
+}
+```
+
+### Example output
+
+```json
+{
+  "id": "t2Yn0qR3",
+  "slug": "subscription:monthly",
+  "display_name": "Monthly Subscription",
+  "description": "Recurring monthly charge.",
+  "color": "#4f46e5",
+  "icon": "refresh-cw"
+}
+```
+
+---
+
+## delete_tag
+
+Delete a tag. Cascades to `transaction_tags` — the tag is removed from every transaction it was attached to. Annotations that reference the tag keep their rows with `tag_id=NULL`, preserving the audit trail.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Tag UUID, short ID, or slug.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "retiring deprecated workflow tag",
+  "id": "old-workflow-tag"
+}
+```
+
+### Example output
+
+```json
+{
+  "deleted": true,
+  "id": "old-workflow-tag"
+}
+```

@@ -1,5 +1,6 @@
 ---
-title: "Connections"
+title: "Connections API"
+sidebarTitle: "Connections"
 description: "Reference for Breadbox connections endpoints: list connections, get connection status with sync history, and trigger a manual sync."
 ---
 
@@ -9,7 +10,7 @@ Connections represent the links between Breadbox and your financial institutions
 
 ## List connections
 
-```
+```text
 GET /api/v1/connections
 ```
 
@@ -26,48 +27,44 @@ Returns all bank connections in the order they were created.
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
-      "institution_id": "ins_3",
-      "institution_name": "Chase",
-      "provider": "plaid",
-      "status": "active",
-      "error_code": null,
-      "error_message": null,
-      "last_synced_at": "2026-02-28T14:30:00Z",
-      "last_attempted_sync_at": "2026-02-28T14:30:00Z",
-      "accounts_count": 2,
-      "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
-      "user_name": "Alex Canales",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2026-02-28T14:30:00Z"
-    },
-    {
-      "id": "d8e9f0a1-b2c3-4567-efab-cd9012345678",
-      "institution_id": "ins_11",
-      "institution_name": "Bank of America",
-      "provider": "plaid",
-      "status": "error",
-      "error_code": "ITEM_LOGIN_REQUIRED",
-      "error_message": "The login details of this item have changed.",
-      "last_synced_at": "2026-01-15T08:00:00Z",
-      "last_attempted_sync_at": "2026-02-28T14:31:00Z",
-      "accounts_count": 1,
-      "user_id": "u2b3c4d5-e6f7-890a-bcde-f12345678901",
-      "user_name": "Jordan Canales",
-      "created_at": "2025-12-01T11:00:00Z",
-      "updated_at": "2026-02-28T14:31:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
+    "short_id": "Cd4eFg5h",
+    "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
+    "user_name": "Alex Canales",
+    "provider": "plaid",
+    "institution_id": "ins_3",
+    "institution_name": "Chase",
+    "status": "active",
+    "error_code": null,
+    "error_message": null,
+    "last_synced_at": "2026-02-28T14:30:00Z",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2026-02-28T14:30:00Z"
+  },
+  {
+    "id": "d8e9f0a1-b2c3-4567-efab-cd9012345678",
+    "short_id": "De5fGh6i",
+    "user_id": "u2b3c4d5-e6f7-890a-bcde-f12345678901",
+    "user_name": "Jordan Canales",
+    "provider": "plaid",
+    "institution_id": "ins_11",
+    "institution_name": "Bank of America",
+    "status": "error",
+    "error_code": "ITEM_LOGIN_REQUIRED",
+    "error_message": "The login details of this item have changed.",
+    "last_synced_at": "2026-01-15T08:00:00Z",
+    "created_at": "2025-12-01T11:00:00Z",
+    "updated_at": "2026-02-28T14:31:00Z"
+  }
+]
 ```
 
 ### Connection status values
 
 | Value | Description |
-|-------|-------------|
+| --- | --- |
 | `active` | Connection is healthy and syncing normally. Transactions are being imported on schedule. |
 | `error` | The most recent sync encountered an error. Check `error_code` and `error_message` for details. Breadbox will retry on the next scheduled sync. |
 | `pending_reauth` | The institution requires the user to re-authenticate. This is typically triggered by a provider error such as `ITEM_LOGIN_REQUIRED`. The user must complete re-authentication from the admin dashboard before syncing can resume. |
@@ -82,7 +79,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get connection status
 
-```
+```text
 GET /api/v1/connections/{id}/status
 ```
 
@@ -101,28 +98,37 @@ Returns detailed health and sync information for a single connection, including 
 ```json
 {
   "id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
-  "institution_name": "Chase",
+  "short_id": "Cd4eFg5h",
+  "user_id": "u1a2b3c4-d5e6-f789-0abc-def123456789",
+  "user_name": "Alex Canales",
   "provider": "plaid",
+  "institution_id": "ins_3",
+  "institution_name": "Chase",
   "status": "active",
   "error_code": null,
   "error_message": null,
   "last_synced_at": "2026-02-28T14:30:00Z",
   "last_attempted_sync_at": "2026-02-28T14:30:00Z",
-  "recent_sync": {
+  "created_at": "2025-11-01T09:00:00Z",
+  "updated_at": "2026-02-28T14:30:00Z",
+  "last_sync_log": {
     "id": "s1a2b3c4-d5e6-f789-0abc-def123456789",
+    "short_id": "Ef6gHi7j",
+    "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
     "trigger": "cron",
     "status": "success",
     "added_count": 12,
     "modified_count": 2,
     "removed_count": 0,
-    "error": null,
+    "error_message": null,
     "started_at": "2026-02-28T14:29:45Z",
-    "completed_at": "2026-02-28T14:30:00Z"
+    "completed_at": "2026-02-28T14:30:00Z",
+    "duration": "15s"
   }
 }
 ```
 
-The `recent_sync` object is `null` if no sync has ever been run for this connection.
+The `last_sync_log` object is `null` if no sync has ever been run for this connection.
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
@@ -133,7 +139,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Trigger a manual sync
 
-```
+```text
 POST /api/v1/sync
 ```
 
@@ -159,19 +165,11 @@ The request body is optional. If provided, it must be valid JSON.
 
 ```json
 {
-  "message": "Sync started.",
-  "connection_id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321"
+  "status": "sync_triggered"
 }
 ```
 
-When syncing all connections, `connection_id` is `null`:
-
-```json
-{
-  "message": "Sync started for all active connections.",
-  "connection_id": null
-}
-```
+The same response is returned whether you target a specific `connection_id` or omit the body to sync every active connection. Poll `GET /api/v1/connections/{id}/status` to observe progress.
 
 <CodeGroup>
 
@@ -231,10 +229,6 @@ curl -X POST \
   Timestamp of the most recently attempted sync, regardless of outcome. `null` if never attempted.
 </ResponseField>
 
-<ResponseField name="accounts_count" type="integer">
-  Number of accounts associated with this connection.
-</ResponseField>
-
 <ResponseField name="user_id" type="string (UUID)">
   UUID of the family member who owns this connection.
 </ResponseField>
@@ -243,12 +237,18 @@ curl -X POST \
   Display name of the owning family member.
 </ResponseField>
 
-<ResponseField name="recent_sync" type="object">
-  The most recent sync log entry. `null` if no sync has ever run.
+<ResponseField name="last_sync_log" type="object">
+  The most recent sync log entry (only returned by `GET /connections/{id}/status`). `null` if no sync has ever run.
 
-  <Expandable title="recent_sync fields">
+  <Expandable title="last_sync_log fields">
     <ResponseField name="id" type="string (UUID)" required>
       Sync log entry UUID.
+    </ResponseField>
+    <ResponseField name="short_id" type="string" required>
+      8-character base62 alias.
+    </ResponseField>
+    <ResponseField name="connection_id" type="string (UUID)" required>
+      UUID of the parent connection.
     </ResponseField>
     <ResponseField name="trigger" type="string" required>
       What triggered the sync: `cron`, `webhook`, `manual`, or `initial`.
@@ -265,14 +265,17 @@ curl -X POST \
     <ResponseField name="removed_count" type="integer" required>
       Number of transactions soft-deleted.
     </ResponseField>
-    <ResponseField name="error" type="string">
+    <ResponseField name="error_message" type="string">
       Error message when `status` is `error`. `null` on success.
     </ResponseField>
-    <ResponseField name="started_at" type="string (ISO 8601)" required>
+    <ResponseField name="started_at" type="string (ISO 8601)">
       When the sync began.
     </ResponseField>
     <ResponseField name="completed_at" type="string (ISO 8601)">
       When the sync completed. `null` if still in progress.
+    </ResponseField>
+    <ResponseField name="duration" type="string">
+      Human-formatted duration (e.g., `"15s"`, `"2m4s"`). Omitted when the sync is still in progress.
     </ResponseField>
   </Expandable>
 </ResponseField>
@@ -282,7 +285,7 @@ curl -X POST \
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
 | `user_id` is not a valid UUID | `400` | `INVALID_PARAMETER` |
 | `connection_id` is not a valid UUID | `400` | `INVALID_PARAMETER` |

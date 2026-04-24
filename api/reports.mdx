@@ -1,5 +1,6 @@
 ---
-title: "Reports"
+title: "Reports API"
+sidebarTitle: "Reports"
 description: "Reference for Breadbox reports endpoints: list all reports, count unread reports, submit a Markdown report from an agent, and mark reports as read."
 ---
 
@@ -9,41 +10,37 @@ Reports let AI agents communicate findings to the household. An agent might subm
 
 ## List reports
 
-```
+```text
 GET /api/v1/reports
 ```
 
-Returns all reports, ordered by creation time descending (newest first).
+Returns the 50 most recently created reports, ordered by creation time descending (newest first). This endpoint is not paginated — older reports beyond that window are not returned.
 
 **Auth:** Read
 
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
-      "short_id": "Uv8wXy9z",
-      "title": "Monthly spending summary — January 2025",
-      "body": "## Summary\n\nTotal spending: $3,241.50 across 127 transactions...",
-      "read": false,
-      "created_at": "2025-02-01T08:00:00Z",
-      "updated_at": "2025-02-01T08:00:00Z"
-    },
-    {
-      "id": "rp2b3c4d5-e6f7-890a-bcde-f12345678901",
-      "short_id": "Vw9xYz0a",
-      "title": "Unusual transaction detected — $899 at Best Buy",
-      "body": "## Alert\n\nA transaction of **$899.00** at Best Buy was detected on January 14...",
-      "read": true,
-      "created_at": "2025-01-15T10:30:00Z",
-      "updated_at": "2025-01-15T14:22:00Z"
-    }
-  ],
-  "next_cursor": null,
-  "has_more": false
-}
+[
+  {
+    "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
+    "short_id": "Uv8wXy9z",
+    "title": "Monthly spending summary — January 2025",
+    "body": "## Summary\n\nTotal spending: $3,241.50 across 127 transactions...",
+    "read": false,
+    "created_at": "2025-02-01T08:00:00Z",
+    "updated_at": "2025-02-01T08:00:00Z"
+  },
+  {
+    "id": "rp2b3c4d5-e6f7-890a-bcde-f12345678901",
+    "short_id": "Vw9xYz0a",
+    "title": "Unusual transaction detected — $899 at Best Buy",
+    "body": "## Alert\n\nA transaction of **$899.00** at Best Buy was detected on January 14...",
+    "read": true,
+    "created_at": "2025-01-15T10:30:00Z",
+    "updated_at": "2025-01-15T14:22:00Z"
+  }
+]
 ```
 
 ```bash
@@ -55,7 +52,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Count unread reports
 
-```
+```text
 GET /api/v1/reports/unread-count
 ```
 
@@ -67,7 +64,7 @@ Returns the number of reports that have not yet been marked as read. Use this to
 
 ```json
 {
-  "count": 3
+  "unread_count": 3
 }
 ```
 
@@ -80,7 +77,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Submit a report
 
-```
+```text
 POST /api/v1/reports
 ```
 
@@ -134,7 +131,7 @@ curl -X POST \
 
 ## Mark a report as read
 
-```
+```text
 PATCH /api/v1/reports/{id}/read
 ```
 
@@ -152,9 +149,7 @@ Marks a report as read. This clears the unread indicator in the dashboard and de
 
 ```json
 {
-  "id": "rp1a2b3c4-d5e6-f789-0abc-def123456789",
-  "read": true,
-  "updated_at": "2025-02-02T09:15:00Z"
+  "ok": true
 }
 ```
 
@@ -213,7 +208,7 @@ A few conventions help make agent reports useful in the admin dashboard:
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
 | Missing `title` or `body` | `422` | `VALIDATION_ERROR` |
 | Report not found | `404` | `NOT_FOUND` |

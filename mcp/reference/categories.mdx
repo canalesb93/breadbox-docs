@@ -1,0 +1,114 @@
+---
+title: "Category read MCP reference"
+sidebarTitle: "Categories"
+description: "MCP read tools for listing and exporting the category taxonomy. Category writes (import) live on a separate page."
+---
+
+Categories are a two-level hierarchy (primary → subcategory) identified by slug (e.g. `food_and_drink_groceries`). Agents use `list_categories` to discover valid slugs before filtering transactions or setting rules; `export_categories` returns the full taxonomy as TSV for bulk external editing.
+
+---
+
+## list_categories
+
+Returns the full category taxonomy as a tree. Each category has a stable `slug`, `display_name`, `icon`, `color`, and optional children.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/categories`](/api/categories#list-categories)
+
+### Parameters
+
+None. Pass an empty object.
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+```json
+[
+  {
+    "id": "c1Xm9pQ2",
+    "slug": "food_and_drink",
+    "display_name": "Food and Drink",
+    "icon": "utensils",
+    "color": "#C8482E",
+    "parent_id": null,
+    "sort_order": 10,
+    "is_system": true,
+    "hidden": false,
+    "created_at": "2026-01-01T00:00:00Z",
+    "updated_at": "2026-01-01T00:00:00Z",
+    "children": [
+      {
+        "id": "c2Yn0qR3",
+        "slug": "food_and_drink_groceries",
+        "display_name": "Groceries",
+        "icon": "shopping-basket",
+        "color": "#C8482E",
+        "parent_id": "c1Xm9pQ2",
+        "parent_slug": "food_and_drink",
+        "parent_display_name": "Food and Drink",
+        "sort_order": 0,
+        "is_system": true,
+        "hidden": false,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z"
+      },
+      {
+        "id": "c3Zo1rS4",
+        "slug": "food_and_drink_restaurant",
+        "display_name": "Restaurants",
+        "icon": "utensils-crossed",
+        "color": "#C8482E",
+        "parent_id": "c1Xm9pQ2",
+        "parent_slug": "food_and_drink",
+        "parent_display_name": "Food and Drink",
+        "sort_order": 10,
+        "is_system": true,
+        "hidden": false,
+        "created_at": "2026-01-01T00:00:00Z",
+        "updated_at": "2026-01-01T00:00:00Z"
+      }
+    ]
+  }
+]
+```
+
+---
+
+## export_categories
+
+Returns all category definitions as TSV text. The returned format can be edited externally (text editor, agent) and re-imported via `import_categories`. Columns: `slug`, `display_name`, `parent_slug`, `icon`, `color`, `sort_order`, `hidden`, `merge_into`.
+
+Slugs are immutable identifiers; `display_name` and other fields can be changed. The `merge_into` column is always empty on export — it's an optional write-time directive for the import path.
+
+**Scope:** Read
+
+### Parameters
+
+None.
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+The response content is a single text block containing TSV:
+
+```tsv
+slug	display_name	parent_slug	icon	color	sort_order	hidden	merge_into
+food_and_drink	Food and Drink		utensils	#C8482E	10	false	
+food_and_drink_groceries	Groceries	food_and_drink	shopping-basket	#C8482E	0	false	
+food_and_drink_restaurant	Restaurants	food_and_drink	utensils-crossed	#C8482E	10	false	
+transportation	Transportation		car	#3E78B2	20	false	
+transportation_gas	Gas	transportation	fuel	#3E78B2	0	false	
+```
+
+Round-trip workflow: call `export_categories` → edit the TSV → call [`import_categories`](/mcp/reference/categories-write#import_categories) with the edited content.

@@ -1,40 +1,36 @@
 ---
-title: "Connect bank accounts via Plaid, Teller, or CSV"
+title: "Connect your bank accounts"
 description: "Learn how Breadbox connects to your banks via Plaid, Teller, or CSV import, and how to manage connection health from the admin dashboard."
 ---
 
-A connection in Breadbox is a link between your self-hosted instance and a bank account source. Each connection belongs to a family member and is managed through the admin dashboard. Once a connection is established, Breadbox pulls in your transactions automatically — or lets you import them manually — and keeps everything in your local database.
+A **connection** in Breadbox is the link between your self-hosted instance and a bank data source, owned by a specific family member. Once a connection is established, Breadbox pulls in that person's transactions automatically — or lets you import them manually — and keeps everything in your local database.
 
-## Provider types
+## Providers supported
 
-Breadbox supports three ways to bring in bank data. Each has different setup requirements and capabilities.
+Breadbox currently supports three ways to bring in bank data. If you're setting up for the first time, **Teller is the easiest starting point**: the free Development tier connects to real accounts immediately, with no production approval process to wait on.
 
 <CardGroup cols={3}>
-  <Card title="Plaid" icon="building-columns" href="/connections/plaid">
-    Connects to thousands of US financial institutions using Plaid's secure link flow. Supports automatic sync and real-time webhooks.
-  </Card>
   <Card title="Teller" icon="landmark" href="/connections/teller">
-    An alternative to Plaid for some US banks. Uses mTLS-based authentication and the same dashboard-driven connection flow.
+    Recommended starter. Real bank connections on the free Development tier without a production approval process. Uses mTLS-based authentication.
   </Card>
-  <Card title="CSV import" icon="file-csv" href="/connections/csv-import">
-    Manually import transactions from a CSV file your bank provides. Works for any institution, with no API credentials required.
+
+  <Card title="Plaid" icon="building" href="/connections/plaid">
+    Widest US coverage — thousands of institutions, automatic sync, webhooks, and balance tracking. Worth the extra setup once you're ready for production.
+  </Card>
+
+  <Card title="CSV import" icon="file-spreadsheet" href="/connections/csv-import">
+    Works for any institution, with no API credentials. Useful for banks Plaid and Teller don't cover, historical data, and migrations from other tools. <Badge color="blue" icon="hammer">BETA</Badge>
   </Card>
 </CardGroup>
 
-### When to use each provider
-
-| Provider | Best for |
-|----------|----------|
-| Plaid | Most US banks and credit cards. Widest coverage, automatic sync, balance tracking. |
-| Teller | Banks or credit unions where Teller has coverage but Plaid does not, or as an alternative to Plaid. |
-| CSV | Institutions not covered by Plaid or Teller, historical data imports, and one-time migrations from other tools. |
+More provider integrations are on the roadmap — see the [GitHub repo](https://github.com/canalesb93/breadbox) for current status.
 
 ## Connection statuses
 
 Every connection has a status that tells you whether Breadbox can sync data from it.
 
 | Status | Meaning |
-|--------|---------|
+| --- | --- |
 | `active` | The connection is healthy. Sync runs on schedule. |
 | `pending_reauth` | Your session or OAuth consent with the bank is about to expire. Re-authentication is needed soon but sync is still working. |
 | `error` | Sync is blocked. The bank rejected the stored credentials or a login change occurred. You must re-authenticate before data will update. |
@@ -57,7 +53,7 @@ Breadbox keeps your data up to date using two complementary mechanisms:
 If no webhook URL is configured, Breadbox falls back to cron-only syncing.
 
 <Note>
-  Your webhook endpoint must be reachable from the internet. If you run Breadbox at home or behind a firewall, Cloudflare Tunnel is a free option that creates a stable public URL for your local instance.
+  Your webhook endpoint must be reachable from the internet. If you run Breadbox at home or behind a firewall, [Remote Hosting](/installation/remote-hosting) covers four options — exe.dev, Cloudflare Tunnel, Caddy on a VPS, and Tailscale Funnel — that each give you a stable public URL.
 </Note>
 
 CSV connections do not support automatic sync. You import new data manually whenever you want to add transactions.
@@ -80,13 +76,15 @@ From this page you can:
 ## Next steps
 
 <CardGroup cols={3}>
-  <Card title="Connect with Plaid" icon="plug" href="/connections/plaid">
-    Set up Plaid credentials and link your first bank account.
-  </Card>
   <Card title="Connect with Teller" icon="plug" href="/connections/teller">
     Configure Teller and enroll a bank using the Teller Connect flow.
   </Card>
-  <Card title="Import from CSV" icon="file-import" href="/connections/csv-import">
+
+  <Card title="Connect with Plaid" icon="plug" href="/connections/plaid">
+    Set up Plaid credentials and link your first bank account.
+  </Card>
+
+  <Card title="Import from CSV" icon="upload" href="/connections/csv-import">
     Upload a CSV export from your bank and map columns to Breadbox fields.
   </Card>
 </CardGroup>

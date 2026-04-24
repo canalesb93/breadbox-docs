@@ -1,15 +1,16 @@
 ---
-title: "Categories"
+title: "Categories API"
+sidebarTitle: "Categories"
 description: "Reference for Breadbox category endpoints: list, create, update, delete, export as TSV, import from TSV, and merge categories together."
 ---
 
-Categories organize transactions into a two-level hierarchy: a primary category (e.g., `FOOD_AND_DRINK`) and a detailed subcategory (e.g., `FOOD_AND_DRINK_GROCERIES`). Breadbox ships with the Plaid taxonomy pre-loaded, and you can customize it by creating, editing, or merging categories. Transaction rules and manual overrides reference categories by their `slug`.
+Categories organize transactions into a two-level hierarchy: a primary category (e.g., `FOOD_AND_DRINK`) and a detailed subcategory (e.g., `FOOD_AND_DRINK_GROCERIES`). Breadbox ships with the Plaid taxonomy by default, and you can customize it by creating, editing, or merging categories. Transaction rules and manual overrides reference categories by their `slug`.
 
 ## Two-level hierarchy
 
 Every category has a primary parent and an optional detailed child. For example:
 
-```
+```text
 FOOD_AND_DRINK
 ├── FOOD_AND_DRINK_GROCERIES
 ├── FOOD_AND_DRINK_RESTAURANTS
@@ -26,7 +27,7 @@ Primary categories group broad spending areas. Detailed categories give finer-gr
 
 ## List categories
 
-```
+```text
 GET /api/v1/categories
 ```
 
@@ -37,30 +38,28 @@ Returns all categories in the two-level hierarchy.
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "c1a2b3c4-d5e6-f789-0abc-def123456789",
-      "short_id": "Ab1cDe2f",
-      "slug": "food-and-drink",
-      "name": "Food & Drink",
-      "primary_slug": null,
-      "description": "Restaurants, groceries, coffee, and bars.",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2025-11-01T09:00:00Z"
-    },
-    {
-      "id": "c2b3c4d5-e6f7-890a-bcde-f12345678901",
-      "short_id": "Bc2dEf3g",
-      "slug": "food-and-drink-groceries",
-      "name": "Groceries",
-      "primary_slug": "food-and-drink",
-      "description": "Supermarkets and grocery stores.",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2025-11-01T09:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "c1a2b3c4-d5e6-f789-0abc-def123456789",
+    "short_id": "Ab1cDe2f",
+    "slug": "food-and-drink",
+    "name": "Food & Drink",
+    "primary_slug": null,
+    "description": "Restaurants, groceries, coffee, and bars.",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  },
+  {
+    "id": "c2b3c4d5-e6f7-890a-bcde-f12345678901",
+    "short_id": "Bc2dEf3g",
+    "slug": "food-and-drink-groceries",
+    "name": "Groceries",
+    "primary_slug": "food-and-drink",
+    "description": "Supermarkets and grocery stores.",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  }
+]
 ```
 
 ```bash
@@ -72,7 +71,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Export categories as TSV
 
-```
+```text
 GET /api/v1/categories/export
 ```
 
@@ -82,7 +81,7 @@ Returns all categories as a tab-separated values (TSV) file. Useful for bulk edi
 
 The response has `Content-Type: text/tab-separated-values` and includes a header row:
 
-```
+```text
 slug	name	primary_slug	description
 food-and-drink	Food & Drink		Restaurants, groceries, coffee, and bars.
 food-and-drink-groceries	Groceries	food-and-drink	Supermarkets and grocery stores.
@@ -98,7 +97,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get a single category
 
-```
+```text
 GET /api/v1/categories/{id}
 ```
 
@@ -121,7 +120,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Create a category
 
-```
+```text
 POST /api/v1/categories
 ```
 
@@ -176,7 +175,7 @@ curl -X POST \
 
 ## Update a category
 
-```
+```text
 PUT /api/v1/categories/{id}
 ```
 
@@ -211,7 +210,7 @@ curl -X PUT \
 
 ## Delete a category
 
-```
+```text
 DELETE /api/v1/categories/{id}
 ```
 
@@ -235,7 +234,7 @@ curl -X DELETE \
 
 ## Import categories from TSV
 
-```
+```text
 POST /api/v1/categories/import
 ```
 
@@ -268,7 +267,7 @@ curl -X POST \
 
 ## Merge a category
 
-```
+```text
 POST /api/v1/categories/{id}/merge
 ```
 
@@ -344,7 +343,7 @@ curl -X POST \
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
 | Category not found | `404` | `NOT_FOUND` |
 | Slug already exists | `409` | `VALIDATION_ERROR` |

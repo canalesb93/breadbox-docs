@@ -5,7 +5,7 @@ description: "Open-ended labels you attach to transactions — the primitive Bre
 
 Tags are open-ended labels attached to transactions. They are the primitive Breadbox uses for any workflow that asks "which transactions are in this state?" — the review queue is a tag view, and you can build your own (flagged, disputed, tax-deductible) the same way.
 
-Unlike categories, tags are not hierarchical and a transaction can carry any number of them at once.
+Unlike categories, tags are not hierarchical and a transaction can carry any number of them at once. The endpoints for listing, attaching, and detaching tags live on the [Tags API](/api/tags) reference; filtering transactions by tag is on [Transactions API](/api/transactions).
 
 ## Anatomy of a tag
 
@@ -16,11 +16,11 @@ Unlike categories, tags are not hierarchical and a transaction can carry any num
 | `description` | Optional short explanation of what the tag means. |
 | `color` | Hex color for the dashboard pill. |
 
-Each tag also has an 8-character `short_id` alongside its internal UUID, same as every other entity in Breadbox.
+Each tag also has an 8-character <Tooltip headline="Short ID" tip="8-character base62 alias accepted interchangeably with the full UUID `id` in any API or MCP tool input.">`short_id`</Tooltip> alongside its internal UUID, same as every other entity in Breadbox.
 
 ## Tag removal notes
 
-When you remove a tag from a transaction, you can optionally include a short note. If provided, the note is recorded as an annotation on the transaction's activity timeline — useful for workflow flags like `needs-review` or `disputed`, where the reason for resolution is worth keeping.
+When you remove a tag from a transaction, you can optionally include a short note. If provided, the note is recorded as an annotation on the transaction's activity timeline — useful for workflow flags like <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> or `disputed`, where the reason for resolution is worth keeping.
 
 ## Seeded tags
 
@@ -44,7 +44,7 @@ A tag reaches a transaction one of four ways — and the activity timeline recor
     An AI agent connected over MCP calls `update_transactions` with `tags_to_add` or `tags_to_remove` (each entry can include an inline `note`). Recorded as `added_by_type = agent`.
   </Step>
   <Step title="Rule action">
-    A transaction rule with `add_tag` or `remove_tag` in its actions fires during sync (trigger `on_create`) or retroactively (trigger `on_apply`). Recorded as `added_by_type = rule`, with the rule's ID on the annotation so you can trace why the tag landed.
+    A transaction rule with `add_tag` or `remove_tag` in its actions fires during sync (trigger <Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>) or retroactively (trigger `on_apply`). Recorded as `added_by_type = rule`, with the rule's ID on the annotation so you can trace why the tag landed.
   </Step>
   <Step title="System">
     Reserved for Breadbox itself — seeds, backfills, internal workflows. You won't normally apply system tags; they show up in the timeline when they do.
@@ -60,7 +60,7 @@ MCP tools accept two filter shapes:
 - **`tags`** — all-of semantics. A transaction must carry every listed slug.
 - **`any_tag`** — any-of semantics. A transaction must carry at least one.
 
-```
+```text
 query_transactions(tags=["needs-review"])                      # the review backlog
 query_transactions(tags=["needs-review", "high-amount"])       # both tags
 query_transactions(any_tag=["flagged", "disputed"])            # either tag

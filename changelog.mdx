@@ -1,0 +1,47 @@
+---
+title: "Changelog"
+sidebarTitle: "Changelog"
+description: "What's new in Breadbox — user-facing changes since the V1 docs launch."
+---
+
+{/* Scope: user-visible changes from the V1 docs rollout onward. */}
+{/* Do not backfill pre-V1 history. */}
+
+<Update label="April 24, 2026" description="V1 polish: install UX, transaction timeline, and keyboard nav" tags={["Install", "UI"]}>
+  - `breadbox doctor` is now available as a standalone pre-flight command. Run it before starting the server to verify your database connection, encryption key, and provider credentials in one pass — no server boot required. Use `--json` for CI or scripted installs.
+  - The transaction activity timeline now groups events by day with clear date headers. Same-day events no longer blur together, and tapping a rule row on mobile navigates directly to the rule that fired.
+  - CSV import now shows plain-English error messages when a file is malformed instead of leaking raw Go parse errors.
+  - Anonymous `404` and `500` pages no longer render the admin sidebar for logged-out visitors.
+  {/* closes #692, #721, #719, #698 */}
+</Update>
+
+<Update label="April 24, 2026" description="Keyboard navigation polish" tags={["UI"]}>
+  - Keyboard shortcuts now work correctly on the review queue: `j`/`k` navigation, `a` to approve, and all transaction bindings carry over from the main list via scope inheritance.
+  - Category tree keyboard nav is fully wired: `Enter` expands or jumps to filtered transactions, `e` opens the edit form, and `n` creates a new category — all from the keyboard.
+  - Chord shortcuts (`g+h`, `n+t`, etc.) are suppressed on touch devices so mobile users no longer get a stalled prefix state when tapping keys.
+  - The `?` shortcut help modal now shows page-level shortcuts above globals and labels sections with the current page context.
+  {/* closes #712, #714, #699, #705 */}
+</Update>
+
+<Update label="April 24, 2026" description="One-liner installer and cross-platform daemon registration" tags={["Install"]}>
+  - Breadbox can now be installed with a single command: `curl -fsSL https://breadbox.sh/install.sh | bash`. The installer auto-detects your OS, arch, package manager, and init system.
+  - On Linux, the installer offers to register a systemd unit so Breadbox starts on boot. On macOS, it registers a launchd agent. Pass `--register-daemon` to accept without prompting.
+  - Caddy (HTTPS reverse proxy) is now opt-in behind a Docker Compose profile. Localhost-only installs no longer bind ports 80/443. The installer prompts for an optional public domain and wires Caddy automatically when one is provided.
+  - `update.sh` now preserves your installed version pin and only upgrades when you explicitly pass `--bump=vX.Y.Z` or `--bump=latest`.
+  {/* closes #695, #694, #693 */}
+</Update>
+
+<Update label="April 24, 2026" description="MCP response shape regression harness" tags={["MCP", "API"]}>
+  An integration test harness now locks the response shapes for all ~14 key MCP tools — `list_accounts`, `query_transactions`, `transaction_summary`, `merchant_summary`, `list_categories`, `preview_rule`, and more. Any rename or field drop in the service layer will fail a test in the same PR, preventing silent breakage for agents that depend on specific field names.
+  {/* closes #696 */}
+</Update>
+
+<Update label="April 23, 2026" description="Keyboard shortcut badge component" tags={["UI"]}>
+  Keyboard shortcut hints throughout the admin UI now use a unified `Kbd`/`KbdChord` component. Hints are hidden automatically on touch devices (both via CSS and Alpine.js runtime) so mobile views are no longer cluttered with inaccessible shortcut badges.
+  {/* closes #664 */}
+</Update>
+
+<Update label="April 23, 2026" description="CSV import viewport fix" tags={["UI", "Install"]}>
+  The final confirmation step of the CSV import wizard no longer clips content on narrow viewports, making the import flow fully usable on tablets and small-screen laptops.
+  {/* closes #663 */}
+</Update>

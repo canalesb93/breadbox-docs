@@ -1,5 +1,6 @@
 ---
-title: "Transactions"
+title: "Transactions API"
+sidebarTitle: "Transactions"
 description: "Complete reference for Breadbox transaction endpoints: list, count, summarize, merchant stats, single fetch, category overrides, and bulk recategorize."
 ---
 
@@ -9,7 +10,7 @@ Transactions are the core data in Breadbox. The transactions API lets you query 
 
 ## List transactions
 
-```
+```text
 GET /api/v1/transactions
 ```
 
@@ -19,30 +20,83 @@ Returns a paginated list of transactions sorted by date descending by default. S
 
 ### Query parameters
 
-| Parameter | Type | Default | Description |
-|-----------|------|---------|-------------|
-| `account_id` | string (UUID) | — | Filter to transactions from a single account. |
-| `user_id` | string (UUID) | — | Filter to transactions from all accounts owned by a family member. Uses attribution-aware logic: `COALESCE(attributed_user_id, account.user_id)`. |
-| `category_slug` | string | — | Filter by category slug (e.g., `food-and-drink-groceries`). |
-| `start_date` | string (YYYY-MM-DD) | — | Inclusive lower bound on the transaction date. |
-| `end_date` | string (YYYY-MM-DD) | — | Exclusive upper bound on the transaction date. A transaction on `end_date` is excluded — use this to express calendar months without overlap (e.g., `start_date=2025-01-01&end_date=2025-02-01` returns all of January). |
-| `min_amount` | number | — | Inclusive lower bound on amount. Uses Plaid convention (positive = debit). To find all debits over $100: `min_amount=100`. |
-| `max_amount` | number | — | Inclusive upper bound on amount. To find all credits: `max_amount=-0.01`. |
-| `search` | string | — | Case-insensitive search on `name` and `merchant_name`. Comma-separate values for OR logic. Minimum 2 characters. |
-| `exclude_search` | string | — | Exclude transactions where `name` or `merchant_name` matches this term. Minimum 2 characters. |
-| `search_mode` | string | `contains` | How the `search` term is matched. One of: `contains` (default substring), `words` (word-boundary match), `fuzzy` (trigram similarity). |
-| `pending` | boolean | — | `true` returns only pending transactions; `false` returns only posted. Omit to return both. |
-| `sort_by` | string | `date` | Sort field. One of: `date`, `amount`, `name`. Cursor pagination only works with `date` sort. |
-| `sort_order` | string | `desc` | Sort direction. One of: `desc`, `asc`. |
-| `fields` | string | — | Field selection preset. One of: `minimal`, `core`, `category`, `timestamps`. Returns a subset of fields to reduce response size. |
-| `cursor` | string | — | Opaque pagination cursor from a previous response. Omit to fetch the first page. Only works with `date` sort. |
-| `limit` | integer | `50` | Results per page. Minimum `1`, maximum `500`. |
+<ParamField query="account_id" type="string (UUID)">
+  Filter to transactions from a single account.
+</ParamField>
+
+<ParamField query="user_id" type="string (UUID)">
+  Filter to transactions from all accounts owned by a family member. Uses attribution-aware logic: `COALESCE(attributed_user_id, account.user_id)`.
+</ParamField>
+
+<ParamField query="category_slug" type="string">
+  Filter by category slug (e.g., `food-and-drink-groceries`).
+</ParamField>
+
+<ParamField query="start_date" type="string (YYYY-MM-DD)">
+  Inclusive lower bound on the transaction date.
+</ParamField>
+
+<ParamField query="end_date" type="string (YYYY-MM-DD)">
+  Exclusive upper bound on the transaction date. A transaction on `end_date` is excluded — use this to express calendar months without overlap (e.g., `start_date=2025-01-01&end_date=2025-02-01` returns all of January).
+</ParamField>
+
+<ParamField query="min_amount" type="number">
+  Inclusive lower bound on amount. Uses Plaid convention (positive = debit). To find all debits over $100: `min_amount=100`.
+</ParamField>
+
+<ParamField query="max_amount" type="number">
+  Inclusive upper bound on amount. To find all credits: `max_amount=-0.01`.
+</ParamField>
+
+<ParamField query="search" type="string">
+  Case-insensitive search on `name` and `merchant_name`. Comma-separate values for OR logic. Minimum 2 characters.
+</ParamField>
+
+<ParamField query="exclude_search" type="string">
+  Exclude transactions where `name` or `merchant_name` matches this term. Minimum 2 characters.
+</ParamField>
+
+<ParamField query="search_mode" type="string" default="contains">
+  How the `search` term is matched. One of: `contains` (default substring), `words` (word-boundary match), `fuzzy` (trigram similarity).
+</ParamField>
+
+<ParamField query="pending" type="boolean">
+  `true` returns only pending transactions; `false` returns only posted. Omit to return both.
+</ParamField>
+
+<ParamField query="tags" type="string">
+  Comma-separated list of tag slugs. Returns only transactions that carry **every** listed tag (AND semantics). Example: `tags=needs-review,subscription`. See the [Tags API](/api/tags) for the full tag-management surface.
+</ParamField>
+
+<ParamField query="any_tag" type="string">
+  Comma-separated list of tag slugs. Returns transactions that carry **at least one** of the listed tags (OR semantics). Example: `any_tag=flagged,disputed`.
+</ParamField>
+
+<ParamField query="sort_by" type="string" default="date">
+  Sort field. One of: `date`, `amount`, `name`. Cursor pagination only works with `date` sort.
+</ParamField>
+
+<ParamField query="sort_order" type="string" default="desc">
+  Sort direction. One of: `desc`, `asc`.
+</ParamField>
+
+<ParamField query="fields" type="string">
+  Field selection preset. One of: `minimal`, `core`, `category`, `timestamps`. Returns a subset of fields to reduce response size.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Opaque pagination cursor from a previous response. Omit to fetch the first page. Only works with `date` sort.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Results per page. Minimum `1`, maximum `500`.
+</ParamField>
 
 ### Response
 
 ```json
 {
-  "data": [
+  "transactions": [
     {
       "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
       "short_id": "Wm5kTrU9",
@@ -81,7 +135,8 @@ Returns a paginated list of transactions sorted by date descending by default. S
     }
   ],
   "next_cursor": "eyJkYXRlIjoiMjAyNi0wMi0yNSIsImlkIjoidDJiM2M0ZDUifQ",
-  "has_more": true
+  "has_more": true,
+  "limit": 100
 }
 ```
 
@@ -110,7 +165,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Count transactions
 
-```
+```text
 GET /api/v1/transactions/count
 ```
 
@@ -135,7 +190,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Summarize transactions
 
-```
+```text
 GET /api/v1/transactions/summary
 ```
 
@@ -143,34 +198,45 @@ Returns aggregated spending totals grouped by category, month, week, or day. Use
 
 **Auth:** Read
 
-Accepts the same filter parameters as the list endpoint. The `group_by` parameter controls the aggregation dimension.
+Accepts the same filter parameters as the list endpoint. The `group_by` parameter (required — one of `category`, `month`, `week`, `day`, `category_month`) controls the aggregation dimension.
 
 ### Response
 
 ```json
 {
-  "data": [
+  "summary": [
     {
-      "group": "FOOD_AND_DRINK",
-      "total": 843.21,
-      "count": 34,
+      "category": "food-and-drink",
+      "total_amount": 843.21,
+      "transaction_count": 34,
       "iso_currency_code": "USD"
     },
     {
-      "group": "TRANSPORTATION",
-      "total": 312.50,
-      "count": 18,
+      "category": "transportation",
+      "total_amount": 312.50,
+      "transaction_count": 18,
       "iso_currency_code": "USD"
     }
-  ]
+  ],
+  "totals": {
+    "total_amount": 1155.71,
+    "transaction_count": 52
+  },
+  "filters": {
+    "start_date": "",
+    "end_date": "",
+    "group_by": "category"
+  }
 }
 ```
+
+Rows aggregated by `month`, `week`, or `day` include a `period` string (e.g., `"2026-02"`) instead of `category`. Rows aggregated by `category_month` include both fields.
 
 ---
 
 ## Merchant statistics
 
-```
+```text
 GET /api/v1/transactions/merchants
 ```
 
@@ -182,22 +248,36 @@ Returns merchant-level statistics — total spent, transaction count, and averag
 
 ```json
 {
-  "data": [
+  "merchants": [
     {
-      "merchant_name": "Whole Foods Market",
-      "count": 12,
-      "total": 843.21,
-      "average": 70.27,
+      "merchant": "Whole Foods Market",
+      "transaction_count": 12,
+      "total_amount": 843.21,
+      "avg_amount": 70.27,
+      "first_date": "2025-11-02",
+      "last_date": "2026-02-26",
       "iso_currency_code": "USD"
     },
     {
-      "merchant_name": "Netflix",
-      "count": 3,
-      "total": 42.00,
-      "average": 14.00,
+      "merchant": "Netflix",
+      "transaction_count": 3,
+      "total_amount": 42.00,
+      "avg_amount": 14.00,
+      "first_date": "2025-12-01",
+      "last_date": "2026-02-01",
       "iso_currency_code": "USD"
     }
-  ]
+  ],
+  "totals": {
+    "merchant_count": 2,
+    "transaction_count": 15,
+    "total_amount": 885.21
+  },
+  "filters": {
+    "start_date": "",
+    "end_date": "",
+    "min_count": 1
+  }
 }
 ```
 
@@ -210,7 +290,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get a single transaction
 
-```
+```text
 GET /api/v1/transactions/{id}
 ```
 
@@ -260,7 +340,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Set category override
 
-```
+```text
 PATCH /api/v1/transactions/{id}/category
 ```
 
@@ -278,19 +358,23 @@ Sets a manual category override on a single transaction. Once overridden, Breadb
 
 ```json
 {
-  "category_slug": "food-and-drink-groceries"
+  "category_id": "food-and-drink-groceries"
 }
 ```
 
-<ParamField body="category_slug" type="string" required>
-  The slug of the category to assign. Must be an existing category slug from `GET /api/v1/categories`.
+<ParamField body="category_id" type="string" required>
+  Identifier of the category to assign. Accepts a category UUID, 8-character short ID, or slug (e.g., `food-and-drink-groceries`). Must match an existing category.
 </ParamField>
+
+### Response
+
+Returns `204 No Content` on success.
 
 ```bash
 curl -X PATCH \
   -H "X-API-Key: bb_your_key" \
   -H "Content-Type: application/json" \
-  -d '{"category_slug": "food-and-drink-groceries"}' \
+  -d '{"category_id": "food-and-drink-groceries"}' \
   "http://localhost:8080/api/v1/transactions/t1a2b3c4-d5e6-f789-0abc-def123456789/category"
 ```
 
@@ -298,7 +382,7 @@ curl -X PATCH \
 
 ## Reset category override
 
-```
+```text
 DELETE /api/v1/transactions/{id}/category
 ```
 
@@ -312,6 +396,10 @@ Removes a manual category override, restoring the transaction to its provider-as
   The transaction's Breadbox UUID or short ID.
 </ParamField>
 
+### Response
+
+Returns `204 No Content` on success.
+
 ```bash
 curl -X DELETE \
   -H "X-API-Key: bb_your_key" \
@@ -322,11 +410,11 @@ curl -X DELETE \
 
 ## Batch categorize
 
-```
+```text
 POST /api/v1/transactions/batch-categorize
 ```
 
-Sets a category override on multiple transactions in a single request. Maximum 500 transactions per call. All transactions receive the same category; to assign different categories, make multiple requests.
+Sets category overrides on up to 500 transactions in a single request. Each item pairs a transaction with its target category, so you can assign different categories in one call.
 
 **Auth:** Write
 
@@ -334,37 +422,38 @@ Sets a category override on multiple transactions in a single request. Maximum 5
 
 ```json
 {
-  "transaction_ids": [
-    "t1a2b3c4-d5e6-f789-0abc-def123456789",
-    "t2b3c4d5-e6f7-890a-bcde-f12345678901"
-  ],
-  "category_slug": "food-and-drink-groceries"
+  "items": [
+    { "transaction_id": "t1a2b3c4-d5e6-f789-0abc-def123456789", "category_slug": "food-and-drink-groceries" },
+    { "transaction_id": "t2b3c4d5-e6f7-890a-bcde-f12345678901", "category_slug": "transportation-gas" }
+  ]
 }
 ```
 
-<ParamField body="transaction_ids" type="array of strings" required>
-  List of transaction UUIDs or short IDs to categorize. Maximum 500 per request.
-</ParamField>
-
-<ParamField body="category_slug" type="string" required>
-  The category slug to assign to all listed transactions.
+<ParamField body="items" type="array of objects" required>
+  Up to 500 `{transaction_id, category_slug}` pairs. `transaction_id` accepts either a UUID or an 8-character short ID.
 </ParamField>
 
 ### Response
 
 ```json
 {
-  "updated_count": 2
+  "succeeded": 2,
+  "failed": [
+    { "transaction_id": "t3...unknown", "error": "transaction not found" }
+  ]
 }
 ```
+
+The `failed` array is omitted when every item succeeded.
 
 ```bash
 curl -X POST \
   -H "X-API-Key: bb_your_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "transaction_ids": ["t1a2b3c4-d5e6-f789-0abc-def123456789"],
-    "category_slug": "food-and-drink-groceries"
+    "items": [
+      { "transaction_id": "t1a2b3c4-d5e6-f789-0abc-def123456789", "category_slug": "food-and-drink-groceries" }
+    ]
   }' \
   "http://localhost:8080/api/v1/transactions/batch-categorize"
 ```
@@ -373,7 +462,7 @@ curl -X POST \
 
 ## Bulk recategorize
 
-```
+```text
 POST /api/v1/transactions/bulk-recategorize
 ```
 
@@ -385,29 +474,66 @@ Recategorizes all transactions matching a set of filters in a single server-side
 
 ```json
 {
-  "filters": {
-    "search": "NETFLIX",
-    "start_date": "2025-01-01"
-  },
-  "category_slug": "entertainment-streaming-services"
+  "target_category_slug": "entertainment-streaming-services",
+  "search": "NETFLIX",
+  "start_date": "2025-01-01"
 }
 ```
 
-<ParamField body="filters" type="object" required>
-  The same filter parameters accepted by `GET /api/v1/transactions` (e.g., `account_id`, `search`, `start_date`, `end_date`, `category_slug`). All matching transactions are recategorized.
+<ParamField body="target_category_slug" type="string" required>
+  The category slug to assign to every transaction that matches the filters.
 </ParamField>
 
-<ParamField body="category_slug" type="string" required>
-  The category slug to assign to all matching transactions.
+<ParamField body="start_date" type="string (YYYY-MM-DD)">
+  Inclusive lower bound on the transaction date.
+</ParamField>
+
+<ParamField body="end_date" type="string (YYYY-MM-DD)">
+  Inclusive upper bound on the transaction date.
+</ParamField>
+
+<ParamField body="account_id" type="string">
+  Limit to a specific account (UUID or short ID).
+</ParamField>
+
+<ParamField body="user_id" type="string">
+  Limit to transactions attributed to a specific family member.
+</ParamField>
+
+<ParamField body="category_slug" type="string">
+  Filter by the transaction's **current** category slug (distinct from `target_category_slug`, which is the replacement).
+</ParamField>
+
+<ParamField body="min_amount" type="number">
+  Inclusive lower bound on amount (Plaid sign convention).
+</ParamField>
+
+<ParamField body="max_amount" type="number">
+  Inclusive upper bound on amount.
+</ParamField>
+
+<ParamField body="pending" type="boolean">
+  Filter to pending (`true`) or posted (`false`) transactions.
+</ParamField>
+
+<ParamField body="search" type="string">
+  Case-insensitive search on `name` and `merchant_name`.
+</ParamField>
+
+<ParamField body="name_contains" type="string">
+  Case-insensitive substring match against `name` only (ignores `merchant_name`).
 </ParamField>
 
 ### Response
 
 ```json
 {
+  "matched_count": 14,
   "updated_count": 14
 }
 ```
+
+`matched_count` is the number of transactions that matched the filters; `updated_count` is the number actually modified (excludes transactions that already had `category_override` set, which are preserved).
 
 ---
 
@@ -486,7 +612,7 @@ Recategorizes all transactions matching a set of filters in a single server-side
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
 | `limit` out of range | `400` | `INVALID_PARAMETER` |
 | Date not in `YYYY-MM-DD` format | `400` | `INVALID_PARAMETER` |

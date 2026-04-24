@@ -1,9 +1,10 @@
 ---
-title: "Auto-categorize transactions with rules"
-description: "Build condition-based rules that automatically categorize, tag, and annotate transactions at sync time using Breadbox's recursive AND/OR/NOT rule engine."
+title: "Rules: automate categorization, tagging, and annotations"
+description: "Build condition-based rules that categorize, apply tags, and leave annotations on transactions automatically — at sync time or retroactively — using Breadbox's recursive AND/OR/NOT condition engine with a multi-stage pipeline."
+sidebarTitle: "Rules"
 ---
 
-Breadbox's rules engine lets you define conditions that run automatically whenever transactions are synced. When a transaction matches a rule's conditions, the rule assigns a category, adds tags, or leaves a comment — without any manual intervention. This is one of Breadbox's most powerful features for keeping your transaction history organized.
+Breadbox's rules engine lets you define conditions that run automatically whenever transactions are synced. When a transaction matches a rule's conditions, the rule assigns a category, adds tags, or leaves a comment — without any manual intervention.
 
 ## What rules do
 
@@ -156,7 +157,7 @@ curl -X POST \
   http://localhost:8080/api/v1/rules
 ```
 
-A rule with no `trigger` specified defaults to `on_create`, which means it fires only on newly synced transactions. Use `always` to also run on re-synced changes, or `on_change` to run only when an existing transaction is modified.
+A rule with no `trigger` specified defaults to <Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>, which means it fires only on newly synced transactions. Use `always` to also run on re-synced changes, or `on_change` to run only when an existing transaction is modified.
 
 ## Previewing a rule
 
@@ -199,7 +200,7 @@ curl -X POST \
 
 </CodeGroup>
 
-Retroactive apply respects the same pipeline stage ordering as sync. It also respects `category_override` — transactions with a manual override are skipped for `set_category` actions, just as they are during sync.
+Retroactive apply respects the same pipeline stage ordering as sync. It also respects <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override`</Tooltip> — transactions with a manual override are skipped for `set_category` actions, just as they are during sync.
 
 <Warning>
 `add_comment` actions do **not** fire during retroactive apply. Comments are designed to narrate a specific sync event and are only written during live syncs.

@@ -19,7 +19,7 @@
     }
   },
   "banner": {
-    "content": "🚧 Breadbox is approaching V1. Some features described here are still in progress — see [#624](https://github.com/canalesb93/breadbox/issues/624) for the remaining gaps.",
+    "content": "🚧 Breadbox is available Early Access. Some features described here may still be in-progress or inaccurate.",
     "dismissible": true
   },
   "navbar": {
@@ -28,30 +28,45 @@
       "href": "https://github.com/canalesb93/breadbox"
     }
   },
+  "icons": {
+    "library": "lucide"
+  },
   "navigation": {
     "tabs": [
       {
         "tab": "Docs",
-        "groups": [
+        "icon": "book-open",
+        "pages": [
           {
-            "group": "Get Started",
+            "group": "Overview",
+            "icon": "sparkles",
             "pages": [
               "introduction",
               "installation",
+              "installation/remote-hosting",
               "quickstart"
             ]
           },
           {
             "group": "Bank Connections",
+            "icon": "landmark",
             "pages": [
               "connections/overview",
-              "connections/plaid",
-              "connections/teller",
-              "connections/csv-import"
+              {
+                "group": "Providers",
+                "icon": "plug",
+                "expanded": true,
+                "pages": [
+                  "connections/teller",
+                  "connections/plaid",
+                  "connections/csv-import"
+                ]
+              }
             ]
           },
           {
             "group": "Transactions",
+            "icon": "receipt",
             "pages": [
               "transactions/overview",
               "transactions/categories",
@@ -62,6 +77,7 @@
           },
           {
             "group": "AI Integration",
+            "icon": "bot",
             "pages": [
               "mcp/overview",
               "mcp/setup",
@@ -70,6 +86,7 @@
           },
           {
             "group": "Configuration",
+            "icon": "settings",
             "pages": [
               "configuration/environment",
               "configuration/api-keys",
@@ -80,9 +97,11 @@
       },
       {
         "tab": "API Reference",
+        "icon": "code",
         "groups": [
           {
             "group": "Overview",
+            "icon": "info",
             "pages": [
               "api/overview",
               "api/authentication",
@@ -91,10 +110,12 @@
           },
           {
             "group": "Endpoints",
+            "icon": "zap",
             "pages": [
               "api/accounts",
               "api/transactions",
               "api/categories",
+              "api/tags",
               "api/rules",
               "api/connections",
               "api/users",
@@ -102,6 +123,87 @@
             ]
           }
         ]
+      },
+      {
+        "tab": "MCP Reference",
+        "icon": "plug-zap",
+        "groups": [
+          {
+            "group": "Overview",
+            "icon": "info",
+            "pages": [
+              "mcp/reference/overview",
+              "mcp/reference/conventions"
+            ]
+          },
+          {
+            "group": "Data access (read)",
+            "icon": "search",
+            "pages": [
+              "mcp/reference/transactions",
+              "mcp/reference/accounts",
+              "mcp/reference/categories",
+              "mcp/reference/tags",
+              "mcp/reference/rules",
+              "mcp/reference/connections-sync"
+            ]
+          },
+          {
+            "group": "Mutations (write)",
+            "icon": "pencil",
+            "pages": [
+              "mcp/reference/sessions",
+              "mcp/reference/categorization",
+              "mcp/reference/transactions-write",
+              "mcp/reference/tags-write",
+              "mcp/reference/rules-write",
+              "mcp/reference/categories-write",
+              "mcp/reference/matches",
+              "mcp/reference/connections-write",
+              "mcp/reference/reports"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Guides",
+        "icon": "map",
+        "pages": [
+          "guides/overview",
+          {
+            "group": "Getting Started",
+            "icon": "rocket",
+            "pages": [
+              "guides/breadbox-in-a-nutshell",
+              "guides/understanding-rules"
+            ]
+          },
+          {
+            "group": "Common Workflows",
+            "icon": "repeat",
+            "pages": [
+              "guides/single-routine-reviewer",
+              "guides/multi-agent-reviewer",
+              "guides/zelle-venmo-analysis",
+              "guides/gmail-cross-referencing",
+              "guides/tracking-subscriptions",
+              "guides/openclaw-recurring-workflows"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "icon": "flame",
+            "pages": [
+              "guides/on-demand-analysis",
+              "guides/custom-dashboard-with-claude"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Changelog",
+        "icon": "history",
+        "pages": ["changelog"]
       }
     ]
   },
@@ -109,6 +211,26 @@
     {
       "source": "/transactions/review-queue",
       "destination": "/transactions/review-workflow"
+    },
+    {
+      "source": "/automating-breadbox",
+      "destination": "/guides/overview"
+    },
+    {
+      "source": "/quick-start",
+      "destination": "/introduction"
+    },
+    {
+      "source": "/index",
+      "destination": "/introduction"
     }
-  ]
+  ],
+  "search": {
+    "prompt": "Search..."
+  },
+  "errors": {
+    "404": {
+      "redirect": true
+    }
+  }
 }

@@ -1,0 +1,500 @@
+---
+title: "Transaction read MCP reference"
+sidebarTitle: "Transactions"
+description: "MCP read tools for querying, counting, summarizing transactions and reading comments, matches, and annotations."
+---
+
+The core read surface of Breadbox. Agents query transactions, aggregate spending, and read activity context through the tools on this page. All amounts use the Plaid sign convention: positive = money out, negative = money in. See [Conventions](/mcp/reference/conventions) for the full cross-cutting rules.
+
+---
+
+## query_transactions
+
+Returns a paginated list of transactions matching the supplied filters. This is the workhorse read tool — almost every agent session goes through it.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/transactions`](/api/transactions#list-transactions)
+
+### Parameters
+
+<ParamField path="start_date" type="string (YYYY-MM-DD)">
+  Start date inclusive.
+</ParamField>
+
+<ParamField path="end_date" type="string (YYYY-MM-DD)">
+  End date exclusive.
+</ParamField>
+
+<ParamField path="account_id" type="string">
+  Filter to a single account (UUID or short ID).
+</ParamField>
+
+<ParamField path="user_id" type="string">
+  Filter to all accounts owned by a family member. Attribution-aware — includes transactions attributed to this user via account links.
+</ParamField>
+
+<ParamField path="category_slug" type="string">
+  Filter by category slug. Parent slugs include all children.
+</ParamField>
+
+<ParamField path="min_amount" type="number">
+  Minimum amount (positive = debit, negative = credit).
+</ParamField>
+
+<ParamField path="max_amount" type="number">
+  Maximum amount.
+</ParamField>
+
+<ParamField path="pending" type="boolean">
+  Filter by pending status. Omit to return both.
+</ParamField>
+
+<ParamField path="search" type="string">
+  Case-insensitive substring match on `name` and `merchant_name`. Comma-separate values for OR.
+</ParamField>
+
+<ParamField path="search_mode" type="string" default="contains">
+  `contains`, `words`, or `fuzzy`.
+</ParamField>
+
+<ParamField path="exclude_search" type="string">
+  Exclude transactions whose name or merchant matches this text.
+</ParamField>
+
+<ParamField path="tags" type="array of strings">
+  Tags the transaction must have (AND). The review queue is `["needs-review"]`.
+</ParamField>
+
+<ParamField path="any_tag" type="array of strings">
+  Tags the transaction must have at least one of (OR).
+</ParamField>
+
+<ParamField path="limit" type="integer" default="50">
+  Max 500.
+</ParamField>
+
+<ParamField path="cursor" type="string">
+  Opaque pagination cursor from a previous response. Only valid with `sort_by=date`.
+</ParamField>
+
+<ParamField path="sort_by" type="string" default="date">
+  `date`, `amount`, or `name`.
+</ParamField>
+
+<ParamField path="sort_order" type="string" default="desc">
+  `desc` or `asc`.
+</ParamField>
+
+<ParamField path="fields" type="string">
+  Comma-separated fields or aliases (`minimal`, `core`, `category`, `timestamps`). See [Conventions](/mcp/reference/conventions#fields-aliases). `id` is always included.
+</ParamField>
+
+<ParamField path="session_id" type="string">
+  Optional session ID to associate this read with a session.
+</ParamField>
+
+<ParamField path="reason" type="string">
+  Optional rationale for this query.
+</ParamField>
+
+### Example input
+
+```json
+{
+  "start_date": "2026-03-01",
+  "end_date": "2026-04-01",
+  "category_slug": "food_and_drink_groceries",
+  "fields": "core,category",
+  "limit": 100
+}
+```
+
+### Example output
+
+```json
+{
+  "transactions": [
+    {
+      "id": "k7Xm9pQ2",
+      "date": "2026-03-28",
+      "amount": 67.43,
+      "name": "WHOLE FOODS MARKET #10452",
+      "iso_currency_code": "USD",
+      "category": {
+        "slug": "food_and_drink_groceries",
+        "display_name": "Groceries",
+        "primary_slug": "food_and_drink",
+        "primary_display_name": "Food and Drink"
+      },
+      "category_primary_raw": "FOOD_AND_DRINK",
+      "category_detailed_raw": "FOOD_AND_DRINK_GROCERIES"
+    }
+  ],
+  "next_cursor": "eyJkYXRlIjoiMjAyNi0wMy0yOCIsImlkIjoiazdYbTlwUTIifQ",
+  "has_more": true,
+  "limit": 100
+}
+```
+
+---
+
+## count_transactions
+
+Returns the count of transactions matching the filters, without fetching any rows. Agents use this as a cheap pre-flight to decide whether to paginate or narrow filters.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/transactions/count`](/api/transactions#count-transactions)
+
+### Parameters
+
+Accepts the same filters as `query_transactions` except `cursor`, `limit`, `sort_by`, `sort_order`, and `fields`.
+
+### Example input
+
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-04-01",
+  "category_slug": "food_and_drink_groceries"
+}
+```
+
+### Example output
+
+```json
+{ "count": 128 }
+```
+
+---
+
+## transaction_summary
+
+Returns aggregated transaction totals grouped by category, month, week, day, or category × month. Replaces the need to paginate through every transaction for spending analysis. Amounts follow the Plaid convention — positive = money out.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/transactions/summary`](/api/transactions#summarize-transactions)
+
+### Parameters
+
+<ParamField path="group_by" type="string" required>
+  One of `category`, `month`, `week`, `day`, `category_month`.
+</ParamField>
+
+<ParamField path="start_date" type="string (YYYY-MM-DD)">
+  Defaults to 30 days ago.
+</ParamField>
+
+<ParamField path="end_date" type="string (YYYY-MM-DD)">
+  Defaults to today.
+</ParamField>
+
+<ParamField path="account_id" type="string">
+  Filter by account.
+</ParamField>
+
+<ParamField path="user_id" type="string">
+  Filter by family member (attribution-aware).
+</ParamField>
+
+<ParamField path="category" type="string">
+  Filter by primary category before aggregating.
+</ParamField>
+
+<ParamField path="include_pending" type="boolean" default="false">
+  Include pending transactions.
+</ParamField>
+
+### Example input
+
+```json
+{
+  "group_by": "category",
+  "start_date": "2026-03-01",
+  "end_date": "2026-04-01"
+}
+```
+
+### Example output
+
+```json
+{
+  "summary": [
+    {
+      "category": "food_and_drink_groceries",
+      "total_amount": 843.21,
+      "transaction_count": 34,
+      "iso_currency_code": "USD"
+    },
+    {
+      "category": "transportation_gas",
+      "total_amount": 312.50,
+      "transaction_count": 18,
+      "iso_currency_code": "USD"
+    }
+  ],
+  "totals": {
+    "total_amount": 1155.71,
+    "transaction_count": 52
+  },
+  "filters": {
+    "start_date": "2026-03-01",
+    "end_date": "2026-04-01",
+    "group_by": "category"
+  }
+}
+```
+
+---
+
+## merchant_summary
+
+Lists distinct merchants with aggregated stats — count, total, average, and date range. Agents use this to scan for recurring charges, find top merchants, or surface unknown subscriptions.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/transactions/merchants`](/api/transactions#merchant-statistics)
+
+### Parameters
+
+<ParamField path="start_date" type="string (YYYY-MM-DD)">
+  Defaults to 90 days ago.
+</ParamField>
+
+<ParamField path="end_date" type="string (YYYY-MM-DD)">
+  Defaults to today.
+</ParamField>
+
+<ParamField path="account_id" type="string">
+  Filter by account.
+</ParamField>
+
+<ParamField path="user_id" type="string">
+  Filter by family member.
+</ParamField>
+
+<ParamField path="category_slug" type="string">
+  Filter by category.
+</ParamField>
+
+<ParamField path="min_amount" type="number">
+  Minimum per-transaction amount.
+</ParamField>
+
+<ParamField path="max_amount" type="number">
+  Maximum per-transaction amount.
+</ParamField>
+
+<ParamField path="search" type="string">
+  Search merchant/transaction names.
+</ParamField>
+
+<ParamField path="search_mode" type="string" default="contains">
+  `contains`, `words`, `fuzzy`.
+</ParamField>
+
+<ParamField path="exclude_search" type="string">
+  Exclude merchants matching this text.
+</ParamField>
+
+<ParamField path="min_count" type="integer" default="1">
+  Minimum transaction count to include a merchant. Set to `2` for recurring, `3` for likely subscriptions.
+</ParamField>
+
+<ParamField path="spending_only" type="boolean" default="false">
+  Only include positive amounts (spending).
+</ParamField>
+
+### Example input
+
+```json
+{
+  "start_date": "2026-01-01",
+  "end_date": "2026-04-01",
+  "min_count": 3,
+  "spending_only": true
+}
+```
+
+### Example output
+
+```json
+{
+  "merchants": [
+    {
+      "merchant": "Netflix",
+      "transaction_count": 3,
+      "total_amount": 42.00,
+      "avg_amount": 14.00,
+      "first_date": "2026-01-15",
+      "last_date": "2026-03-15",
+      "iso_currency_code": "USD"
+    },
+    {
+      "merchant": "Whole Foods Market",
+      "transaction_count": 12,
+      "total_amount": 843.21,
+      "avg_amount": 70.27,
+      "first_date": "2026-01-03",
+      "last_date": "2026-03-28",
+      "iso_currency_code": "USD"
+    }
+  ],
+  "totals": {
+    "merchant_count": 2,
+    "transaction_count": 15,
+    "total_amount": 885.21
+  },
+  "filters": {
+    "start_date": "2026-01-01",
+    "end_date": "2026-04-01",
+    "min_count": 3
+  }
+}
+```
+
+---
+
+## list_transaction_comments
+
+Returns all comments attached to a transaction, ordered chronologically. Agents should check comments before writing to understand prior context.
+
+**Scope:** Read
+
+### Parameters
+
+<ParamField path="transaction_id" type="string" required>
+  UUID or short ID of the transaction.
+</ParamField>
+
+### Example input
+
+```json
+{ "transaction_id": "k7Xm9pQ2" }
+```
+
+### Example output
+
+```json
+[
+  {
+    "id": "c4Xp2mQr",
+    "transaction_id": "k7Xm9pQ2",
+    "content": "Shared grocery run — split with roommate.",
+    "author_type": "user",
+    "author_id": "u4Xm9pQ2",
+    "author_name": "Alice",
+    "created_at": "2026-03-29T10:12:00Z",
+    "updated_at": "2026-03-29T10:12:00Z"
+  }
+]
+```
+
+---
+
+## list_transaction_matches
+
+Lists transaction pairs matched by an account link. Used to audit which primary-account transactions were attributed to a dependent user via the account-link dedup system.
+
+**Scope:** Read
+
+### Parameters
+
+<ParamField path="link_id" type="string" required>
+  The account link ID to list matches for.
+</ParamField>
+
+### Example input
+
+```json
+{ "link_id": "L9Xm2pQr" }
+```
+
+### Example output
+
+```json
+[
+  {
+    "id": "M4Xp9mQr",
+    "account_link_id": "L9Xm2pQr",
+    "primary_transaction_id": "k7Xm9pQ2",
+    "dependent_transaction_id": "n3Xr5mQp",
+    "match_confidence": "auto",
+    "matched_on": ["date", "amount"],
+    "primary_txn_name": "WHOLE FOODS MARKET #10452",
+    "primary_txn_merchant": "Whole Foods",
+    "dependent_txn_name": "WHOLE FOODS #10452",
+    "dependent_txn_merchant": "Whole Foods",
+    "amount": 67.43,
+    "date": "2026-03-28",
+    "created_at": "2026-03-28T08:15:00Z"
+  }
+]
+```
+
+---
+
+## list_annotations
+
+Returns the full activity timeline for a single transaction: comments, tag adds/removes, rule applications, and category sets. Ordered by `created_at` ascending. Use this to reconstruct "what happened to this transaction and when" before making further changes.
+
+**Scope:** Read
+
+### Parameters
+
+<ParamField path="transaction_id" type="string" required>
+  UUID or short ID of the transaction.
+</ParamField>
+
+### Example input
+
+```json
+{ "transaction_id": "k7Xm9pQ2" }
+```
+
+### Example output
+
+```json
+[
+  {
+    "id": "a1Xm2pQ9",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "tag_added",
+    "actor_type": "system",
+    "actor_name": "system",
+    "tag_id": "t1Xm9pQ2",
+    "payload": { "slug": "needs-review" },
+    "created_at": "2026-03-28T06:00:00Z"
+  },
+  {
+    "id": "a2Yn3qR0",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "category_set",
+    "actor_type": "agent",
+    "actor_name": "Review Agent",
+    "session_id": "s9Xm2pQk",
+    "payload": {
+      "category_slug": "food_and_drink_groceries",
+      "note": "clearly groceries"
+    },
+    "created_at": "2026-03-29T10:12:00Z"
+  },
+  {
+    "id": "a3Zo4rS1",
+    "transaction_id": "k7Xm9pQ2",
+    "kind": "tag_removed",
+    "actor_type": "agent",
+    "actor_name": "Review Agent",
+    "session_id": "s9Xm2pQk",
+    "tag_id": "t1Xm9pQ2",
+    "payload": { "slug": "needs-review", "note": "clearly groceries" },
+    "created_at": "2026-03-29T10:12:00Z"
+  }
+]
+```
+
+<Note>
+  The event type lives in `kind` — values are `comment`, `rule_applied`, `tag_added`, `tag_removed`, and `category_set`. Actor identity is split across `actor_type` (`user` / `agent` / `system`), `actor_name`, and optional `actor_id`. When a write tool passed a `session_id`, it's echoed here so you can group events by session. Rule applications set `rule_id`; tag events set `tag_id`.
+</Note>

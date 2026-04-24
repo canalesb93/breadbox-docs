@@ -1,0 +1,61 @@
+---
+title: "Session MCP reference"
+sidebarTitle: "Sessions"
+description: "Start an audit session before performing write operations."
+---
+
+Every write tool (except `create_session` itself) requires a `session_id` and a `reason`. Sessions group a related set of tool calls into a single unit in the activity log — "weekly review", "dining rule cleanup", etc. — so households can see what an agent did and why. Sessions are the only concept that sits between the API key and the individual tool call; the MCP admin dashboard shows tool calls grouped by session.
+
+---
+
+## create_session
+
+Starts an audit session and returns a `session_id` for use on subsequent write tool calls. One session per logical task.
+
+**Scope:** Write
+
+<Note>
+  **Exception to the session rule.** `create_session` is the one write tool that doesn't require a `session_id` — it's how you obtain one. `reason` is also not required on this call; pass `purpose` instead to describe the session as a whole.
+</Note>
+
+### Parameters
+
+<ParamField path="purpose" type="string" required>
+  Brief label for this session. Examples: `"weekly transaction review"`, `"rule creation for dining merchants"`, `"monthly spending report"`.
+</ParamField>
+
+### Example input
+
+```json
+{ "purpose": "weekly transaction review" }
+```
+
+### Example output
+
+```json
+{
+  "id": "s9Xm2pQk",
+  "purpose": "weekly transaction review",
+  "api_key_name": "review-agent",
+  "created_at": "2026-04-23T14:32:00Z"
+}
+```
+
+<Note>
+  The response identifies the session's owner via `api_key_name` (the API key that created it) — there is no separate `actor` field. Sessions do not track a `completed_at` timestamp; they stay live and accumulate tool calls, with `tool_call_count` and `last_call_at` surfacing in subsequent reads.
+</Note>
+
+### Using the returned session_id
+
+Every subsequent write call in the session passes the returned `id` as `session_id`:
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "categorizing clearly valid grocery charge",
+  "transaction_id": "k7Xm9pQ2",
+  "category_slug": "food_and_drink_groceries"
+}
+```
+
+Read calls accept `session_id` as optional — include it to associate the read with the session in the audit log, or omit it if you don't care.

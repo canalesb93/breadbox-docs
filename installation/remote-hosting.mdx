@@ -1,0 +1,196 @@
+---
+title: "Make Breadbox reachable from the internet"
+description: "Give your Breadbox instance a public HTTPS URL so MCP clients and bank webhooks can reach it."
+sidebarTitle: "Remote Hosting"
+---
+
+Remote hosting is the intended default for Breadbox. Almost every integration that makes Breadbox useful assumes a public HTTPS URL:
+
+- **Cloud AI clients.** Claude (Desktop / web / mobile), ChatGPT, Manus, Openclaw, and most other MCP-speaking AI apps can only reach an MCP server over `https://` — a bare `localhost` is unreachable from a cloud-hosted model.
+- **Bank webhooks.** Plaid and Teller push real-time updates (new transactions, reauth events) to a webhook URL you register with them. Without a public URL those events are dropped and you fall back to polling.
+- **Reading from anywhere.** Phone, laptop, a browser at work — any of those assumes Breadbox is more than `localhost` on the one machine you installed it on.
+
+The one case where pure-localhost is legitimate: you're running a local autonomous agent (e.g., an Openclaw runner on the same box) that is the *only* client that will ever touch Breadbox. If that's not you, pick one of the options below.
+
+This page covers four ways to put a real URL in front of Breadbox, from easiest to most hands-on.
+
+<Note>
+  None of these replace the admin login. They put Breadbox on the public internet; Breadbox still authenticates every request against your admin account, API keys, and MCP mode.
+</Note>
+
+## Pick an option
+
+<Tabs>
+  <Tab title="exe.dev (easiest)">
+    {/* Source: https://exe.dev — canonical commands from the exe-dev skill reference */}
+
+    [exe.dev](https://exe.dev) is our recommended easy path. It spins up a persistent Linux VM in a couple of seconds, gives it an HTTPS endpoint at `https://<vmname>.exe.xyz/`, and handles TLS, DNS, and reverse-proxying for you. No ports to open, no Caddy to configure.
+
+    <Steps>
+      <Step title="Register your SSH key">
+        exe.dev is driven entirely over SSH. Register your public key once:
+
+        ```bash
+        ssh exe.dev ssh-key add < ~/.ssh/id_ed25519.pub
+        ```
+      </Step>
+      <Step title="Create a VM">
+        ```bash
+        ssh exe.dev new
+        ```
+
+        The command prints a VM name (e.g. `breadbox-a1b2`). Every VM gets `https://<vmname>.exe.xyz/` automatically, with TLS and auth handled by the platform.
+      </Step>
+      <Step title="Install Breadbox on the VM">
+        SSH in and run the one-liner installer:
+
+        ```bash
+        ssh <vmname>.exe.xyz
+        curl -fsSL https://breadbox.sh/install.sh | bash
+        ```
+
+        Or use any other method from the [installation guide](/installation) — Docker Compose, binary download, or `go install`.
+      </Step>
+      <Step title="Point the proxy at port 8080">
+        exe.dev's proxy defaults to port 80 or the smallest exposed port; tell it to forward to Breadbox:
+
+        ```bash
+        ssh exe.dev share port <vmname> 8080
+        ```
+
+        Open `https://<vmname>.exe.xyz/` in a browser and the setup wizard loads over HTTPS.
+      </Step>
+      <Step title="(Optional) Bring your own domain">
+        Point a CNAME at your VM and exe.dev will issue a cert for it automatically:
+
+        ```
+        breadbox.example.com  CNAME  <vmname>.exe.xyz
+        ```
+      </Step>
+    </Steps>
+
+    <Tip>
+      exe.dev keeps the HTTPS endpoint behind its own identity layer by default. If you want Breadbox's own login to be the only gate, run `ssh exe.dev share set-public <vmname>`.
+    </Tip>
+  </Tab>
+
+  <Tab title="Cloudflare Tunnel">
+    {/* Source: https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/local-management/create-local-tunnel/
+       and https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/do-more-with-tunnels/trycloudflare/ */}
+
+    [Cloudflare Tunnel](https://developers.cloudflare.com/cloudflare-one/connections/connect-networks/) exposes a local service at a public HTTPS URL without opening any inbound ports. `cloudflared` dials out to Cloudflare, and traffic flows back through that outbound connection. It works behind NAT, CGNAT, or a home router you don't control, and it's free on any Cloudflare plan.
+
+    ### Quick tunnel (testing, no account needed)
+
+    For a one-off disposable HTTPS URL — great for trying MCP from Claude Desktop before committing to anything:
+
+    ```bash
+    cloudflared tunnel --url http://localhost:8080
+    ```
+
+    The command prints a random `https://<random>.trycloudflare.com` URL and proxies it to your local Breadbox until you kill the process. Treat this as testing-only: the URL changes every run, and there's a 200-concurrent-request ceiling.
+
+    ### Named tunnel (permanent URL on your own domain)
+
+    For a stable URL you can register with Plaid/Teller webhooks and Claude Desktop, use a named tunnel bound to a domain you've added to Cloudflare:
+
+    <Steps>
+      <Step title="Install cloudflared">
+        ```bash
+        # macOS
+        brew install cloudflared
+
+        # Ubuntu / Debian
+        sudo apt-get update && sudo apt-get install cloudflared
+        ```
+      </Step>
+      <Step title="Authenticate">
+        ```bash
+        cloudflared tunnel login
+        ```
+
+        This opens a browser to authorize `cloudflared` against one of your Cloudflare zones and writes a cert to `~/.cloudflared/`.
+      </Step>
+      <Step title="Create the tunnel">
+        ```bash
+        cloudflared tunnel create breadbox
+        ```
+
+        Note the tunnel UUID from the output — you'll need it for the config file.
+      </Step>
+      <Step title="Write ~/.cloudflared/config.yml">
+        ```yaml
+        tunnel: <YOUR-TUNNEL-UUID>
+        credentials-file: /home/<user>/.cloudflared/<YOUR-TUNNEL-UUID>.json
+        url: http://localhost:8080
+        ```
+
+        Point `credentials-file` at the actual JSON file `cloudflared tunnel create` wrote — it lives under whatever `$HOME/.cloudflared/` is for the user running `cloudflared`. If you're running as root, the path is `/root/.cloudflared/...`.
+      </Step>
+      <Step title="Route DNS to the tunnel">
+        ```bash
+        cloudflared tunnel route dns breadbox breadbox.example.com
+        ```
+
+        Cloudflare creates the CNAME automatically. Replace the hostname with whatever subdomain you want Breadbox to live at.
+      </Step>
+      <Step title="Run the tunnel">
+        ```bash
+        cloudflared tunnel run breadbox
+        ```
+
+        On a long-running host, install it as a service so it survives reboots — Cloudflare's docs have `cloudflared service install` snippets per-OS.
+      </Step>
+    </Steps>
+  </Tab>
+
+  <Tab title="Caddy on a VPS">
+    If you already have a VPS (DigitalOcean, Hetzner, Fly machine, a home server with port 443 forwarded), Breadbox ships a Caddy reverse proxy you can turn on with a single flag at install time. Caddy requests a Let's Encrypt cert automatically the first time a request lands on your domain.
+
+    1. Point an `A` record (or `AAAA`) for your chosen domain at the VPS's public IP.
+    2. Run the one-liner installer with `--domain` to enable the Caddy profile up front:
+
+       ```bash
+       curl -fsSL https://breadbox.sh/install.sh | bash -s -- --yes --domain=breadbox.example.com
+       ```
+
+       This starts Breadbox, PostgreSQL, **and** Caddy in one shot. Caddy is gated behind a `caddy` compose profile — localhost-only installs skip it and leave ports 80/443 unbound.
+    3. If you already installed without a domain, edit `breadbox/.env` to set `DOMAIN=breadbox.example.com` and bring the Caddy profile up:
+
+       ```bash
+       cd breadbox && docker compose --profile caddy up -d
+       ```
+
+    The bundled `Caddyfile` is a single `reverse_proxy breadbox:8080` block keyed on `{$DOMAIN}`. See [Install Breadbox](/installation) for the full installer reference.
+  </Tab>
+
+  <Tab title="Tailscale Funnel">
+    {/* Source: https://tailscale.com/kb/1223/funnel */}
+
+    [Tailscale Funnel](https://tailscale.com/kb/1223/funnel) is a nice middle ground if you already live inside Tailscale. Machines on your tailnet reach Breadbox privately at its MagicDNS name; Funnel then optionally exposes specific ports to the public internet over HTTPS, using certificates Tailscale issues automatically.
+
+    On the machine running Breadbox:
+
+    ```bash
+    tailscale funnel 8080
+    ```
+
+    Funnel prints a public URL like `https://<hostname>.<tailnet>.ts.net/`. MagicDNS and HTTPS certs must be enabled for your tailnet, and Funnel only accepts ports `443`, `8443`, and `10000` — Tailscale relays the incoming HTTPS traffic to `localhost:8080` on the target machine for you.
+
+    <Note>
+      Share-only-with-my-devices is the default: `tailscale serve 8080` keeps Breadbox private to your tailnet. Reach for Funnel only when you actually need the public HTTPS URL (webhooks, cloud MCP clients).
+    </Note>
+  </Tab>
+</Tabs>
+
+## Which should I pick?
+
+| You want... | Recommended option |
+| --- | --- |
+| The absolute shortest path; happy running a small managed VM | **exe.dev** |
+| To host Breadbox at home behind NAT/CGNAT without port forwarding | **Cloudflare Tunnel** (named) |
+| To try an MCP client once before committing to a real URL | **Cloudflare Tunnel** (quick tunnel) |
+| A VPS you already own and full control over TLS/logs | **Caddy on a VPS** |
+| To start private inside your own network and only selectively go public | **Tailscale Funnel** |
+
+Once you have a public HTTPS URL, register it with Plaid/Teller as your webhook endpoint and plug it into your MCP client of choice — everything in the rest of the docs applies unchanged.

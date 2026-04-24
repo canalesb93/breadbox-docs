@@ -1,0 +1,91 @@
+---
+title: "Report MCP reference"
+sidebarTitle: "Reports"
+description: "Submit an agent report to the household dashboard."
+---
+
+Reports are how an agent signals "I did work — here's what happened and what you should know". Each report shows up in the household's dashboard feed as a message from the agent, with a title (the headline), a markdown body (the detail), a priority, and optional tags.
+
+This tool is **Write** scope and requires `session_id` + `reason`. The same resource is also exposed via REST at [`POST /api/v1/reports`](/api/reports).
+
+---
+
+## submit_report
+
+Send a message to the family's dashboard.
+
+The `title` IS the message — it's rendered as the primary line in the dashboard feed, like a direct message. Most users will only read the title. Write it as a complete past-tense sentence with specific numbers and outcomes.
+
+The `body` is where structure, headers, and detail go — the UI renders markdown with `##` section headers, bullet lists, tables, and inline transaction links (`[Transaction Name](/transactions/ID)`).
+
+Read `breadbox://report-format` for the full style guide and report templates (review report, spending report, anomaly report).
+
+### Parameters
+
+<ParamField path="title" type="string" required>
+  Concise 1–2 sentence summary. This is the primary thing the family sees. Good: "Reviewed 47 transactions this week — 3 recategorized and no suspicious activity found." Bad: "Weekly Review Complete" (too vague).
+</ParamField>
+
+<ParamField path="body" type="string" required>
+  Markdown body with sections, bullets, and transaction links. Use `##` headers. Skip `#` entirely.
+</ParamField>
+
+<ParamField path="priority" type="string" default="info">
+  `info` (routine updates), `warning` (needs attention), `critical` (urgent action).
+</ParamField>
+
+<ParamField path="tags" type="array of strings">
+  Short labels for categorizing reports (e.g. `weekly-review`, `anomaly`). Max 10.
+</ParamField>
+
+<ParamField path="author" type="string">
+  Custom author name (e.g. `Review Agent`, `Budget Monitor`). Overrides the API key name for display.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "closing weekly review session",
+  "title": "Reviewed 47 transactions this week — 3 recategorized, no suspicious activity.",
+  "body": "## Summary\n- Reviewed: 47 transactions (approved: 44, recategorized: 3)\n- New rules created: 1 (Starbucks → coffee)\n\n## Rules Created\n- name: Starbucks → food_and_drink_coffee (matched 12 transactions retroactively)\n\n## Recategorized\n- [STARBUCKS #4591](/transactions/k7Xm9pQ2) — was misfiled under general; now coffee\n- [UBER TRIP](/transactions/k8Yn0qR3) — moved from travel to ride_share\n- [APPLE.COM/BILL](/transactions/k9Zo1rS4) — moved to subscriptions\n\n## Observations\nNo unusual charges. Monthly dining is tracking $340 below February.",
+  "priority": "info",
+  "tags": ["weekly-review"],
+  "author": "Review Agent"
+}
+```
+
+### Example output
+
+```json
+{
+  "id": "R9Xm2pQr",
+  "title": "Reviewed 47 transactions this week — 3 recategorized, no suspicious activity.",
+  "body": "## Summary\n- Reviewed: 47 transactions (approved: 44, recategorized: 3)\n...",
+  "priority": "info",
+  "tags": ["weekly-review"],
+  "author": "Review Agent",
+  "created_by_type": "agent",
+  "created_by_id": "ak_01HT...",
+  "created_by_name": "Review Agent",
+  "read_at": null,
+  "created_at": "2026-04-23T14:55:00Z"
+}
+```
+
+<Note>
+  The session link is recorded server-side (the session row gets a `report_id`) but is not echoed back on this response — the submission carries `session_id` in, not out.
+</Note>
+
+### Report priorities
+
+| Priority | When to use |
+| --- | --- |
+| `info` | Routine updates, weekly summaries, expected reports. |
+| `warning` | Items needing attention soon — unusual charges, potential duplicates, data issues. |
+| `critical` | Urgent issues — suspected fraud, large unexpected charges, connection failures. |

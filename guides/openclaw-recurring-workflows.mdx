@@ -1,0 +1,286 @@
+---
+title: "Recurring workflows with Openclaw"
+description: "Use Openclaw's autonomous scheduling and sub-agent primitives to run Breadbox transaction triage, anomaly alerts, and session hygiene on a continuous cadence — without manual intervention."
+---
+
+Household finances need continuous attention: new transactions arrive daily, the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog grows between human check-ins, and subscriptions quietly drift. Running an agent _on demand_ is fine for one-off analysis, but it doesn't scale as a daily habit.
+
+[Openclaw](https://openclaw.ai) is a persistent, VM-hosted autonomous agent platform. Unlike a chat session that ends when you close the window, Openclaw runs continuously on its own machine, maintains session state, and can spawn sub-agents for parallelised work. It also connects to messaging channels — Slack, Telegram, Discord, WhatsApp, and others — so it can reach you out-of-band when something needs attention.
+
+This guide shows three self-contained workflow patterns you can drop into Openclaw today. Each one assumes Breadbox is already connected as an MCP server; if it isn't yet, start with [Set up MCP for Claude and AI agents](/mcp/setup).
+
+## Prerequisites
+
+- A running Breadbox instance with a reachable `/mcp` endpoint (HTTPS for remote Openclaw gateways).
+- An Openclaw gateway installed and running.
+- Breadbox registered as an MCP server in Openclaw — follow the [Openclaw tab on the MCP setup page](/mcp/setup).
+- A Breadbox API key. Start with **read-only** scope and graduate to **full access** only after observing a few correct agent cycles. See [API keys](/configuration/api-keys).
+
+---
+
+## Workflow 1 — The 12-hour triage loop
+
+**Pattern:** Every 12 hours, the main agent checks how large the `needs-review` backlog is. If it's small enough to handle in one pass, it delegates a sub-agent to work the batch. If the queue is large, the sub-agent works in 30-transaction pages until it drains to zero.
+
+This is the automated version of the [Single Routine Reviewer](/guides/single-routine-reviewer) pattern — same logic, running on a schedule instead of on demand.
+
+### Scheduling in Openclaw
+
+<Note>
+  Draft — verify with current Openclaw docs before publishing. Openclaw supports cron-like scheduling for recurring agent tasks. The exact configuration block for scheduling varies by Openclaw version; check [https://docs.openclaw.ai](https://docs.openclaw.ai) for the current schedule config syntax. The example below reflects the general scheduling primitives documented as of early 2026.
+</Note>
+
+Configure the triage loop as a recurring task in your Openclaw agent definition. Use a standard cron expression for the schedule:
+
+```text
+0 */12 * * *   # every 12 hours, on the hour
+```
+
+The main agent runs on this cadence. When it determines the queue needs work, it calls `sessions_spawn` (Openclaw's sub-agent primitive) to delegate the review batch to a child agent. The child agent inherits the Breadbox MCP connection from the parent workspace.
+
+### Main agent prompt (paste-ready)
+
+Drop this into the main agent's system instructions inside Openclaw:
+
+```text
+You are the triage coordinator for this household's Breadbox instance.
+You run every 12 hours. Your job is to check the review backlog and
+decide whether to work it now or defer.
+
+You have access to the Breadbox MCP server.
+
+On each run:
+
+1. Call `create_session` with purpose "12h triage — <ISO date>".
+   Save the returned session_id for all subsequent write calls.
+
+2. Call `count_transactions(tags=["needs-review"])`.
+   - If the count is 0: call `submit_report` with title
+     "Triage check — queue empty." and stop.
+   - If the count is 1–150: proceed to step 3.
+   - If the count is over 150: proceed to step 3 but set a
+     `page_limit` variable to 5 (you will cap at 150 transactions
+     this cycle and leave the rest for the next run; note the
+     overflow in the report).
+
+3. Spawn a sub-agent (via Openclaw's session spawn) with the
+   review sub-agent prompt below. Pass it the session_id and the
+   page_limit. Wait for the sub-agent to complete.
+
+4. Once the sub-agent returns, call `submit_report` with:
+   - title: "Triage — <date>: <N> reviewed, <M> deferred"
+   - body: the sub-agent's summary
+   - priority: "info" if M is 0, "warning" if M > 0
+   - session_id and reason: "closing triage session"
+   - tags: ["triage"]
+
+Amount convention: positive amounts are money out, negative are money in.
+Never sum across different iso_currency_code values.
+Never modify transactions with category_override = true.
+```
+
+### Sub-agent prompt (paste-ready)
+
+This is the prompt for the child agent that does the actual review work:
+
+```text
+You are the transaction reviewer for this household's Breadbox instance.
+You have been spawned by the triage coordinator to process a review batch.
+
+You have access to the Breadbox MCP server.
+
+Input from parent: session_id, page_limit (default 5 pages of 30).
+
+On each run:
+
+1. Use the provided session_id for all write calls.
+
+2. Call `query_transactions(tags=["needs-review"], fields="core,category",
+   limit=30)`. Work in pages of 30.
+
+3. For each transaction:
+   - If the merchant and amount are clearly identifiable (recurring
+     subscription, known coffee shop, grocery store, utility), set
+     the category via `update_transactions` and remove the
+     `needs-review` tag with a one-line note.
+   - If it is a peer-to-peer transfer (Zelle, Venmo, Cash App),
+     a charge over $500 with an opaque description, or anything
+     you are uncertain about: leave `needs-review` and add a
+     `needs-human` tag with a note explaining your uncertainty.
+   - Never modify a transaction that has category_override = true.
+
+4. After each page, call the next page until the queue is empty
+   or page_limit is reached.
+
+5. Return a summary to the parent:
+   - Total reviewed, total categorized, total deferred.
+   - Compact IDs and one-line reasons for every deferred transaction.
+```
+
+---
+
+## Workflow 2 — Attention-needed alerts
+
+**Pattern:** After each review pass, the agent scans the deferred (`needs-human`) transactions. If any match certain criteria — large charge, unknown merchant, a charge that deviates from a known subscription amount — it sends a notification through Openclaw's connected messaging channel.
+
+This lets Breadbox reach you in Slack, Telegram, or wherever you're already paying attention, instead of requiring you to check a dashboard.
+
+### Criteria for an alert
+
+Common thresholds to configure (tune to your household):
+
+| Criterion | Example threshold |
+| --- | --- |
+| Large single charge | Amount > $200 |
+| Unknown merchant | No prior transactions from merchant in last 90 days |
+| Subscription deviation | Recurring merchant with amount +/- 15% of 3-month average |
+| Duplicate candidate | Same merchant, same amount, same day as another transaction |
+
+### Notification channels
+
+Openclaw exposes a `message()` tool that routes outbound messages through any channel the gateway manages — Slack, Telegram, Discord, WhatsApp, iMessage (via BlueBubbles), and others. The call shape is consistent across channels:
+
+```json
+{
+  "channel": "discord",
+  "action": "send",
+  "to": "channel:<channel-id>",
+  "message": "Breadbox alert: ..."
+}
+```
+
+Swap `"channel": "discord"` for `slack`, `telegram`, etc., and set `to` to whatever channel/user identifier that platform uses (`channel:<id>`, `user:<id>`, `thread:<id>`). The agent prompt below uses that shape directly.
+
+<Note>
+  Channel routing — which channel ID belongs to "the household alerts channel" — is gateway-specific and configured where you set up your Openclaw tenant. See [https://docs.openclaw.ai](https://docs.openclaw.ai) for the current per-channel reference if you need a different target format.
+</Note>
+
+### Alert agent prompt (paste-ready)
+
+Run this agent after the triage loop completes (or as a standalone step inside the main agent before closing the session):
+
+```text
+You are the anomaly alert agent for this household's Breadbox instance.
+You run after the triage loop completes each cycle.
+
+You have access to the Breadbox MCP server.
+
+On each run:
+
+1. Call `query_transactions(tags=["needs-human"], fields="core,category",
+   limit=50)`.
+   If no results, stop quietly.
+
+2. For each transaction flagged `needs-human`, check:
+   - Is the amount > 200 (positive, meaning money out)?
+   - Is the merchant name entirely new (no prior transactions
+     in the last 90 days with the same merchant_name)?
+   - Does the merchant look like a subscription (same merchant
+     each month) but the amount differs by more than 15% from the
+     last known charge?
+
+3. For any transaction matching one or more criteria, compose a
+   short alert message:
+     "Breadbox alert: [MERCHANT NAME] — $[AMOUNT] on [DATE]
+      [Account: ACCOUNT_NAME]
+      Reason: [why it triggered]
+      Review: https://your-breadbox-host/transactions/[ID]"
+
+4. Send the alert using Openclaw's `message()` tool. Example:
+     message({
+       "channel": "<slack | discord | telegram | ...>",
+       "action": "send",
+       "to": "channel:<household-alerts-channel-id>",
+       "message": "<the alert text composed above>"
+     })
+
+5. Do NOT modify transaction tags or categories in this step.
+   Alerts are read-only. The human decides what to do next.
+
+Amount convention: positive = money out, negative = money in.
+```
+
+---
+
+## Workflow 3 — Session hygiene
+
+**Pattern:** Every write cycle starts with `create_session` and ends with `submit_report`. This is not optional overhead — it's how Breadbox attributes agent work to specific cycles in the audit log. Without it, all agent writes are anonymous and the household has no clear record of what any given run did.
+
+### Why this matters
+
+Breadbox's [Sessions reference](/mcp/reference/sessions) explains that every write tool (other than `create_session` itself) requires a <Tooltip headline="session_id" tip="Identifier that groups an agent's MCP writes into one auditable unit. Required on every write tool; obtained from create_session." cta="Sessions reference" href="/mcp/reference/sessions">`session_id`</Tooltip>. Sessions group related tool calls into a unit visible in the admin dashboard. When Openclaw runs nightly and names its session "nightly triage — 2026-04-23", the household can see exactly which transactions were touched, by which agent, and why.
+
+[`submit_report`](/mcp/reference/reports) closes the loop by posting a human-readable summary to the Breadbox Reports page. It is the agent's equivalent of leaving a note — the household skims the title, reads the body if they want detail, and can see at a glance whether the last cycle ran cleanly.
+
+### Session open / close pattern
+
+Every Openclaw agent that writes to Breadbox should follow this shell:
+
+```text
+Step 1 — Open:
+  create_session(purpose="<cycle name> — <ISO date>")
+  → save session_id
+
+Step 2 — Work:
+  All read and write calls include session_id.
+
+Step 3 — Close:
+  submit_report(
+    session_id=<session_id>,
+    reason="closing cycle session",
+    title="<One-sentence summary with counts>",
+    body="<Markdown: ## Summary, ## Reviewed, ## Deferred, ## Anomalies>",
+    priority="info" | "warning" | "critical",
+    tags=["<cycle-tag>"],
+    author="<Agent name>"
+  )
+```
+
+### Report format
+
+Follow the style from [`submit_report`](/mcp/reference/reports): the `title` is the primary signal — write it as a complete past-tense sentence with concrete numbers. The `body` uses `##` headers, bullet lists, and inline transaction links for items that need a human look.
+
+Example title: `"Triage — 2026-04-23: 42 reviewed, 3 deferred, 1 anomaly flagged."`
+
+---
+
+## Cost, safety, and failure modes
+
+<Warning>
+  An autonomous agent with a **full-access** Breadbox API key can recategorize hundreds of transactions, rewrite rules, and retag your entire backlog in a single unattended cycle. Start **read-only**, observe at least five cycles through the dashboard Reports and Annotations pages, and promote to full access only after you trust the behavior.
+</Warning>
+
+### Start read-only
+
+Configure Openclaw's Breadbox API key as **read-only** for the first few cycles. Watch the reports in the Breadbox dashboard — verify the agent is querying the right transactions, making sensible decisions, and correctly identifying what to defer. Promote to **full access** only after you trust the behavior. See [Read-only vs. read-write](/mcp/setup#read-only-vs-read-write).
+
+### Guard against runaway writes
+
+Even after a promotion to full access, a few defaults limit blast radius per cycle:
+
+- Keep `limit=30` per page on `query_transactions`. Smaller batches = smaller blast radius per cycle.
+- Review `submit_report` output for the first few weeks. If the deferred count is unexpectedly high or low, inspect the annotations before giving the agent more autonomy.
+- Breadbox's `update_transactions` respects `category_override = true` — rows a human has manually categorized are skipped automatically. Do not override this behavior.
+
+### Observe before automating
+
+Use Breadbox's Reports and Annotations pages as the primary observability surface:
+- **Reports** — every `submit_report` call appears here, showing what the agent did each cycle.
+- **Annotations** — every tag change, category set, and comment is recorded on the individual transaction. Drill into any transaction to see the full agent reasoning trail.
+
+Watch at least five cycles before switching the API key to full access.
+
+### Failure resilience
+
+If Openclaw loses its machine, crashes, or loses its API token between cycles, the only harm is missed cycles. The data Breadbox holds is safe — no in-flight transaction updates are lost because `update_transactions` is atomic per call. The next time Openclaw recovers and runs, it will find the same backlog waiting.
+
+If a cycle errors mid-way, the `needs-review` tags on unprocessed transactions remain intact. The household can see the half-finished session in the Breadbox admin dashboard and investigate from there.
+
+---
+
+## Related reading
+
+- [Set up MCP for Claude and AI agents](/mcp/setup) — configure the Breadbox MCP connection in Openclaw.
+- [MCP reference overview](/mcp/reference/overview) — full list of available tools and scopes.
+- [Single Routine Reviewer](/guides/single-routine-reviewer) — the manual version of the triage loop this guide automates.
+- [Multi-agent reviewer flows](/guides/multi-agent-reviewer) — if the queue grows too large for a single agent pass.

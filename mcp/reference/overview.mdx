@@ -1,0 +1,105 @@
+---
+title: "MCP reference overview"
+sidebarTitle: "Overview"
+description: "Breadbox MCP transports, authentication, scope-based tool filtering, write-session requirements, and how MCP tools map to the REST API."
+---
+
+Breadbox exposes its data to AI agents through the [Model Context Protocol](https://modelcontextprotocol.io). An MCP client connects to the server, receives a catalog of typed tools at handshake time, and calls them to read and write the same PostgreSQL dataset the admin dashboard and REST API sit on top of. Every tool is a thin wrapper around the internal service layer — there is no HTTP round-trip between the MCP handler and the database.
+
+This reference enumerates every tool the server registers, along with inputs, outputs, and the REST endpoint each one mirrors when one exists.
+
+## Transports
+
+Breadbox ships with two MCP transports. Both expose the same tool set.
+
+| Transport | Endpoint | Auth | Typical client |
+| --- | --- | --- | --- |
+| Streamable HTTP | `POST /mcp` on your Breadbox host | `X-API-Key` header | Claude.ai custom connector, Claude Code via `--mcp`, remote agents |
+| stdio | `breadbox mcp-stdio` subcommand | None (local only) | Claude Desktop, local scripts, anything embedding the binary |
+
+The HTTP transport is filtered per request: every call builds a fresh `*mcpsdk.Server` from the tool registry, applying the current global MCP mode, per-tool disable list, and the API key's scope. The stdio transport is unfiltered — it's intended for local, trusted use. See [Set up MCP](/mcp/setup) for connection examples.
+
+## Authentication and scopes
+
+The HTTP transport authenticates with an API key. The key's scope controls which tools are visible:
+
+- `full_access` — every tool in the registry is registered on the per-request server, subject to the global mode and disable list.
+- `read_only` — write tools are filtered out entirely. The client never sees them in its tool catalog, so it can't call them even if it tries.
+
+The global MCP mode (`app_config.mcp_mode`) overlays a second filter. When set to `read_only`, writes are suppressed for every key regardless of scope. The admin UI at `/mcp` controls the mode and per-tool disable list.
+
+## Write session discipline
+
+Every write tool requires two extra fields, enforced by the server before the handler runs:
+
+- `session_id` — obtained from `create_session`. Lasts for one logical task (e.g. "weekly review").
+- `reason` — a brief string describing this specific call (e.g. "categorizing clearly valid grocery charge").
+
+Read tools accept both fields as optional. Including them associates the call with a session in the activity log. `create_session` itself is the only write tool that doesn't require a session — it's how you obtain one. See `create_session` on the [Sessions](/mcp/reference/sessions) page for the exact shape.
+
+## Read vs write classification
+
+Each tool in this reference is tagged **Read** or **Write**. The distinction drives:
+
+1. Scope filtering — `read_only` keys never see write tools.
+2. Session enforcement — write tools require `session_id` + `reason`; reads don't.
+3. Activity logging — every call is logged asynchronously with the classification.
+
+Write tools also run an in-handler `checkWritePermission` check as a belt-and-suspenders guard against TOCTOU races between config changes and server construction.
+
+## ID format in responses
+
+Entity IDs in MCP responses are compact 8-character base62 strings (e.g., `k7Xm9pQ2`). Internally every row has both a full UUID and a short ID; the MCP response pipeline replaces every `id` field with the short ID value and drops the `short_id` field entirely to save tokens. Tool inputs accept either form — both the UUID and the short ID resolve to the same row.
+
+This differs from the REST API, which returns both `id` (UUID) and `short_id` on every record. If you're cross-referencing between an agent session and the admin UI, remember that what the agent sees as `id` is what the UI calls `short_id`.
+
+## Resources
+
+MCP resources are static or live documents the server exposes alongside tools. Breadbox serves three:
+
+| URI | MIME | What it returns |
+| --- | --- | --- |
+| `breadbox://overview` | `application/json` | Live dataset summary: users, connections, accounts, 30-day spending, top categories |
+| `breadbox://review-guidelines` | `text/markdown` | Guidance for reviewing transactions and creating rules (user-editable in `/mcp` admin) |
+| `breadbox://report-format` | `text/markdown` | Report structure templates used by `submit_report` (user-editable) |
+
+Agents are expected to read `breadbox://overview` first to orient themselves, and to read `breadbox://review-guidelines` before processing review work.
+
+## Error shape
+
+Tool errors return a standard MCP call result with `isError: true` and a single text content block containing JSON:
+
+```json
+{ "error": "session_id is required for write operations; call create_session first" }
+```
+
+Transport-level errors (bad authentication, malformed JSON-RPC) come back as JSON-RPC error responses and never reach the tool handler.
+
+## Relationship to the REST API
+
+Many MCP tools mirror a REST endpoint. Where one exists, the reference page cross-links to it. Both layers call the same service methods — there are no behavioral differences beyond the ID compaction above and the session-tracking layer. If a feature is available in one surface but not the other, that's a gap, not a design choice, and worth flagging.
+
+## Grouped tool index
+
+A complete list of every tool Breadbox exposes, grouped by domain.
+
+**Data access (read)**
+
+- Transactions: [`query_transactions`, `count_transactions`, `transaction_summary`, `merchant_summary`, `list_transaction_comments`, `list_transaction_matches`, `list_annotations`](/mcp/reference/transactions)
+- Accounts and users: [`list_accounts`, `list_users`](/mcp/reference/accounts)
+- Categories: [`list_categories`, `export_categories`](/mcp/reference/categories)
+- Tags: [`list_tags`](/mcp/reference/tags)
+- Rules: [`list_transaction_rules`, `preview_rule`](/mcp/reference/rules)
+- Connections and sync: [`get_sync_status`, `list_account_links`](/mcp/reference/connections-sync)
+
+**Mutations (write)**
+
+- Sessions: [`create_session`](/mcp/reference/sessions)
+- Categorization: [`categorize_transaction`, `batch_categorize_transactions`, `bulk_recategorize`, `reset_transaction_category`, `apply_rules`](/mcp/reference/categorization)
+- Transaction writes: [`update_transactions`, `add_transaction_comment`, `add_transaction_tag`, `remove_transaction_tag`](/mcp/reference/transactions-write)
+- Tag CRUD: [`create_tag`, `update_tag`, `delete_tag`](/mcp/reference/tags-write)
+- Rule CRUD: [`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `batch_create_rules`](/mcp/reference/rules-write)
+- Category imports: [`import_categories`](/mcp/reference/categories-write)
+- Account-link matches: [`confirm_match`, `reject_match`](/mcp/reference/matches)
+- Connections: [`create_account_link`, `delete_account_link`, `reconcile_account_link`, `trigger_sync`](/mcp/reference/connections-write)
+- Reports: [`submit_report`](/mcp/reference/reports)

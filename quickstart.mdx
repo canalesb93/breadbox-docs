@@ -1,133 +1,109 @@
 ---
-title: "Get started with Breadbox"
-description: "Connect a bank, sync your first transactions, and query them through the REST API — from a fresh install to your first API response in minutes."
+title: "Onboard your Breadbox instance"
+description: "After you've installed Breadbox, use this guide to run the first-run wizard, connect your first bank, and hook up an AI agent."
+sidebarTitle: "Onboarding"
 ---
 
-This guide takes you from a fresh install to your first queried transaction. By the end, you'll have Breadbox running, a bank account connected, and your transactions accessible through the REST API.
+Onboarding picks up where [installation](/installation) leaves off — this guide assumes Breadbox is already running and reachable at a URL you know (either a public HTTPS host per [Remote Hosting](/installation/remote-hosting) or `http://localhost:8080` for a local eval). If you haven't installed yet, start with [Install Breadbox](/installation).
 
-## Step 1: Start Breadbox with Docker Compose
+By the end of this guide you'll have completed the first-run setup wizard, linked a bank account, watched the initial sync complete, and attached an AI agent over <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip>.
 
-If you haven't installed Breadbox yet, follow the [installation guide](/installation) first. Once your `.env` file is ready, start Breadbox and PostgreSQL:
+## Step 1: Open the setup wizard
 
-```bash
-docker compose up -d breadbox db
-```
+Open your Breadbox URL in a browser. On first launch Breadbox redirects you to the setup wizard automatically — the wizard runs once and collects everything needed before you can link a bank.
 
-Wait a few seconds for the database to initialize and for Breadbox to run its migrations. You can check that everything is healthy:
+## Step 2: Complete the wizard
 
-```bash
-docker compose ps
-```
-
-Both the `breadbox` and `db` services should show a `running` or `healthy` status.
-
-## Step 2: Open the setup wizard
-
-Open [http://localhost:8080](http://localhost:8080) in your browser. If this is your first launch, Breadbox redirects you to the setup wizard automatically.
-
-The wizard runs once and collects everything Breadbox needs before you can connect a bank.
-
-## Step 3: Complete the setup wizard
-
-The setup wizard has five steps. Work through them in order:
+The wizard has five sub-steps. Work through them in order:
 
 <Steps>
   <Step title="Create your admin account">
-    Enter a username and password for your admin account. This is the account you'll use to log in to the dashboard and manage connections.
+    Enter a username and password. This is the account you'll use to log in to the dashboard and manage connections.
   </Step>
-  <Step title="Configure your bank provider">
-    Enter your Plaid or Teller API credentials.
+  <Step title="Configure a bank provider">
+    You can do this later from the dashboard, but setting it up now lets you link a bank immediately.
 
-    - **Plaid:** Paste your **Client ID** and **Secret** from the [Plaid dashboard](https://dashboard.plaid.com/). Set the environment to `sandbox` for testing.
-    - **Teller:** Enter your **App ID** from the [Teller console](https://teller.io/).
-
-    <Note>
-      If you're testing, use Plaid's sandbox environment. It's free and includes pre-populated test institutions with realistic transaction history — no production approval needed.
-    </Note>
+    - **Teller (recommended starter):** enter your **App ID** from the [Teller console](https://teller.io/) and the path to your client certificate and private key. Teller's Development tier is free and works with real bank data — no production approval process, which makes it the fastest way to verify the setup end-to-end.
+    - **Plaid:** paste your **Client ID** and **Secret** from the [Plaid dashboard](https://dashboard.plaid.com/). Use the Sandbox environment for simulated data or Production once you're approved.
   </Step>
   <Step title="Set the sync interval">
-    Choose how often Breadbox polls your banks for new transactions. The default is every 12 hours. You can change this at any time from the admin dashboard.
+    Pick how often Breadbox polls your banks for new transactions. The default is 12 hours. You can change it at any time from the admin dashboard.
   </Step>
-  <Step title="Set a webhook URL (optional)">
-    Enter a public URL for your Breadbox instance if you want Plaid to push transaction updates to you in real time instead of waiting for the next scheduled poll.
+  <Step title="Set your webhook URL">
+    Enter the public URL of your Breadbox instance (e.g., `https://your-breadbox.example.com`). Plaid and Teller deliver real-time webhooks to `https://<your-host>/webhooks/<provider>` so transactions show up in seconds instead of on the polling interval.
 
-    Leave this blank if you're running locally or don't have a public URL yet — polling-based sync works without it.
+    You can leave this blank temporarily if your public URL isn't set up yet — polling-only sync works without it. Come back and fill it in once remote hosting is live.
   </Step>
   <Step title="Finish">
-    Review your settings and click **Complete setup**. Breadbox saves your configuration and redirects you to the admin dashboard.
+    Review your settings and click **Complete setup**. Breadbox saves your configuration and drops you into the admin dashboard.
   </Step>
 </Steps>
 
-## Step 4: Connect a bank
+## Step 3: Link your first bank
 
-From the admin dashboard, navigate to **Connections** and click **Add connection**.
+From the dashboard, go to **Connections → Add connection**. Pick the family member this account belongs to, choose your provider, and complete the Plaid Link or Teller Connect flow in the browser popup.
 
-Breadbox opens the Plaid Link (or Teller) widget in your browser. Select your bank, sign in with your bank credentials, and grant access to your accounts. Your credentials go directly to Plaid or Teller — Breadbox never sees them.
+Your bank credentials go directly to Plaid or Teller — Breadbox never sees them. Once you finish the popup, Breadbox stores the encrypted access token and queues an initial sync.
 
-After you complete the widget flow, Breadbox stores the encrypted access token and queues an initial sync for that connection.
+If your household has multiple family members, add them from **Settings → Users** before linking additional banks so each connection can be attributed to the right person.
 
-## Step 5: Wait for the initial sync
+## Step 4: Wait for the initial sync
 
-The initial sync fetches your full transaction history from your bank. For most connections this takes under a minute, but it can take longer for accounts with several years of history.
+The first sync pulls up to two years of transaction history. Most connections finish in under a minute; accounts with long histories take longer. Watch the **Connections** page — the status transitions from `in_progress` to `success` when the sync completes.
 
-Watch the sync status from the dashboard under **Connections**. The status changes from `in_progress` to `success` when the sync completes.
+If you see an `error` status instead, open the connection to view the provider error message and retry.
 
-<Tip>
-  You can also trigger a manual sync at any time from the **Connections** page by clicking **Sync now** next to a connection.
-</Tip>
+## Step 5: Connect your first AI agent
 
-## Step 6: Query your first transaction
+This is where Breadbox earns its keep. Point your AI app at Breadbox's `/mcp` endpoint and it can query accounts, search transactions, categorize, tag, and summarize spending — all against your live data, without ever touching your bank credentials.
 
-Once the sync completes, use the REST API to fetch your transactions. You'll need an API key — generate one from **Settings → API keys** in the admin dashboard.
+<Steps>
+  <Step title="Generate an API key">
+    In the dashboard, go to **Settings → API Keys** and click **Create API Key**. Start with a **read-only** scope for your first agent — it limits blast radius while you verify the integration works. You can issue a full-access key later for agents that need to categorize or trigger syncs.
+
+    Copy the key immediately — Breadbox only shows it once.
+  </Step>
+  <Step title="Configure your agent">
+    Pick your client from the [MCP setup guide](/mcp/setup) — we cover Claude (Desktop / web / mobile), Claude Code, opencode, Codex, ChatGPT, Openclaw, Manus, and any other MCP-compatible client. Paste your Breadbox URL and API key into the config.
+  </Step>
+  <Step title="Ask something">
+    Start a conversation and ask the agent something only Breadbox would know:
+
+    > "How much did we spend on groceries last month, and what are the top three merchants?"
+
+    If the agent comes back with numbers that match your dashboard, the connection is live.
+  </Step>
+</Steps>
+
+For ready-made agent workflows — automated weekly reviews, subscription tracking, cross-referencing Gmail receipts — see the [Guides](/guides/overview) tab.
+
+## Step 6 (optional): Query the REST API
+
+If you prefer to script against Breadbox from your own tools, the REST API mirrors the MCP surface. A minimal sanity-check query:
 
 ```bash
 curl -H "X-API-Key: bb_your_api_key" \
-  "http://localhost:8080/api/v1/transactions?limit=5"
+  "https://your-breadbox.example.com/api/v1/transactions?limit=5"
 ```
 
-A successful response looks like this:
-
-```json
-{
-  "data": [
-    {
-      "id": "txn_abc12345",
-      "account_id": "acc_xyz98765",
-      "amount": "42.50",
-      "iso_currency_code": "USD",
-      "name": "WHOLE FOODS MARKET",
-      "merchant_name": "Whole Foods",
-      "date": "2026-04-18",
-      "pending": false,
-      "category": {
-        "primary": "Food and Drink",
-        "detailed": "Groceries"
-      }
-    }
-  ],
-  "next_cursor": "eyJpZCI6InR4bl9hYmMxMjM0NSJ9"
-}
-```
-
-<Note>
-  Replace `bb_your_api_key` with the key you generated from the dashboard. API keys always start with the `bb_` prefix.
-</Note>
+Replace the host and key with your own. Full endpoint reference lives under [API](/api/overview).
 
 ## What's next?
 
-Now that your first transactions are syncing, explore what Breadbox can do:
-
 <CardGroup cols={2}>
+  <Card title="MCP setup" icon="bot" href="/mcp/setup">
+    Detailed walk-throughs per AI client, including Claude, ChatGPT, Openclaw, and Codex.
+  </Card>
+
+  <Card title="Guides" icon="book-open" href="/guides/overview">
+    End-to-end agent workflows: weekly reviews, subscription tracking, Gmail cross-referencing.
+  </Card>
+
   <Card title="Transaction rules" icon="filter" href="/transactions/rules">
     Auto-categorize transactions with flexible AND/OR/NOT rule conditions.
   </Card>
-  <Card title="AI integration (MCP)" icon="robot" href="/mcp/overview">
-    Connect Claude or another AI assistant to query and analyze your financial data.
-  </Card>
-  <Card title="REST API reference" icon="code" href="/api/overview">
-    Explore all available endpoints, filters, and pagination options.
-  </Card>
-  <Card title="Bank connections" icon="building-columns" href="/connections/overview">
+
+  <Card title="Bank connections" icon="landmark" href="/connections/overview">
     Add more banks, manage existing connections, or import CSV files.
   </Card>
 </CardGroup>

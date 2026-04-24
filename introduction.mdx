@@ -1,43 +1,56 @@
 ---
 title: "What is Breadbox?"
-description: "Breadbox is a self-hosted financial data aggregator that syncs your household bank accounts into a PostgreSQL database you own and control."
+description: "Breadbox syncs your household’s financial data into a PostgreSQL database you control, then exposes it through a built-in MCP server and a REST API."
 ---
 
-Breadbox is a self-hosted financial data aggregation tool for households. It connects to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a PostgreSQL database you own, and exposes that data through a REST API and a built-in MCP server for AI agents. Your financial data never touches a third-party cloud — it lives on your hardware, encrypted at rest, and is exportable or deletable at any time.
+Breadbox is an open-source, self-hosted financial aggregator for households. It manages connections to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database you control, and hands that data to the AI apps you already use through a built-in <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip> server.
+
+**Breadbox is not an agent.** It's the infrastructure that makes the agents you already trust — Claude, ChatGPT, Manus, Openclaw — dramatically more useful for personal finance. You host it, you own the data, you pick the agents.
 
 ## Why Breadbox?
 
-Banks silo your financial data behind their own apps. AI assistants can help with budgeting, spending analysis, and anomaly detection — but they need structured access to your data without touching your bank credentials.
+### Your agents already know you
 
-Breadbox bridges that gap. It handles the secure sync from your bank, stores transactions in a database you control, and gives any tool or agent a clean, queryable interface to that data.
+Off-the-shelf categorization engines look at a merchant name and guess. The Claude or ChatGPT you use every day has *context* no automated categorizer will ever have — it knows your recurring subscriptions, your family's routines, the business you run, and — if you connect a Gmail or email MCP alongside Breadbox — can cross-reference the actual receipts sitting in your inbox to confirm what a charge really was. Give it that kind of access and it categorizes, classifies, and analyzes your finances with an accuracy a rules-only system can't match.
+
+### The system gets smarter over time
+
+Every time an agent decides "PG&E charges are Utilities, here's the rule," it can persist that decision as a Breadbox [rule](/transactions/rules). Breadbox auto-applies that rule on every subsequent sync — so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, continuously-improving model of your financial life — maintained by the agents you already use, running against data you control.
+
+### It's free and open source
+
+Breadbox is free to run and [open source on GitHub](https://github.com/canalesb93/breadbox) under the [AGPL-3 license](https://github.com/canalesb93/breadbox/blob/main/LICENSE). No SaaS middleman, no per-account pricing, no monthly bill. You host it, you own your data, and you can audit or extend the code whenever you need to.
 
 ## Key benefits
 
 <CardGroup cols={2}>
-  <Card title="Your data, your database" icon="database">
-    All transactions are stored in a PostgreSQL database you own. No vendor lock-in — export or delete at any time.
+  <Card title="AI-ready via MCP" icon="bot" href="/mcp/overview">
+    A built-in <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip> server lets AI agents like Claude, ChatGPT, Manus, and Openclaw query and reason over your financial data — using the context they already have about you — without ever touching your bank credentials.
   </Card>
-  <Card title="AI-ready via MCP" icon="robot">
-    A built-in Model Context Protocol server lets AI assistants like Claude query your financial data securely, without your bank credentials.
+
+  <Card title="Self-improving rules" icon="sparkles" href="/transactions/rules">
+    Agents don't just categorize transactions — they can create and maintain rules tailored to *your* spending patterns. Over time your rule library handles more of the work automatically, letting agents focus on what's genuinely new.
   </Card>
-  <Card title="REST API" icon="code">
-    Query transactions, accounts, and categories from any tool using a structured REST API with cursor pagination, field selection, and filtering.
+
+  <Card title="Your data, your database" icon="database" href="/configuration/backup">
+    All transactions live in a PostgreSQL database you own. No vendor lock-in — back up, export, audit, or delete at any time.
   </Card>
-  <Card title="Multi-user households" icon="users">
-    Support every family member under one Breadbox instance, with per-user account assignment and attribution-aware filtering.
+
+  <Card title="Open source & self-hosted" icon="git-branch" href="https://github.com/canalesb93/breadbox">
+    Single Go binary, open source on GitHub. Run it on your own hardware, in a VPS, or anywhere Docker runs — no SaaS middleman between your agents and your bank data.
   </Card>
 </CardGroup>
 
 ## Features
 
-- **Bank sync** via Plaid, Teller, and CSV import
-- **MCP server** for AI agent integration (Streamable HTTP at `/mcp` and stdio)
+- **Bank sync** via Plaid, Teller, and CSV import (with more coming)
+- **MCP server** for AI-agent integration — Streamable HTTP at `/mcp` and stdio
 - **REST API** with cursor pagination, field selection, and filtering
 - **Admin dashboard** for connection management, sync monitoring, and transaction review
-- **Transaction rules engine** with recursive AND/OR/NOT conditions for auto-categorization
-- **Tag-based review workflow** — a seeded `needs-review` tag you can narrow, extend, or turn off
-- **Account linking** to deduplicate transactions across connections (e.g., authorized user cards)
+- **Self-improving rules engine** — agents create and maintain rules with recursive AND/OR/NOT conditions; your pattern library grows smarter over time
 - **Category system** with a two-level hierarchy
+- **Tag-based workflows** — tags allow flexible coordination between humans and agents (e.g., the seeded <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> tag marks every new transaction so an agent can work through them and clear the tag as it goes)
+- **Account linking** to deduplicate transactions across connections (e.g., dependent cards)
 - **Agent reports** for AI agents to submit summaries and flag transactions
 - **API key auth** with scoped access (full access or read-only)
 - **AES-256-GCM encryption** for all provider credentials stored at rest
@@ -48,14 +61,11 @@ Breadbox bridges that gap. It handles the secure sync from your bank, stores tra
 Before installing Breadbox, make sure you have the following:
 
 | Requirement | Details |
-|---|---|
-| **Docker** (recommended) | Docker Engine + Docker Compose, or any Linux/macOS machine |
-| **PostgreSQL** | Version 16 or later. Docker Compose handles this automatically. |
-| **Bank API credentials** | A [Plaid](https://plaid.com/) account (sandbox is free) or a [Teller](https://teller.io/) account — or both |
-
-<Note>
-  Plaid's sandbox environment is free and includes pre-populated test institutions with realistic transaction history. You don't need a production Plaid account to try Breadbox.
-</Note>
+| --- | --- |
+| **A machine** | Any Linux or macOS host — a VPS, a spare laptop, a NAS with Docker, or your workstation for a local eval. |
+| **Docker** | Docker Engine \+ Docker Compose. The one-liner installer offers to bootstrap Docker on Linux if it's missing. |
+| **PostgreSQL** | Version 16 or later. Handled automatically by Docker Compose. |
+| **Bank API credentials** | [Plaid](https://plaid.com/) Client ID + Secret, or a [Teller](https://teller.io/) App ID — or both. |
 
 You can also configure Plaid and Teller credentials after installation through the setup wizard — you don't need them before you start.
 
@@ -65,6 +75,7 @@ You can also configure Plaid and Teller credentials after installation through t
   <Card title="Install Breadbox" icon="download" href="/installation">
     Set up Breadbox with Docker, a pre-built binary, or from source.
   </Card>
+
   <Card title="Get started" icon="rocket" href="/quickstart">
     Go from zero to your first synced transaction in minutes.
   </Card>

@@ -1,0 +1,132 @@
+---
+title: "Single routine reviewer"
+description: "The baseline agent workflow: one agent, one schedule, the `needs-review` tag. Covers the loop, the MCP tools involved, and a system prompt you can paste into your agent."
+---
+
+The simplest agentic workflow in Breadbox is a single agent that runs on a schedule, reads the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog, decides what to do with each transaction, and closes the loop by removing the tag. This is the pattern to start with — most households never need anything more complex.
+
+## The shape of the loop
+
+Every iteration the agent does the same four things:
+
+<Steps>
+  <Step title="Size up the backlog">
+    Call `count_transactions(tags=["needs-review"])` to see how many transactions are pending. If the count is very large, the agent narrows by date or account.
+  </Step>
+  <Step title="Fetch a working batch">
+    Call `query_transactions(tags=["needs-review"], fields="core,category", limit=30)` to pull a page worth of detail. Keep batches small — one batch is the unit the agent reasons over end-to-end.
+  </Step>
+  <Step title="Decide per transaction">
+    For each row the agent considers `name`, `merchant_name`, `amount`, `account_name`, and any pre-applied category. It either confirms the category, picks a new one, or defers.
+  </Step>
+  <Step title="Resolve with a compound write">
+    Call `update_transactions` once per batch with up to 50 operations. Each op can set the category, remove the `needs-review` tag with a note, and optionally add a comment — all in a single request.
+  </Step>
+</Steps>
+
+At the end of the run, the agent submits a short report (`POST /api/v1/reports`) so the household can skim what happened without reading every annotation.
+
+## A full compound op, end-to-end
+
+Here's what a single `update_transactions` call looks like for a batch of three decisions:
+
+```json
+{
+  "operations": [
+    {
+      "transaction_id": "k7Xm9pQ2",
+      "category_slug": "food_and_drink_coffee",
+      "tags_to_remove": [
+        { "slug": "needs-review", "note": "Confirmed coffee purchase at Blue Bottle." }
+      ],
+      "comment": "Routine coffee run — no further action needed."
+    },
+    {
+      "transaction_id": "p3Ab8mN4",
+      "category_slug": "shopping",
+      "tags_to_remove": [
+        { "slug": "needs-review", "note": "Amazon household goods." }
+      ]
+    },
+    {
+      "transaction_id": "qZ5vT1yB",
+      "tags_to_add": [
+        { "slug": "needs-human", "note": "Opaque wire transfer — asking the household before closing." }
+      ]
+    }
+  ]
+}
+```
+
+Two rows get categorized and closed; the third gets bumped to a secondary tag and left on the queue. That's the rhythm of the loop.
+
+## A paste-ready system prompt
+
+Drop this into your agent's system instructions (Claude.ai projects, Claude Desktop, an automation tool, etc.). Tune the cadence line to match how often you want it to run.
+
+<CodeGroup>
+
+```text System prompt
+You are the routine transaction reviewer for this household's Breadbox
+instance. You run once every weekday morning. Your job is to clear the
+`needs-review` tag off transactions that don't warrant a human look, and to
+leave the ones that do.
+
+Step-by-step, every run:
+
+1. Call `get_sync_status`. If any connection has `status = "error"` or
+   `status = "pending_reauth"`, note it in the report and skip those
+   accounts' transactions.
+2. Call `count_transactions(tags=["needs-review"])`. If the count is over
+   200, narrow the batch by the most recent 7 days.
+3. Call `query_transactions(tags=["needs-review"], fields="core,category",
+   limit=30)`. Work in batches of 30.
+4. For each transaction:
+   - If the merchant and amount are consistent with a straightforward
+     category (recurring bill, known subscription, a coffee shop you visit
+     weekly), set the category and remove `needs-review` with a one-line
+     note explaining the decision.
+   - If it's a peer-to-peer transfer with opaque description, or an
+     amount larger than $500, leave the `needs-review` tag and add a
+     `needs-human` tag with a note describing what you're uncertain about.
+   - Never overwrite an existing category if the transaction already has
+     `category_override = true` — that means a human set it deliberately.
+5. Apply resolutions as compound `update_transactions` calls with up to
+   50 operations each.
+6. At the end, submit a report via `POST /api/v1/reports` with:
+   - Title: "Daily review — <date>"
+   - Body: counts of reviewed / resolved / deferred, plus a bulleted list
+     of deferred transactions with their compact IDs and one-line reasons.
+
+Amount convention: positive amounts are money out, negative are money in.
+Never sum across different `iso_currency_code` values. Use the `shopping`
+slug for Amazon-style purchases; use `food_and_drink_coffee` for
+single-location coffee shops. Ask the household (by leaving the item
+tagged) whenever you're unsure — it is better to leave one review open
+than to miscategorize.
+```
+
+</CodeGroup>
+
+## What the agent should _not_ do
+
+- **Never touch <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip> rows** for category changes. The `update_transactions` op will report the skip; trust that signal.
+- **Never batch more than 50 ops** into one `update_transactions` call. Split batches.
+- **Never resync** on its own schedule. Sync runs on its own cron; `trigger_sync` is reserved for when a human asks for the latest data.
+- **Never close a review it's not confident about.** Leaving the tag in place is a first-class action.
+
+## When one agent is enough
+
+A single routine reviewer handles most households indefinitely. The thresholds that usually prompt people to graduate to [multi-agent setups](/guides/multi-agent-reviewer) are:
+
+- Queue consistently sits above 100 unresolved items for days at a time.
+- Different kinds of transactions need genuinely different reasoning — peer-to-peer transfers, business expenses, subscriptions — and you want each handled by a specialist agent with its own context.
+- You want different review cadences for different transaction types (e.g., subscriptions weekly, everything else daily).
+
+Until you hit one of those, keep it simple.
+
+## Related reading
+
+- [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) — the primitives the loop rests on.
+- [Review workflow](/transactions/review-workflow) — the full spec for the `needs-review` tag and its seeded rule.
+- [MCP tools](/mcp/tools) — reference for `query_transactions`, `count_transactions`, and `update_transactions`.

@@ -1,5 +1,6 @@
 ---
-title: "Authentication"
+title: "API authentication"
+sidebarTitle: "Authentication"
 description: "How to create and use Breadbox API keys, understand read_only and full_access scopes, pass the X-API-Key header, and handle auth errors."
 ---
 
@@ -15,7 +16,7 @@ For detailed configuration steps, see the [API keys configuration guide](/config
 
 All Breadbox API keys begin with the `bb_` prefix followed by 32 cryptographically random bytes encoded in base62:
 
-```
+```text
 bb_4xK9mZ2nQpR7sT1vW3yA5bC8dE6fG0hJqLnPuVw
 ```
 
@@ -26,7 +27,7 @@ The total length is approximately 46 characters. Any string that does not start 
 Each key is assigned one of two scopes at creation time:
 
 | Scope | Description |
-|-------|-------------|
+| --- | --- |
 | `read_only` | Read access to all data endpoints. Cannot modify data, trigger syncs, or create resources. |
 | `full_access` | Full read and write access. Required for any endpoint marked **Write** in this documentation. |
 
@@ -36,7 +37,7 @@ Choose the narrowest scope that meets your use case. AI agents that only query t
 
 Include the key in the `X-API-Key` HTTP header on every request:
 
-```
+```text
 X-API-Key: bb_your_api_key_here
 ```
 
@@ -59,13 +60,13 @@ curl -X POST \
 
 ## Authentication errors
 
-| Scenario | HTTP Status | Error Code |
-|----------|-------------|------------|
-| `X-API-Key` header missing | `401 Unauthorized` | `MISSING_API_KEY` |
-| Key does not start with `bb_` | `401 Unauthorized` | `INVALID_API_KEY` |
-| Key does not match any active key | `401 Unauthorized` | `INVALID_API_KEY` |
-| Key has been revoked | `401 Unauthorized` | `REVOKED_API_KEY` |
-| Key scope is insufficient for the endpoint | `403 Forbidden` | `FORBIDDEN` |
+| Condition | Status | Code |
+| --- | --- | --- |
+| `X-API-Key` header missing | `401` | `MISSING_API_KEY` |
+| Key does not start with `bb_` | `401` | `INVALID_API_KEY` |
+| Key does not match any active key | `401` | `INVALID_API_KEY` |
+| Key has been revoked | `401` | `REVOKED_API_KEY` |
+| Key scope is insufficient for the endpoint | `403` | `FORBIDDEN` |
 
 All authentication errors use the standard error envelope:
 

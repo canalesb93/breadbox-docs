@@ -1,0 +1,67 @@
+---
+title: "Using Breadbox with AI agents"
+description: "The opinionated shape of how Breadbox is meant to be used day to day: data flows in, one or more agents review it on a cadence, you step in only when something needs a human."
+sidebarTitle: "Start here"
+---
+
+Breadbox isn't a dashboard, and it isn't an agent. It's infrastructure: a database of your household's financial data and an <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip> surface that hands that data to the AI apps you already trust. The whole system only earns its keep when an agent is doing the boring work for you and pinging you when something needs attention.
+
+The two properties that make this worth doing at all:
+
+- **Your agents bring their own context.** The Claude or ChatGPT that knows your family, your business, your subscriptions, your Gmail archive can categorize and analyze financial data with an accuracy a pattern-matcher can't touch.
+- **The system compounds.** Every ambiguous case an agent resolves can be persisted as a Breadbox [rule](/transactions/rules). Breadbox auto-applies those rules on every subsequent sync, so each review pass starts from an ever-more-accurate baseline. Your rule library becomes a custom, self-improving model of your financial life, maintained by the agents you already use.
+
+## The basic loop
+
+Across every mature Breadbox setup we've seen, the same four pieces keep showing up:
+
+1. **Transactions flow in** from Plaid, Teller, or CSV — Breadbox's sync engine handles this on a schedule and via webhooks. For the full field schema and sync mechanics, see [How Breadbox syncs, stores, and exposes transactions](/transactions/overview).
+2. **Rules pre-label** what they can. Everything reliably patterned — Amazon → Shopping, PG&E → Utilities, transfers over some threshold → <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> — is auto-categorized or auto-tagged at sync time. The rule library grows as the agents below teach it; see [Rules](/transactions/rules) and the [Understanding Rules guide](/guides/understanding-rules).
+3. **An agent reviews the batch** on a cadence. It looks at what the rules pre-labeled (to verify) plus anything explicitly tagged for follow-up. As it works, it leans on its own context — your subscriptions, your email receipts, the household habits it has picked up — plus Breadbox's MCP tools (`query_transactions`, `update_transactions`, `submit_report`). When it spots a pattern it sees repeating, it writes a new rule so Breadbox pre-categorizes that case on every future sync.
+4. **You look at reports**, not transactions. The agent surfaces anomalies (unusual charges, broken subscriptions, new counterparties) in [reports](/mcp/reference/reports) or an out-of-band channel (Slack, email). Your role shrinks to resolving the genuinely ambiguous cases.
+
+The first time you run this loop, every transaction gets the agent's full attention. A month in, most are already pre-categorized by rules the agent itself wrote — so the review pass becomes mostly fast confirmations, and the agent spends its real thought on the outliers. That compounding effect is the point.
+
+## Pick your review pattern
+
+The three patterns below are ordered by increasing autonomy. Start at the top and move down only when the one above isn't enough.
+
+<CardGroup cols={3}>
+  <Card title="One agent, on demand" icon="user" href="/guides/single-routine-reviewer">
+    You open Claude (or another MCP client) when you have a few minutes, ask it to walk the `needs-review` backlog, and approve its suggestions. Simplest possible setup.
+  </Card>
+  <Card title="Specialists per tag" icon="users" href="/guides/multi-agent-reviewer">
+    You split review across agents — one handles subscriptions, another handles peer-to-peer, another handles general categorization. Good when a single prompt starts feeling overloaded.
+  </Card>
+  <Card title="Always-on autonomous agent" icon="bot" href="/guides/openclaw-recurring-workflows">
+    Openclaw (or similar) runs on a VM, wakes up on a cron, drains the backlog, and pings you via Slack/email when something needs attention. Set-and-forget, with escape valves.
+  </Card>
+</CardGroup>
+
+## Tactical recipes
+
+Pattern-specific guides for narrower jobs that don't neatly fit into "review everything":
+
+- [**Zelle / Venmo analysis**](/guides/zelle-venmo-analysis) — agents for categorizing peer-to-peer transfers with opaque descriptions.
+- [**Gmail cross-referencing**](/guides/gmail-cross-referencing) — combine Breadbox with a Gmail MCP to confirm ambiguous bills against your inbox.
+- [**Tracking subscriptions**](/guides/tracking-subscriptions) — detect recurring charges, tag them, and flag when the amount drifts.
+- [**On-demand analysis**](/guides/on-demand-analysis) — the "hey Claude, how much did we spend on coffee last quarter" style of ad-hoc query.
+- [**Custom dashboard with Claude**](/guides/custom-dashboard-with-claude) — hand Claude the API and let it build you a React artifact you can live in.
+
+## New to the primitives?
+
+If terms like _pipeline stage_, _condition tree_, or _seeded `needs-review` tag_ don't mean anything yet, detour through these first:
+
+- [**Breadbox in a nutshell**](/guides/breadbox-in-a-nutshell) — Categories, Tags, Rules, and how they compose.
+- [**Understanding Rules**](/guides/understanding-rules) — the DSL primer with worked examples.
+
+## Conventions used in these guides
+
+- Every guide links back to the underlying reference docs — click through to `/transactions/*`, `/mcp/reference/*`, or `/api/*` for the full surface.
+- Examples use real MCP tool names and real API endpoints. Paste them into an agent prompt or adapt to your setup.
+- Amounts follow Plaid convention — **positive = money out**, negative = money in. Summarize "spending" by summing positive amounts only.
+- Some guides lean on capabilities that aren't yet stable (third-party MCPs, in-flight features). Those sections carry a draft note — verify before relying on them.
+
+<Note>
+  These guides assume Breadbox is installed, at least one bank is connected, and you've generated an API key. If any of that is new, start at [What is Breadbox?](/introduction), then [Install](/installation), then [Onboarding](/quickstart).
+</Note>

@@ -163,7 +163,7 @@ This keeps seven daily backups and four weekly backups before pruning.
 
 ## Back up your ENCRYPTION_KEY
 
-Your `ENCRYPTION_KEY` is not in the database, so database backups do not include it. Store it separately:
+Your `ENCRYPTION_KEY` is an environment variable (see the [environment variables reference](/configuration/environment) for generation and precedence rules). It's not in the database, so database backups do not include it. Store it separately:
 
 - In a password manager (1Password, Bitwarden, etc.)
 - In a secrets vault (HashiCorp Vault, AWS Secrets Manager, etc.)

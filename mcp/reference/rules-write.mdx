@@ -1,0 +1,342 @@
+---
+title: "Rule write MCP reference"
+sidebarTitle: "Rule writes"
+description: "Create, update, delete, and batch-create transaction rules. Apply rules retroactively."
+---
+
+Transaction rules are condition trees that fire during sync to auto-categorize, tag, or annotate new transactions. See [Rules (read)](/mcp/reference/rules) for `list_transaction_rules` and `preview_rule`, and [Categorization](/mcp/reference/categorization#apply_rules) for `apply_rules` (retroactive application).
+
+The full DSL lives in the Breadbox repo at `docs/rule-dsl.md`. Key concepts recapped below under [Pipeline stages](#pipeline-stages-and-priority).
+
+All tools on this page are **Write** scope and require `session_id` + `reason`.
+
+---
+
+## create_transaction_rule
+
+Create a transaction rule. Rules match condition trees against transactions during sync and fire in pipeline-stage order (priority ASC — lower runs first). Pass `stage` (`baseline` | `standard` | `refinement` | `override`) instead of a raw priority when you can — stage resolves to priority 0/10/50/100 so rules from different agents compose predictably.
+
+### Parameters
+
+<ParamField path="name" type="string" required>
+  Human-readable description. Convention: `"<pattern-type>: <match> → <category>"`.
+</ParamField>
+
+<ParamField path="conditions" type="object">
+  Condition tree. Omit or pass `{}` to match every transaction. See [Condition grammar](#condition-grammar).
+</ParamField>
+
+<ParamField path="actions" type="array of objects">
+  Array of typed actions. Shapes:
+
+  - `{"type": "set_category", "category_slug": "..."}`
+  - `{"type": "add_tag", "tag_slug": "..."}`
+  - `{"type": "remove_tag", "tag_slug": "..."}`
+  - `{"type": "add_comment", "content": "..."}`
+
+  Actions compose — a rule can set a category, add a tag, and add a comment on the same match. `add_comment` fires only at sync time (not on retroactive apply). If omitted, supply `category_slug` as a shorthand.
+</ParamField>
+
+<ParamField path="category_slug" type="string">
+  Shorthand for `[{"type": "set_category", "category_slug": "<slug>"}]`. Either `actions` or `category_slug` is required.
+</ParamField>
+
+<ParamField path="trigger" type="string" default="on_create">
+  When the rule fires: `on_create` (default — first-synced transactions), `on_change` (existing transactions that change on re-sync), or `always` (both). `on_update` is accepted as a legacy alias for `on_change`. Retroactive apply ignores `trigger`.
+</ParamField>
+
+<ParamField path="stage" type="string">
+  Semantic pipeline stage. Preferred over raw priority. One of `baseline` (priority 0), `standard` (10, default), `refinement` (50), `override` (100). If both `stage` and `priority` are supplied, `priority` wins.
+</ParamField>
+
+<ParamField path="priority" type="integer" default="10">
+  Raw pipeline-stage integer, 0–1000. Lower runs first. Prefer `stage` for shared vocabulary.
+</ParamField>
+
+<ParamField path="expires_in" type="string">
+  Optional expiry duration: `24h`, `30d`, `1w`. Rule auto-disables after this period.
+</ParamField>
+
+<ParamField path="apply_retroactively" type="boolean" default="false">
+  If `true`, immediately apply this rule to existing transactions after creation. Materializes `set_category`, `add_tag`, `remove_tag`; skips `add_comment` (sync-only).
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "tagging Starbucks charges for coffee tracking",
+  "name": "name: Starbucks → food_and_drink_coffee",
+  "conditions": {
+    "field": "merchant_name",
+    "op": "contains",
+    "value": "starbucks"
+  },
+  "actions": [
+    { "type": "set_category", "category_slug": "food_and_drink_coffee" }
+  ],
+  "stage": "standard",
+  "trigger": "on_create"
+}
+```
+
+### Example output
+
+```json
+{
+  "rule": {
+    "id": "r9Xm2pQr",
+    "name": "name: Starbucks → food_and_drink_coffee",
+    "conditions": {
+      "field": "merchant_name",
+      "op": "contains",
+      "value": "starbucks"
+    },
+    "actions": [
+      { "type": "set_category", "category_slug": "food_and_drink_coffee" }
+    ],
+    "trigger": "on_create",
+    "priority": 10,
+    "enabled": true,
+    "hit_count": 0,
+    "last_hit_at": null,
+    "created_at": "2026-04-23T14:45:00Z",
+    "created_by": "review-agent@example.com",
+    "expires_at": null
+  }
+}
+```
+
+If `apply_retroactively: true` was passed, the response also includes `retroactive_matches: <count>` (or `retroactive_error: "<msg>"` on failure).
+
+---
+
+## update_transaction_rule
+
+Update one rule. Every field is optional — omit to leave unchanged. `conditions={}` explicitly clears conditions (match-all). `actions=[...]` replaces the entire action set. `expires_at=""` clears expiry.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Rule UUID or short ID.
+</ParamField>
+
+<ParamField path="name" type="string" />
+
+<ParamField path="conditions" type="object">
+  New condition tree. Pass `{}` to explicitly change to match-all. Omit entirely to leave conditions unchanged.
+</ParamField>
+
+<ParamField path="actions" type="array of objects">
+  Replace the entire actions array. Pass an empty array to reject (rules must have at least one action).
+</ParamField>
+
+<ParamField path="category_slug" type="string">
+  Shorthand: replace only the `set_category` action. Other action types on the rule are preserved.
+</ParamField>
+
+<ParamField path="trigger" type="string" />
+
+<ParamField path="stage" type="string" />
+
+<ParamField path="priority" type="integer" />
+
+<ParamField path="enabled" type="boolean">
+  Disabled rules are excluded from sync and retroactive apply.
+</ParamField>
+
+<ParamField path="expires_at" type="string">
+  RFC3339 timestamp, or empty string to clear expiry.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "disabling noisy rule",
+  "id": "r9Xm2pQr",
+  "enabled": false
+}
+```
+
+### Example output
+
+```json
+{
+  "id": "r9Xm2pQr",
+  "name": "name: Starbucks → food_and_drink_coffee",
+  "enabled": false,
+  "priority": 10,
+  "hit_count": 47,
+  "last_hit_at": "2026-04-12T14:32:00Z"
+}
+```
+
+---
+
+## delete_transaction_rule
+
+Delete a rule by ID. System-seeded rules (the `needs-review` auto-tagger) cannot be deleted — disable them via `update_transaction_rule` instead.
+
+### Parameters
+
+<ParamField path="id" type="string" required>
+  Rule UUID or short ID.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "retiring obsolete rule",
+  "id": "r9Xm2pQr"
+}
+```
+
+### Example output
+
+```json
+{
+  "deleted": true,
+  "id": "r9Xm2pQr"
+}
+```
+
+---
+
+## batch_create_rules
+
+Create up to 100 rules in one call. Ideal for composable pipelines — each item can set its `stage` to order rules so earlier stages set up tags/categories that later stages react to.
+
+Each item follows the same shape as `create_transaction_rule`. Returns created rules plus any per-item errors so partial success is recoverable.
+
+### Parameters
+
+<ParamField path="rules" type="array of objects" required>
+  Array of rule definitions. Max 100. Each item has `name` (required), `conditions`, `actions` or `category_slug` (one required), `trigger`, `stage`, `priority`, `expires_in`.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "setting up composable coffee pipeline",
+  "rules": [
+    {
+      "name": "Tag coffee shops",
+      "stage": "baseline",
+      "conditions": {
+        "field": "merchant_name",
+        "op": "contains",
+        "value": "starbucks"
+      },
+      "actions": [{ "type": "add_tag", "tag_slug": "coffee" }]
+    },
+    {
+      "name": "Categorize coffee-tagged",
+      "stage": "standard",
+      "conditions": {
+        "field": "tags",
+        "op": "contains",
+        "value": "coffee"
+      },
+      "actions": [
+        { "type": "set_category", "category_slug": "food_and_drink_coffee" }
+      ]
+    },
+    {
+      "name": "Flag expensive coffee",
+      "stage": "refinement",
+      "conditions": {
+        "and": [
+          { "field": "tags", "op": "contains", "value": "coffee" },
+          { "field": "amount", "op": "gt", "value": 15 }
+        ]
+      },
+      "actions": [{ "type": "add_tag", "tag_slug": "expensive" }]
+    }
+  ]
+}
+```
+
+### Example output
+
+```json
+{
+  "created": 3,
+  "failed": 0,
+  "rules": [
+    { "id": "r9Xm2pQr", "name": "Tag coffee shops", "priority": 0 },
+    { "id": "rAYn0qR3", "name": "Categorize coffee-tagged", "priority": 10 },
+    { "id": "rBZo1rS4", "name": "Flag expensive coffee", "priority": 50 }
+  ],
+  "errors": []
+}
+```
+
+---
+
+## Pipeline stages and priority
+
+Rules fire in priority-ASC order during each sync pass, and within a single pass each rule observes mutations from earlier-stage rules. That makes rules composable — rule A can add a tag, rule B's condition can react to that tag, rule C can set a category based on the combined state.
+
+| Stage | Priority | Typical use |
+| --- | --- | --- |
+| `baseline` | 0 | Broad defaults — tagging coffee shops, marking credit card payments |
+| `standard` | 10 (default) | Most categorization rules |
+| `refinement` | 50 | Rules that react to earlier-stage tags or categories |
+| `override` | 100 | Rules that forcibly win `set_category` regardless of what earlier stages did |
+
+Rules of thumb:
+
+- Per-merchant rules (priority 20–30 or `refinement`) > name-pattern rules (`standard`) > `category_primary` rules (`baseline`).
+- Prefer `contains` over exact match — bank feeds format merchant names inconsistently.
+- Always use `category_slug`, not `category_id`, when authoring actions or filters.
+
+## Condition grammar
+
+Same grammar used by [`preview_rule`](/mcp/reference/rules#preview_rule).
+
+- **Fields** — `name`, `merchant_name`, `amount`, `category_primary`, `category_detailed`, `category` (assigned slug, live-updated by earlier-stage rules), `pending`, `provider`, `account_id`, `account_name`, `user_id`, `user_name`, `tags`.
+- **Operators** —
+  - String/category: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
+  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`.
+  - Bool: `eq`, `neq`.
+  - Tags: `contains`, `not_contains`, `in`.
+- **Combinators** — `and`, `or`, `not` (nest freely, max depth 10).
+
+Nested example:
+
+```json
+{
+  "or": [
+    {
+      "and": [
+        { "field": "merchant_name", "op": "contains", "value": "starbucks" },
+        { "field": "amount", "op": "gte", "value": 5 }
+      ]
+    },
+    { "field": "tags", "op": "contains", "value": "coffee" }
+  ]
+}
+```

@@ -1,0 +1,246 @@
+---
+title: "Transaction write MCP reference"
+sidebarTitle: "Transaction writes"
+description: "Compound writes, comments, and tag add/remove on transactions. Categorization lives on its own page."
+---
+
+Write tools for editing transactions. The headline primitive is [`update_transactions`](#update_transactions) — a compound write that covers category, tags, and a comment in one atomic op per row. Single-action tools exist for simpler cases.
+
+All tools on this page are **Write** scope and require `session_id` + `reason`. See [Categorization](/mcp/reference/categorization) for category-only writes.
+
+---
+
+## update_transactions
+
+Compound write for up to 50 transactions at once. Each operation can set a category (`category_slug`), add tags (`tags_to_add`), remove tags (`tags_to_remove`), and attach a comment — all atomically per transaction. This is the preferred tool for closing review work (set category + remove `needs-review` + explain) in one call.
+
+Every change lands as a single linked annotation per operation. Prefer this over composing `categorize_transaction` + `add_transaction_tag` + `remove_transaction_tag` + `add_transaction_comment`, which would write four separate annotations.
+
+### Compound op semantics
+
+<Note>
+  **What "compound" means here.** Each element in the `operations` array is a bundle of mutations targeting one transaction. Within a single operation:
+
+  - The category, tag additions, tag removals, and comment are applied atomically — either all land or none do.
+  - The annotations written for those changes are linked so the activity timeline reads as one event, not four.
+  - Tag `note` fields are preserved on both `tag_added` and `tag_removed` annotations.
+</Note>
+
+### on_error behavior
+
+- `continue` (default) — each operation runs in its own DB transaction. A failure on row 17 doesn't roll back rows 1–16. The response returns per-row `status` so you can retry the failed ones.
+- `abort` — the whole batch runs in one DB transaction. The first error rolls back every operation and the response includes `aborted: true`.
+
+### Parameters
+
+<ParamField path="operations" type="array of objects" required>
+  Array of per-transaction operations. Max 50. See the operation shape below.
+</ParamField>
+
+<ParamField path="on_error" type="string" default="continue">
+  `continue` or `abort`.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Operation shape
+
+<ParamField path="transaction_id" type="string" required>
+  UUID or short ID.
+</ParamField>
+
+<ParamField path="category_slug" type="string">
+  Category slug to set. Sets `category_override=true`. Omit to leave the category unchanged.
+</ParamField>
+
+<ParamField path="tags_to_add" type="array">
+  List of `{slug, note?}` entries. Auto-creates persistent tags if the slug is unknown.
+</ParamField>
+
+<ParamField path="tags_to_remove" type="array">
+  List of `{slug, note?}` entries. `note` is recommended for workflow tags like `needs-review`.
+</ParamField>
+
+<ParamField path="comment" type="string">
+  Free-form comment written as an annotation. Max 10000 chars. Prefer inline over a separate `add_transaction_comment` call.
+</ParamField>
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "closing weekly review batch",
+  "on_error": "continue",
+  "operations": [
+    {
+      "transaction_id": "k7Xm9pQ2",
+      "category_slug": "food_and_drink_groceries",
+      "tags_to_remove": [
+        { "slug": "needs-review", "note": "clearly groceries (Whole Foods)" }
+      ]
+    },
+    {
+      "transaction_id": "k8Yn0qR3",
+      "category_slug": "transportation_ride_share",
+      "tags_to_remove": [
+        { "slug": "needs-review", "note": "Uber to airport" }
+      ],
+      "comment": "Work trip — filed to expense tracker 2026-04-20."
+    }
+  ]
+}
+```
+
+### Example output
+
+```json
+{
+  "results": [
+    { "transaction_id": "k7Xm9pQ2", "status": "ok" },
+    { "transaction_id": "k8Yn0qR3", "status": "ok" }
+  ],
+  "succeeded": 2,
+  "failed": 0
+}
+```
+
+---
+
+## add_transaction_comment
+
+Adds a free-standing comment to a transaction — narrative that isn't tied to a specific category or tag change. Flagging unusual charges, noting shared expenses, cross-references.
+
+<Note>
+  **When the comment is rationale for an edit, use `update_transactions` instead.** Passing the rationale inline (`comment`, or `note` on a tag op) writes one linked annotation; `add_transaction_comment` writes a separate, free-standing one — so the timeline would duplicate the context.
+</Note>
+
+### Parameters
+
+<ParamField path="transaction_id" type="string" required>
+  UUID or short ID.
+</ParamField>
+
+<ParamField path="content" type="string" required>
+  Comment text. Markdown supported. Max 10000 chars.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "flagging unusual charge for household review",
+  "transaction_id": "k7Xm9pQ2",
+  "content": "Possible fraud — no one recognizes this merchant. Recommend disputing."
+}
+```
+
+### Example output
+
+```json
+{
+  "id": "c4Xp2mQr",
+  "transaction_id": "k7Xm9pQ2",
+  "content": "Possible fraud — no one recognizes this merchant. Recommend disputing.",
+  "author_type": "agent",
+  "author_id": "ak_01HT...",
+  "author_name": "Review Agent",
+  "created_at": "2026-04-23T14:35:00Z",
+  "updated_at": "2026-04-23T14:35:00Z"
+}
+```
+
+---
+
+## add_transaction_tag
+
+Attach one tag to one transaction. Auto-creates the tag as persistent if the slug isn't registered yet. Idempotent: returns `already_present: true` if the tag was already attached.
+
+### Parameters
+
+<ParamField path="transaction_id" type="string" required />
+
+<ParamField path="tag_slug" type="string" required>
+  Slug to add. Regex: `^[a-z0-9][a-z0-9\-:]*[a-z0-9]$`.
+</ParamField>
+
+<ParamField path="note" type="string">
+  Optional rationale recorded on the `tag_added` annotation.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "flagging this as recurring for subscription tracker",
+  "transaction_id": "k7Xm9pQ2",
+  "tag_slug": "subscription:monthly",
+  "note": "Netflix monthly charge."
+}
+```
+
+### Example output
+
+```json
+{
+  "added": true,
+  "already_present": false,
+  "tag_slug": "subscription:monthly",
+  "transaction_id": "k7Xm9pQ2"
+}
+```
+
+---
+
+## remove_transaction_tag
+
+Remove one tag from one transaction. A `note` is recommended (it lands on the `tag_removed` annotation) but not required. Idempotent: returns `already_absent: true` if the tag wasn't attached.
+
+### Parameters
+
+<ParamField path="transaction_id" type="string" required />
+
+<ParamField path="tag_slug" type="string" required />
+
+<ParamField path="note" type="string">
+  Optional rationale recorded on the annotation.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "closing review after categorizing",
+  "transaction_id": "k7Xm9pQ2",
+  "tag_slug": "needs-review",
+  "note": "clearly groceries — categorized as food_and_drink_groceries"
+}
+```
+
+### Example output
+
+```json
+{
+  "removed": true,
+  "already_absent": false,
+  "tag_slug": "needs-review",
+  "transaction_id": "k7Xm9pQ2"
+}
+```
