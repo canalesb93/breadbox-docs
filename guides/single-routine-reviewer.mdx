@@ -3,7 +3,7 @@ title: "Single routine reviewer"
 description: "The baseline agent workflow: one agent, one schedule, the `needs-review` tag. Covers the loop, the MCP tools involved, and a system prompt you can paste into your agent."
 ---
 
-The simplest agentic workflow in Breadbox is a single agent that runs on a schedule, reads the `needs-review` backlog, decides what to do with each transaction, and closes the loop by removing the tag. This is the pattern to start with — most households never need anything more complex.
+The simplest agentic workflow in Breadbox is a single agent that runs on a schedule, reads the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog, decides what to do with each transaction, and closes the loop by removing the tag. This is the pattern to start with — most households never need anything more complex.
 
 ## The shape of the loop
 
@@ -110,7 +110,7 @@ than to miscategorize.
 
 ## What the agent should _not_ do
 
-- **Never touch `category_override = true` rows** for category changes. The `update_transactions` op will report the skip; trust that signal.
+- **Never touch <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip> rows** for category changes. The `update_transactions` op will report the skip; trust that signal.
 - **Never batch more than 50 ops** into one `update_transactions` call. Split batches.
 - **Never resync** on its own schedule. Sync runs on its own cron; `trigger_sync` is reserved for when a human asks for the latest data.
 - **Never close a review it's not confident about.** Leaving the tag in place is a first-class action.

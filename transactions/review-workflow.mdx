@@ -3,7 +3,7 @@ title: "Review workflow"
 description: "Understand how Breadbox's needs-review tag, seeded rule, and tag-based workflow combine into a configurable review workflow you can extend or turn off."
 ---
 
-Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the `needs-review` tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
+Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
 
 ## How the workflow is assembled
 
@@ -63,7 +63,7 @@ Because the queue is just a tag filter, AI agents connected over MCP can partici
 
 - `query_transactions(tags=["needs-review"])` to fetch the backlog
 - `count_transactions(tags=["needs-review"])` to check the size before diving in
-- `update_transactions` with a compound op (`category_slug` \+ `tags_to_remove` with a note \+ an optional `comment`) to resolve items in batches
+- `update_transactions` with a compound op (<Tooltip headline="category_slug" tip="Breadbox's internal category slug (e.g. `food_and_drink_groceries`). Takes precedence over raw provider fields for display and filtering." cta="See categories" href="/transactions/categories">`category_slug`</Tooltip> \+ `tags_to_remove` with a note \+ an optional `comment`) to resolve items in batches
 - Leave the tag in place when an agent isn't confident — that's the equivalent of "skipping"
 
 A typical agent loop:

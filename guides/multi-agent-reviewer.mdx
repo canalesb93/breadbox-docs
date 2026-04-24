@@ -9,7 +9,7 @@ Start with [Single Routine Reviewer](/guides/single-routine-reviewer) if you hav
 
 ## Pattern A — Delegator + specialists
 
-A single **coordinator agent** owns the top of the funnel. It fetches the `needs-review` backlog, decides which specialist each transaction belongs to, and re-tags accordingly (e.g., `needs-review-gmail`, `needs-review-subscriptions`, `needs-review-p2p`). Each specialist watches its own tag and works through its slice independently.
+A single **coordinator agent** owns the top of the funnel. It fetches the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog, decides which specialist each transaction belongs to, and re-tags accordingly (e.g., `needs-review-gmail`, `needs-review-subscriptions`, `needs-review-p2p`). Each specialist watches its own tag and works through its slice independently.
 
 ```text
 [needs-review] ──┐

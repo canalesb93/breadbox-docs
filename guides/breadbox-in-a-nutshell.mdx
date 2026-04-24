@@ -13,7 +13,7 @@ Categories come from one of three sources, in increasing precedence:
 
 1. **Provider-assigned** — Plaid or Teller guess the category during sync.
 2. **Rule-assigned** — a Breadbox rule overrides the provider value at sync time.
-3. **Manually overridden** — you (or an agent) set the category by hand. Manual overrides set `category_override = true`, which _protects the transaction from rules_ going forward.
+3. **Manually overridden** — you (or an agent) set the category by hand. Manual overrides set <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>, which _protects the transaction from rules_ going forward.
 
 <Tip>
   Manual overrides are sacred. Rules that would otherwise change the category are skipped for any transaction with `category_override = true`. Tag and comment actions still fire — only `set_category` is suppressed.
@@ -25,11 +25,11 @@ Full reference: [Category System](/transactions/categories).
 
 A **tag** is just a label you can attach to any transaction. Unlike categories, tags are flat (no hierarchy) and a single transaction can carry any number of them at once. Each tag has a stable `slug` (used in rules and MCP calls), a `display_name`, and an optional color and description.
 
-Tags are the primitive Breadbox uses any time the question is "which transactions are in this state?" The review queue, for example, is not a separate table — it's the set of transactions carrying the `needs-review` tag. You can build your own states the same way (`flagged`, `disputed`, `tax-deductible`, `subscription`, etc.).
+Tags are the primitive Breadbox uses any time the question is "which transactions are in this state?" The review queue, for example, is not a separate table — it's the set of transactions carrying the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> tag. You can build your own states the same way (`flagged`, `disputed`, `tax-deductible`, `subscription`, etc.).
 
 ### The seeded `needs-review` tag
 
-Breadbox ships with one tag already defined: `needs-review`. A seeded `on_create` rule applies it to every newly synced transaction, and the `/reviews` URL in the dashboard is just a redirect to `/transactions?tags=needs-review`. Removing the tag is how you "close" a review — and you can attach a note to the removal, which gets saved as an annotation on the transaction's timeline.
+Breadbox ships with one tag already defined: `needs-review`. A seeded <Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip> rule applies it to every newly synced transaction, and the `/reviews` URL in the dashboard is just a redirect to `/transactions?tags=needs-review`. Removing the tag is how you "close" a review — and you can attach a note to the removal, which gets saved as an annotation on the transaction's timeline.
 
 The default behavior is optional. The seed rule can be narrowed to only tag uncategorized transactions, or disabled entirely. See the [review workflow](/transactions/review-workflow) for the knobs.
 

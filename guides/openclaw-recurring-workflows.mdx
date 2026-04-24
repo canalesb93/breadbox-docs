@@ -3,7 +3,7 @@ title: "Recurring workflows with Openclaw"
 description: "Use Openclaw's autonomous scheduling and sub-agent primitives to run Breadbox transaction triage, anomaly alerts, and session hygiene on a continuous cadence — without manual intervention."
 ---
 
-Household finances need continuous attention: new transactions arrive daily, the `needs-review` backlog grows between human check-ins, and subscriptions quietly drift. Running an agent _on demand_ is fine for one-off analysis, but it doesn't scale as a daily habit.
+Household finances need continuous attention: new transactions arrive daily, the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog grows between human check-ins, and subscriptions quietly drift. Running an agent _on demand_ is fine for one-off analysis, but it doesn't scale as a daily habit.
 
 [Openclaw](https://openclaw.ai) is a persistent, VM-hosted autonomous agent platform. Unlike a chat session that ends when you close the window, Openclaw runs continuously on its own machine, maintains session state, and can spawn sub-agents for parallelised work. It also connects to messaging channels — Slack, Telegram, Discord, WhatsApp, and others — so it can reach you out-of-band when something needs attention.
 
@@ -208,7 +208,7 @@ Amount convention: positive = money out, negative = money in.
 
 ### Why this matters
 
-Breadbox's [Sessions reference](/mcp/reference/sessions) explains that every write tool (other than `create_session` itself) requires a `session_id`. Sessions group related tool calls into a unit visible in the admin dashboard. When Openclaw runs nightly and names its session "nightly triage — 2026-04-23", the household can see exactly which transactions were touched, by which agent, and why.
+Breadbox's [Sessions reference](/mcp/reference/sessions) explains that every write tool (other than `create_session` itself) requires a <Tooltip headline="session_id" tip="Identifier that groups an agent's MCP writes into one auditable unit. Required on every write tool; obtained from create_session." cta="Sessions reference" href="/mcp/reference/sessions">`session_id`</Tooltip>. Sessions group related tool calls into a unit visible in the admin dashboard. When Openclaw runs nightly and names its session "nightly triage — 2026-04-23", the household can see exactly which transactions were touched, by which agent, and why.
 
 [`submit_report`](/mcp/reference/reports) closes the loop by posting a human-readable summary to the Breadbox Reports page. It is the agent's equivalent of leaving a note — the household skims the title, reads the body if they want detail, and can see at a glance whether the last cycle ran cleanly.
 

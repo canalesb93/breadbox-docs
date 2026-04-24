@@ -13,7 +13,7 @@ A rule is a JSON document with three important pieces:
 
 1. **A condition** — a recursive tree of leaves (`field`/`op`/`value`) and combinators (`and` / `or` / `not`).
 2. **One or more actions** — `set_category`, `add_tag`, `remove_tag`, or `add_comment`.
-3. **A trigger and stage** — when the rule runs (`on_create`, `always`, `on_change`) and where in the pipeline (`baseline`, `standard`, `refinement`, `override`).
+3. **A trigger and stage** — when the rule runs (<Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>, `always`, `on_change`) and where in the pipeline (`baseline`, `standard`, `refinement`, `override`).
 
 Amounts use Plaid convention: **positive = money out** (purchases, payments), **negative = money in** (refunds, paychecks). Every example below respects that.
 
@@ -138,7 +138,7 @@ Sometimes the cleanest way to express a rule is "match this _except_ for these c
 You can freely nest `and`, `or`, and `not` up to 10 levels deep. For most workflows you'll keep it under three.
 
 <Tip>
-  If a transaction gets the wrong category anyway, set it manually from the dashboard. That flips `category_override = true`, which the rule engine honors forever — your deliberate choice won't be undone by a later rule.
+  If a transaction gets the wrong category anyway, set it manually from the dashboard. That flips <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>, which the rule engine honors forever — your deliberate choice won't be undone by a later rule.
 </Tip>
 
 ## Applying rules retroactively

@@ -149,6 +149,10 @@
         ]
       },
       {
+        "tab": "Changelog",
+        "pages": ["changelog"]
+      },
+      {
         "tab": "Guides",
         "pages": [
           "guides/overview",
