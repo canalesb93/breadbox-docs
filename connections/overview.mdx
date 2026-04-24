@@ -1,7 +1,6 @@
 ---
 title: "Connect your bank accounts"
 description: "Learn how Breadbox connects to your banks via Plaid, Teller, or CSV import, and how to manage connection health from the admin dashboard."
-mode: "default"
 ---
 
 A **connection** in Breadbox is the link between your self-hosted instance and a bank data source, owned by a specific family member. Once a connection is established, Breadbox pulls in that person's transactions automatically — or lets you import them manually — and keeps everything in your local database.
@@ -54,7 +53,7 @@ Breadbox keeps your data up to date using two complementary mechanisms:
 If no webhook URL is configured, Breadbox falls back to cron-only syncing.
 
 <Note>
-  Your webhook endpoint must be reachable from the internet. If you run Breadbox at home or behind a firewall, Cloudflare Tunnel is a free option that creates a stable public URL for your local instance.
+  Your webhook endpoint must be reachable from the internet. If you run Breadbox at home or behind a firewall, [Remote Hosting](/installation/remote-hosting) covers four options — exe.dev, Cloudflare Tunnel, Caddy on a VPS, and Tailscale Funnel — that each give you a stable public URL.
 </Note>
 
 CSV connections do not support automatic sync. You import new data manually whenever you want to add transactions.
