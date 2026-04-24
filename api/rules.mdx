@@ -10,7 +10,7 @@ Rules automatically categorize transactions during sync by matching conditions o
 
 ## List rules
 
-```
+```text
 GET /api/v1/rules
 ```
 
@@ -80,7 +80,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get a single rule
 
-```
+```text
 GET /api/v1/rules/{id}
 ```
 
@@ -103,7 +103,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Create a rule
 
-```
+```text
 POST /api/v1/rules
 ```
 
@@ -185,7 +185,7 @@ curl -X POST \
 
 ## Update a rule
 
-```
+```text
 PUT /api/v1/rules/{id}
 ```
 
@@ -211,7 +211,7 @@ curl -X PUT \
 
 ## Delete a rule
 
-```
+```text
 DELETE /api/v1/rules/{id}
 ```
 
@@ -235,7 +235,7 @@ curl -X DELETE \
 
 ## Apply a rule retroactively
 
-```
+```text
 POST /api/v1/rules/{id}/apply
 ```
 
@@ -268,7 +268,7 @@ curl -X POST \
 
 ## Apply all rules retroactively
 
-```
+```text
 POST /api/v1/rules/apply-all
 ```
 
@@ -300,7 +300,7 @@ curl -X POST \
 
 ## Preview a condition (dry run)
 
-```
+```text
 POST /api/v1/rules/preview
 ```
 

@@ -60,7 +60,7 @@ MCP tools accept two filter shapes:
 - **`tags`** — all-of semantics. A transaction must carry every listed slug.
 - **`any_tag`** — any-of semantics. A transaction must carry at least one.
 
-```
+```text
 query_transactions(tags=["needs-review"])                      # the review backlog
 query_transactions(tags=["needs-review", "high-amount"])       # both tags
 query_transactions(any_tag=["flagged", "disputed"])            # either tag

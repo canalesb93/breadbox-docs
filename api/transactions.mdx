@@ -10,7 +10,7 @@ Transactions are the core data in Breadbox. The transactions API lets you query 
 
 ## List transactions
 
-```
+```text
 GET /api/v1/transactions
 ```
 
@@ -157,7 +157,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Count transactions
 
-```
+```text
 GET /api/v1/transactions/count
 ```
 
@@ -182,7 +182,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Summarize transactions
 
-```
+```text
 GET /api/v1/transactions/summary
 ```
 
@@ -228,7 +228,7 @@ Rows aggregated by `month`, `week`, or `day` include a `period` string (e.g., `"
 
 ## Merchant statistics
 
-```
+```text
 GET /api/v1/transactions/merchants
 ```
 
@@ -282,7 +282,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Get a single transaction
 
-```
+```text
 GET /api/v1/transactions/{id}
 ```
 
@@ -332,7 +332,7 @@ curl -H "X-API-Key: bb_your_key" \
 
 ## Set category override
 
-```
+```text
 PATCH /api/v1/transactions/{id}/category
 ```
 
@@ -374,7 +374,7 @@ curl -X PATCH \
 
 ## Reset category override
 
-```
+```text
 DELETE /api/v1/transactions/{id}/category
 ```
 
@@ -402,7 +402,7 @@ curl -X DELETE \
 
 ## Batch categorize
 
-```
+```text
 POST /api/v1/transactions/batch-categorize
 ```
 
@@ -454,7 +454,7 @@ curl -X POST \
 
 ## Bulk recategorize
 
-```
+```text
 POST /api/v1/transactions/bulk-recategorize
 ```
 

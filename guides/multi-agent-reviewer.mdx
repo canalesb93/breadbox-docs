@@ -11,7 +11,7 @@ Start with [Single Routine Reviewer](/guides/single-routine-reviewer) if you hav
 
 A single **coordinator agent** owns the top of the funnel. It fetches the `needs-review` backlog, decides which specialist each transaction belongs to, and re-tags accordingly (e.g., `needs-review-gmail`, `needs-review-subscriptions`, `needs-review-p2p`). Each specialist watches its own tag and works through its slice independently.
 
-```
+```text
 [needs-review] ──┐
                  ▼
            [coordinator]
@@ -77,7 +77,7 @@ router.
 
 Instead of routing via a coordinator, each specialist queries its own tag _directly_, and rules at sync time pre-populate those tags based on conditions. No agent is responsible for routing — the rules engine does it.
 
-```
+```text
          [rules @ sync]
          │    │    │
          ▼    ▼    ▼
