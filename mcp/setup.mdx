@@ -1,6 +1,6 @@
 ---
 title: "Set up MCP for Claude and AI agents"
-description: "Connect Claude (Desktop, web, mobile), Claude Code, opencode, Codex, ChatGPT, Openclaw, Manus, and other MCP-compatible agents to your Breadbox instance."
+description: "Connect Claude (Desktop, web, mobile), Claude Code, ChatGPT, Codex, Openclaw, Manus, and other MCP-compatible agents to your Breadbox instance."
 ---
 
 Breadbox's <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> server is ready as soon as your instance is running — there's nothing extra to install or start. You configure your AI client to point at Breadbox over Streamable HTTP (with an API key) or over stdio (when the `breadbox` binary is local). This page gathers the setup flow for each supported client.
@@ -17,421 +17,381 @@ Breadbox's <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">[MC
 
 ---
 
-## Pick your client
+## Claude
 
-<Tabs>
-  {/* ------------------------------------------------------------------ */}
-  {/* Claude (Desktop / Web / Mobile) — unified UI                       */}
-  {/* Source: https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Claude (UI)">
-    Claude (Desktop, web at claude.ai, and mobile) adds remote MCP servers through its **Connectors** UI — no config file required. The same flow works across all three surfaces. Reference: [Use connectors to extend Claude's capabilities](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c).
+Claude has two connection paths: the in-app **Connectors** UI (works across Desktop, web, and mobile, but only supports OAuth auth), and a **config file** flow for Claude Desktop specifically when you need static-header auth (the default Breadbox `X-API-Key` setup). Use whichever fits how your Breadbox is exposed.
 
-    Custom connectors using remote MCP are available on **Free** (limited to one), **Pro**, **Max**, **Team**, and **Enterprise** plans.
+{/* ------------------------------------------------------------------ */}
+{/* Claude (Desktop / Web / Mobile) — unified UI                       */}
+{/* Source: https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+### Connectors UI (Desktop, web, mobile)
 
-    <Note>
-      Image placeholders below — replace with real screenshots before publishing.
-    </Note>
+Claude (Desktop, web at claude.ai, and mobile) adds remote MCP servers through its **Connectors** UI — no config file required. The same flow works across all three surfaces. Reference: [Use connectors to extend Claude's capabilities](https://support.claude.com/en/articles/11176164-use-connectors-to-extend-claude-s-capabilities#h_815337b08c).
 
-    <Steps>
-      <Step title="Open Connectors">
-        Go to **Customize → Connectors** in settings. From a chat you can also click the **+** in the lower-left (or type `/`), hover over **Connectors**, and pick **Manage connectors**.
+Custom connectors using remote MCP are available on **Free** (limited to one), **Pro**, **Max**, **Team**, and **Enterprise** plans.
 
-        <Frame>
-          <img src="/images/mcp/claude-connectors-list.png" alt="Claude: Customize → Connectors" />
-        </Frame>
-      </Step>
-      <Step title="Add a custom connector">
-        Click the **+** next to **Connectors** and choose **Add custom connector**. Fill in:
+<Note>
+  Image placeholders below — replace with real screenshots before publishing.
+</Note>
 
-        - **Name**: `Breadbox`
-        - **URL**: `https://your-breadbox-host/mcp`
-        - **Advanced settings** (optional): OAuth Client ID and secret, only if you've put an OAuth proxy in front of Breadbox.
-
-        <Frame>
-          <img src="/images/mcp/claude-add-custom-connector.png" alt="Claude: Add custom connector dialog" />
-        </Frame>
-      </Step>
-      <Step title="Approve and use">
-        Save. Start a new conversation, click the **+** in the composer, and attach the Breadbox connector. Claude prompts you to approve tool calls the first time each one runs. Team/Enterprise owners can restrict which Breadbox tools are allowed via **Tool permissions** (Always allow / Needs approval / Blocked) — Breadbox's read tools carry the `readOnlyHint` annotation so they can be distinguished from writes.
-      </Step>
-    </Steps>
-
-    <Warning>
-      The custom-connector dialog exposes a **URL** and optional **OAuth Client ID / secret** — it does **not** have a field for static HTTP headers. If your Breadbox is protected by a plain `X-API-Key` (the default), the UI path won't authenticate. Use **Claude Desktop (config file)** below for header auth, or front Breadbox with an OAuth proxy.
-    </Warning>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* Claude Desktop — config file                                       */}
-  {/* Source: https://support.claude.com/en/articles/10949351            */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Claude Desktop (config file)">
-    Edit Claude Desktop's config file directly when you want to attach a static auth header (like Breadbox's `X-API-Key`) or run in stdio mode against a local binary.
-
-    The config file lives at:
-
-    - **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
-    - **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
-
-    <Tabs>
-      <Tab title="Streamable HTTP">
-        Use when Breadbox is on another host or in Docker and you want to authenticate with a static API key.
-
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "type": "http",
-              "url": "https://your-breadbox-host/mcp",
-              "headers": {
-                "X-API-Key": "bb_your_api_key_here"
-              }
-            }
-          }
-        }
-        ```
-      </Tab>
-      <Tab title="Stdio">
-        Use when the `breadbox` binary is installed on the same machine. Stdio mode connects directly to Breadbox's database — no HTTP server, no API key.
-
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "type": "stdio",
-              "command": "breadbox",
-              "args": ["mcp-stdio"]
-            }
-          }
-        }
-        ```
-
-        The `breadbox` binary must be on your `PATH`, and the same `DATABASE_URL` / `ENCRYPTION_KEY` env vars that run `breadbox serve` must be visible to Claude Desktop.
-      </Tab>
-    </Tabs>
-
-    Restart Claude Desktop after saving.
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* Claude Code                                                        */}
-  {/* Source: https://code.claude.com/docs/en/mcp                        */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Claude Code">
-    Claude Code reads MCP configuration from `.mcp.json` in your project root, or from `~/.config/claude/mcp.json` for a user-level config that applies to all projects.
-
-    <Tabs>
-      <Tab title="Streamable HTTP">
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "type": "http",
-              "url": "http://localhost:8080/mcp",
-              "headers": {
-                "X-API-Key": "bb_your_api_key_here"
-              }
-            }
-          }
-        }
-        ```
-      </Tab>
-      <Tab title="Stdio">
-        ```json
-        {
-          "mcpServers": {
-            "breadbox": {
-              "type": "stdio",
-              "command": "breadbox",
-              "args": ["mcp-stdio"]
-            }
-          }
-        }
-        ```
-      </Tab>
-    </Tabs>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* opencode                                                           */}
-  {/* Source: https://opencode.ai/docs/mcp-servers/                      */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="opencode">
-    [opencode](https://opencode.ai) reads MCP servers from `opencode.json` (or `opencode.jsonc`) in your project root, or from `~/.config/opencode/opencode.json` for a user-level config.
-
-    <Tabs>
-      <Tab title="Streamable HTTP">
-        ```json
-        {
-          "$schema": "https://opencode.ai/config.json",
-          "mcp": {
-            "breadbox": {
-              "type": "remote",
-              "url": "https://your-breadbox-host/mcp",
-              "enabled": true,
-              "headers": {
-                "X-API-Key": "{env:BREADBOX_API_KEY}"
-              }
-            }
-          }
-        }
-        ```
-
-        opencode expands `{env:VAR}` from your shell, so you don't have to paste the key into the config file. Export `BREADBOX_API_KEY=bb_...` in your shell profile.
-      </Tab>
-      <Tab title="Stdio">
-        ```json
-        {
-          "$schema": "https://opencode.ai/config.json",
-          "mcp": {
-            "breadbox": {
-              "type": "local",
-              "command": ["breadbox", "mcp-stdio"],
-              "enabled": true
-            }
-          }
-        }
-        ```
-      </Tab>
-    </Tabs>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* ChatGPT / Codex                                                    */}
-  {/* Source: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta */}
-  {/*         https://developers.openai.com/api/docs/guides/developer-mode */}
-  {/*         https://developers.openai.com/codex/mcp                    */}
-  {/*         https://developers.openai.com/codex/config-reference       */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="ChatGPT / Codex">
-    OpenAI exposes MCP in two places: the **ChatGPT** web app (as "Custom apps" under Developer mode, currently in beta) and the **Codex CLI** (via `mcp_servers` in `config.toml`). ChatGPT's flow is UI-driven with OAuth-style auth; Codex is flexible and works with Breadbox's header-based API keys today.
-
-    <Tabs>
-      <Tab title="ChatGPT (Custom apps, beta)">
-        Custom MCP apps are available in ChatGPT on **Plus**, **Pro**, **Business**, **Enterprise**, and **Education** accounts on the web. Reference: [Developer mode and MCP apps in ChatGPT (Help Center)](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta) and [Developer mode guide](https://developers.openai.com/api/docs/guides/developer-mode).
-
-        <Note>
-          Image placeholder below — replace with a real screenshot of the Apps → Developer mode → Create app dialog before publishing.
-        </Note>
-
-        <Frame>
-          <img src="/images/mcp/chatgpt-developer-mode-create-app.png" alt="ChatGPT: Settings → Apps → Advanced settings → Developer mode → Create app" />
-        </Frame>
-
-        <Warning>
-          **Auth compatibility caveat.** ChatGPT's custom apps accept **OAuth**, **No Authentication**, or **Mixed Authentication** — the dialog does not accept static headers like `X-API-Key`. Breadbox today only authenticates via `X-API-Key`, so the ChatGPT path currently requires either (a) fronting Breadbox with an OAuth proxy, or (b) exposing `/mcp` with No Authentication behind network-level access control you trust. For a header-based flow, use **Codex CLI** (next tab) instead.
-        </Warning>
-
-        <Steps>
-          <Step title="Enable Developer mode">
-            In ChatGPT on the web, open **Settings → Apps → Advanced settings → Developer mode** and toggle it on. The **Create app** button only appears once Developer mode is enabled.
-          </Step>
-          <Step title="Create the Breadbox app">
-            Back in **Apps**, click **Create app** next to Advanced settings. Provide a name (`Breadbox`) and point it at your remote MCP server URL (`https://your-breadbox-host/mcp`). Choose the authentication mode your deployment supports — OAuth, No Auth, or Mixed.
-          </Step>
-          <Step title="Attach it in a chat">
-            Open a new chat and attach the Breadbox app from the tools menu. ChatGPT will respect tool `readOnlyHint` annotations — tools without that hint (Breadbox writes like `trigger_sync`, `update_transactions`, `submit_report`) will prompt for explicit confirmation before each call.
-          </Step>
-        </Steps>
-
-        <Warning>
-          ChatGPT Custom apps require HTTPS and a publicly reachable URL — no localhost / LAN-only setups. Expose Breadbox through a proper tunnel or reverse proxy first. See [Make Breadbox reachable from the internet](/installation/remote-hosting).
-        </Warning>
-      </Tab>
-      <Tab title="Codex CLI">
-        OpenAI's Codex CLI stores MCP config in `~/.codex/config.toml` (or project-scoped `.codex/config.toml` in a trusted project). Unlike ChatGPT's Custom apps, Codex accepts static HTTP headers, so Breadbox's `X-API-Key` auth works directly. You can also add a server with `codex mcp add <name> -- <command...>`.
-
-        ```toml
-        # Remote Streamable HTTP
-        [mcp_servers.breadbox]
-        url = "https://your-breadbox-host/mcp"
-        http_headers = { "X-API-Key" = "bb_your_api_key_here" }
-        startup_timeout_sec = 10
-        tool_timeout_sec = 60
-        ```
-
-        For environment-sourced keys, use `env_http_headers` instead of `http_headers`:
-
-        ```toml
-        [mcp_servers.breadbox]
-        url = "https://your-breadbox-host/mcp"
-        env_http_headers = { "X-API-Key" = "BREADBOX_API_KEY" }
-        ```
-
-        For stdio against a local binary:
-
-        ```toml
-        [mcp_servers.breadbox]
-        command = "breadbox"
-        args = ["mcp-stdio"]
-        ```
-      </Tab>
-    </Tabs>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* Openclaw                                                           */}
-  {/* Source: https://docs.openclaw.ai/cli/mcp                          */}
-  {/*         https://docs.openclaw.ai                                  */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Openclaw">
-    [Openclaw](https://openclaw.ai) is a persistent, VM-hosted autonomous agent platform. It runs continuously, routes conversations across messaging channels (Slack, Telegram, WhatsApp, Discord, and others), spawns sub-agents for parallelised work, and maintains session state across runs — making it a natural fit for recurring household financial workflows. By connecting Breadbox as an MCP server inside Openclaw, you get a permanent agent that can query your transactions, review the backlog, and notify you out-of-band without any per-session setup. See [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows) for scheduled review patterns.
-
-    <Note>
-      Image placeholder below — replace with a real screenshot of the Openclaw MCP config before publishing.
-    </Note>
+<Steps>
+  <Step title="Open Connectors">
+    Go to **Customize → Connectors** in settings. From a chat you can also click the **+** in the lower-left (or type `/`), hover over **Connectors**, and pick **Manage connectors**.
 
     <Frame>
-      <img src="/images/mcp/openclaw-mcp-config.png" alt="Openclaw: mcp.servers config with Breadbox" />
+      <img src="/images/mcp/claude-connectors-list.png" alt="Claude: Customize → Connectors" />
     </Frame>
+  </Step>
+  <Step title="Add a custom connector">
+    Click the **+** next to **Connectors** and choose **Add custom connector**. Fill in:
 
-    Openclaw's MCP registry is managed with the `openclaw mcp` CLI. Run these commands on the machine where your Openclaw gateway is installed.
+    - **Name**: `Breadbox`
+    - **URL**: `https://your-breadbox-host/mcp`
+    - **Advanced settings** (optional): OAuth Client ID and secret, only if you've put an OAuth proxy in front of Breadbox.
 
-    ### Add Breadbox via CLI
+    <Frame>
+      <img src="/images/mcp/claude-add-custom-connector.png" alt="Claude: Add custom connector dialog" />
+    </Frame>
+  </Step>
+  <Step title="Approve and use">
+    Save. Start a new conversation, click the **+** in the composer, and attach the Breadbox connector. Claude prompts you to approve tool calls the first time each one runs. Team/Enterprise owners can restrict which Breadbox tools are allowed via **Tool permissions** (Always allow / Needs approval / Blocked) — Breadbox's read tools carry the `readOnlyHint` annotation so they can be distinguished from writes.
+  </Step>
+</Steps>
 
-    Openclaw stores MCP server definitions as JSON under `mcp.servers` in its config. Use `openclaw mcp set` to register Breadbox:
+<Warning>
+  The custom-connector dialog exposes a **URL** and optional **OAuth Client ID / secret** — it does **not** have a field for static HTTP headers. If your Breadbox is protected by a plain `X-API-Key` (the default), the UI path won't authenticate. Use the **Config file** flow below instead, or front Breadbox with an OAuth proxy.
+</Warning>
 
-    <Tabs>
-      <Tab title="Streamable HTTP (recommended)">
-        Breadbox's `/mcp` endpoint speaks Streamable HTTP. Pass `transport` and `headers` with your API key:
+{/* ------------------------------------------------------------------ */}
+{/* Claude Desktop — config file                                       */}
+{/* Source: https://support.claude.com/en/articles/10949351            */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+### Config file (Claude Desktop)
 
-        ```bash
-        openclaw mcp set breadbox '{
-          "url": "https://your-breadbox-host/mcp",
-          "transport": "streamable-http",
-          "headers": {
-            "X-API-Key": "bb_your_api_key_here"
-          }
-        }'
-        ```
+Edit Claude Desktop's config file directly when you want to attach a static auth header (like Breadbox's `X-API-Key`) or run in stdio mode against a local binary.
 
-        Verify the entry was saved:
+The config file lives at:
 
-        ```bash
-        openclaw mcp show breadbox --json
-        ```
-      </Tab>
-      <Tab title="SSE">
-        Use SSE transport if your Openclaw version does not support `streamable-http`:
+- **macOS**: `~/Library/Application Support/Claude/claude_desktop_config.json`
+- **Windows**: `%APPDATA%\Claude\claude_desktop_config.json`
 
-        ```bash
-        openclaw mcp set breadbox '{
-          "url": "https://your-breadbox-host/mcp",
-          "headers": {
-            "X-API-Key": "bb_your_api_key_here"
-          }
-        }'
-        ```
-      </Tab>
-      <Tab title="Stdio (local binary)">
-        If the `breadbox` binary is installed on the same host as the Openclaw gateway, you can use stdio transport instead. No API key is required — stdio connects directly to the database.
-
-        ```bash
-        openclaw mcp set breadbox '{
-          "command": "breadbox",
-          "args": ["mcp-stdio"]
-        }'
-        ```
-
-        The `breadbox` binary must be on your `PATH`, and the same `DATABASE_URL` / `ENCRYPTION_KEY` env vars that run `breadbox serve` must be set in the Openclaw gateway's environment.
-      </Tab>
-    </Tabs>
-
-    ### Config file shape
-
-    The CLI writes to Openclaw's JSON config. If you prefer to edit the file directly, the shape under `mcp.servers` is:
+<Tabs>
+  <Tab title="Streamable HTTP">
+    Use when Breadbox is on another host or in Docker and you want to authenticate with a static API key.
 
     ```json
     {
-      "mcp": {
-        "servers": {
-          "breadbox": {
-            "url": "https://your-breadbox-host/mcp",
-            "transport": "streamable-http",
-            "headers": {
-              "X-API-Key": "bb_your_api_key_here"
-            }
+      "mcpServers": {
+        "breadbox": {
+          "type": "http",
+          "url": "https://your-breadbox-host/mcp",
+          "headers": {
+            "X-API-Key": "bb_your_api_key_here"
           }
         }
       }
     }
     ```
-
-    <Warning>
-      Openclaw agents that hold a **full access** Breadbox API key can trigger syncs, create rules, update transactions, and submit reports — all autonomously. Unless you have observed several correct review cycles and are confident in your agent prompts, generate a **read-only** API key for Openclaw first. You can always swap it for a full-access key once you trust the agent's behavior. Generate API keys from [API keys](/configuration/api-keys) in the admin dashboard.
-    </Warning>
-
-    For recurring scheduled review patterns — having Openclaw wake up on a cron, query the `needs-review` backlog, and notify you via Slack or another connected channel — see [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows).
   </Tab>
+  <Tab title="Stdio">
+    Use when the `breadbox` binary is installed on the same machine. Stdio mode connects directly to Breadbox's database — no HTTP server, no API key.
 
-  {/* ------------------------------------------------------------------ */}
-  {/* Manus                                                              */}
-  {/* Source: https://manus.im/docs/integrations/custom-mcp              */}
-  {/*         #connecting-a-custom-mcp-server                             */}
-  {/* Verified: 2026-04                                                  */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Manus">
-    [Manus](https://manus.im) connects to remote MCP servers through its Custom MCP Servers integration. You configure Breadbox's `/mcp` endpoint through Manus's UI — there's no JSON config file to edit. Full reference: [Manus — Connecting a Custom MCP Server](https://manus.im/docs/integrations/custom-mcp#connecting-a-custom-mcp-server).
-
-    <Note>
-      Image placeholder below — replace with a real screenshot of the Custom MCP Servers panel before publishing.
-    </Note>
-
-    <Frame>
-      <img src="/images/mcp/manus-custom-mcp-servers.png" alt="Manus: Settings → Integrations → Custom MCP Servers" />
-    </Frame>
-
-    <Steps>
-      <Step title="Expose Breadbox over HTTPS">
-        Manus only accepts MCP servers reachable over HTTPS, so your Breadbox instance needs a public URL with TLS. If you're running locally, set that up first — see [Make Breadbox reachable from the internet](/installation/remote-hosting).
-      </Step>
-      <Step title="Open Custom MCP Servers in Manus">
-        In Manus, go to **Settings → Integrations → Custom MCP Servers** and click **Add Server**.
-      </Step>
-      <Step title="Fill in the server details">
-        - **Server name**: `Breadbox` (or whatever label makes sense to you).
-        - **Server URL**: `https://your-breadbox-host/mcp`
-        - **Authentication**: choose the header / API-key option and set:
-          - Header name: `X-API-Key`
-          - Header value: your Breadbox API key (`bb_...`) — generate one from **Settings → API Keys** in the admin dashboard.
-
-        Manus supports API keys, Bearer tokens, OAuth tokens, and other credentials; Breadbox today authenticates with a header, so the API-key flow is the supported path.
-      </Step>
-      <Step title="Save and test">
-        Manus verifies it can reach the server and lists the tools Breadbox exposes. Once the server shows as connected, Breadbox's tools appear in Manus's available integrations and become callable from any Manus task.
-      </Step>
-    </Steps>
-
-    <Note>
-      OAuth-over-MCP between Breadbox and Manus hasn't been validated end-to-end yet. For now, header-based `X-API-Key` auth is the recommended path. If you test OAuth and it works, please open an issue so we can update these docs.
-    </Note>
-  </Tab>
-
-  {/* ------------------------------------------------------------------ */}
-  {/* Generic / any MCP-compatible agent                                 */}
-  {/* ------------------------------------------------------------------ */}
-  <Tab title="Any MCP client">
-    Any agent that speaks MCP over Streamable HTTP can connect. Point it at `/mcp` and attach your API key:
-
-    ```text
-    URL:    https://your-breadbox-host/mcp
-    Header: X-API-Key: bb_your_api_key_here
+    ```json
+    {
+      "mcpServers": {
+        "breadbox": {
+          "type": "stdio",
+          "command": "breadbox",
+          "args": ["mcp-stdio"]
+        }
+      }
+    }
     ```
 
-    The endpoint handles the Streamable HTTP verbs:
-
-    - `POST /mcp` — JSON-RPC requests
-    - `GET /mcp` — SSE stream (supports session resumption)
-    - `DELETE /mcp` — terminates the session
+    The `breadbox` binary must be on your `PATH`, and the same `DATABASE_URL` / `ENCRYPTION_KEY` env vars that run `breadbox serve` must be visible to Claude Desktop.
   </Tab>
 </Tabs>
+
+Restart Claude Desktop after saving.
+
+{/* ------------------------------------------------------------------ */}
+{/* Claude Code                                                        */}
+{/* Source: https://code.claude.com/docs/en/mcp                        */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+### Claude Code
+
+Claude Code reads MCP configuration from `.mcp.json` in your project root, or from `~/.config/claude/mcp.json` for a user-level config that applies to all projects.
+
+<Tabs>
+  <Tab title="Streamable HTTP">
+    ```json
+    {
+      "mcpServers": {
+        "breadbox": {
+          "type": "http",
+          "url": "https://your-breadbox-host/mcp",
+          "headers": {
+            "X-API-Key": "bb_your_api_key_here"
+          }
+        }
+      }
+    }
+    ```
+  </Tab>
+  <Tab title="Stdio">
+    ```json
+    {
+      "mcpServers": {
+        "breadbox": {
+          "type": "stdio",
+          "command": "breadbox",
+          "args": ["mcp-stdio"]
+        }
+      }
+    }
+    ```
+  </Tab>
+</Tabs>
+
+---
+
+## ChatGPT and Codex
+
+OpenAI exposes MCP in two places: the **ChatGPT** web app (as "Custom apps" under Developer mode, currently in beta) and the **Codex CLI** (via `mcp_servers` in `config.toml`). ChatGPT's flow is UI-driven with OAuth-style auth; Codex is flexible and works with Breadbox's header-based API keys today.
+
+{/* ------------------------------------------------------------------ */}
+{/* ChatGPT Custom apps                                                */}
+{/* Source: https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta */}
+{/*         https://developers.openai.com/api/docs/guides/developer-mode */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+### ChatGPT Custom apps (beta)
+
+Custom MCP apps are available in ChatGPT on **Plus**, **Pro**, **Business**, **Enterprise**, and **Education** accounts on the web. Reference: [Developer mode and MCP apps in ChatGPT (Help Center)](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta) and the [Developer mode guide](https://developers.openai.com/api/docs/guides/developer-mode).
+
+<Note>
+  Image placeholder below — replace with a real screenshot of the Apps → Developer mode → Create app dialog before publishing.
+</Note>
+
+<Frame>
+  <img src="/images/mcp/chatgpt-developer-mode-create-app.png" alt="ChatGPT: Settings → Apps → Advanced settings → Developer mode → Create app" />
+</Frame>
+
+<Warning>
+  **Auth compatibility caveat.** ChatGPT's custom apps accept **OAuth**, **No Authentication**, or **Mixed Authentication** — the dialog does not accept static headers like `X-API-Key`. Breadbox today only authenticates via `X-API-Key`, so the ChatGPT path currently requires either (a) fronting Breadbox with an OAuth proxy, or (b) exposing `/mcp` with No Authentication behind network-level access control you trust. For a header-based flow, use **Codex CLI** below instead.
+</Warning>
+
+<Steps>
+  <Step title="Enable Developer mode">
+    In ChatGPT on the web, open **Settings → Apps → Advanced settings → Developer mode** and toggle it on. The **Create app** button only appears once Developer mode is enabled.
+  </Step>
+  <Step title="Create the Breadbox app">
+    Back in **Apps**, click **Create app** next to Advanced settings. Provide a name (`Breadbox`) and point it at your remote MCP server URL (`https://your-breadbox-host/mcp`). Choose the authentication mode your deployment supports — OAuth, No Auth, or Mixed.
+  </Step>
+  <Step title="Attach it in a chat">
+    Open a new chat and attach the Breadbox app from the tools menu. ChatGPT respects tool `readOnlyHint` annotations — tools without that hint (Breadbox writes like `trigger_sync`, `update_transactions`, `submit_report`) will prompt for explicit confirmation before each call.
+  </Step>
+</Steps>
+
+<Warning>
+  ChatGPT Custom apps require HTTPS and a publicly reachable URL — no localhost / LAN-only setups. Expose Breadbox through a proper tunnel or reverse proxy first. See [Make Breadbox reachable from the internet](/installation/remote-hosting).
+</Warning>
+
+{/* ------------------------------------------------------------------ */}
+{/* Codex CLI                                                          */}
+{/* Source: https://developers.openai.com/codex/mcp                    */}
+{/*         https://developers.openai.com/codex/config-reference       */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+### Codex CLI
+
+OpenAI's Codex CLI stores MCP config in `~/.codex/config.toml` (or project-scoped `.codex/config.toml` in a trusted project). Unlike ChatGPT's Custom apps, Codex accepts static HTTP headers, so Breadbox's `X-API-Key` auth works directly. You can also add a server with `codex mcp add <name> -- <command...>`.
+
+```toml
+# Remote Streamable HTTP
+[mcp_servers.breadbox]
+url = "https://your-breadbox-host/mcp"
+http_headers = { "X-API-Key" = "bb_your_api_key_here" }
+startup_timeout_sec = 10
+tool_timeout_sec = 60
+```
+
+For environment-sourced keys, use `env_http_headers` instead of `http_headers`:
+
+```toml
+[mcp_servers.breadbox]
+url = "https://your-breadbox-host/mcp"
+env_http_headers = { "X-API-Key" = "BREADBOX_API_KEY" }
+```
+
+For stdio against a local binary:
+
+```toml
+[mcp_servers.breadbox]
+command = "breadbox"
+args = ["mcp-stdio"]
+```
+
+---
+
+{/* ------------------------------------------------------------------ */}
+{/* Openclaw                                                           */}
+{/* Source: https://docs.openclaw.ai/cli/mcp                          */}
+{/*         https://docs.openclaw.ai                                  */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+## Openclaw
+
+[Openclaw](https://openclaw.ai) is a persistent, VM-hosted autonomous agent platform. It runs continuously, routes conversations across messaging channels (Slack, Telegram, WhatsApp, Discord, and others), spawns sub-agents for parallelised work, and maintains session state across runs — a natural fit for recurring household financial workflows. By connecting Breadbox as an MCP server inside Openclaw, you get a permanent agent that can query your transactions, review the backlog, and notify you out-of-band without any per-session setup. See [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows) for scheduled review patterns.
+
+<Note>
+  Image placeholder below — replace with a real screenshot of the Openclaw MCP config before publishing.
+</Note>
+
+<Frame>
+  <img src="/images/mcp/openclaw-mcp-config.png" alt="Openclaw: mcp.servers config with Breadbox" />
+</Frame>
+
+Openclaw's MCP registry is managed with the `openclaw mcp` CLI. Run these commands on the machine where your Openclaw gateway is installed. Openclaw stores MCP server definitions as JSON under `mcp.servers` in its config; use `openclaw mcp set` to register Breadbox.
+
+<Tabs>
+  <Tab title="Streamable HTTP (recommended)">
+    Breadbox's `/mcp` endpoint speaks Streamable HTTP. Pass `transport` and `headers` with your API key:
+
+    ```bash
+    openclaw mcp set breadbox '{
+      "url": "https://your-breadbox-host/mcp",
+      "transport": "streamable-http",
+      "headers": {
+        "X-API-Key": "bb_your_api_key_here"
+      }
+    }'
+    ```
+
+    Verify the entry was saved:
+
+    ```bash
+    openclaw mcp show breadbox --json
+    ```
+  </Tab>
+  <Tab title="SSE">
+    Use SSE transport if your Openclaw version does not support `streamable-http`:
+
+    ```bash
+    openclaw mcp set breadbox '{
+      "url": "https://your-breadbox-host/mcp",
+      "headers": {
+        "X-API-Key": "bb_your_api_key_here"
+      }
+    }'
+    ```
+  </Tab>
+  <Tab title="Stdio">
+    If the `breadbox` binary is installed on the same host as the Openclaw gateway, you can use stdio transport instead. No API key is required — stdio connects directly to the database.
+
+    ```bash
+    openclaw mcp set breadbox '{
+      "command": "breadbox",
+      "args": ["mcp-stdio"]
+    }'
+    ```
+
+    The `breadbox` binary must be on your `PATH`, and the same `DATABASE_URL` / `ENCRYPTION_KEY` env vars that run `breadbox serve` must be set in the Openclaw gateway's environment.
+  </Tab>
+</Tabs>
+
+If you prefer to edit the config file directly instead of using the CLI, the shape under `mcp.servers` is:
+
+```json
+{
+  "mcp": {
+    "servers": {
+      "breadbox": {
+        "url": "https://your-breadbox-host/mcp",
+        "transport": "streamable-http",
+        "headers": {
+          "X-API-Key": "bb_your_api_key_here"
+        }
+      }
+    }
+  }
+}
+```
+
+<Warning>
+  Openclaw agents that hold a **full access** Breadbox API key can trigger syncs, create rules, update transactions, and submit reports — all autonomously. Unless you have observed several correct review cycles and are confident in your agent prompts, generate a **read-only** API key for Openclaw first. You can always swap it for a full-access key once you trust the agent's behavior.
+</Warning>
+
+For recurring scheduled review patterns — having Openclaw wake up on a cron, query the `needs-review` backlog, and notify you via Slack or another connected channel — see [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows).
+
+---
+
+{/* ------------------------------------------------------------------ */}
+{/* Manus                                                              */}
+{/* Source: https://manus.im/docs/integrations/custom-mcp              */}
+{/*         #connecting-a-custom-mcp-server                             */}
+{/* Verified: 2026-04                                                  */}
+{/* ------------------------------------------------------------------ */}
+## Manus
+
+[Manus](https://manus.im) connects to remote MCP servers through its Custom MCP Servers integration. You configure Breadbox's `/mcp` endpoint through Manus's UI — there's no JSON config file to edit. Full reference: [Manus — Connecting a Custom MCP Server](https://manus.im/docs/integrations/custom-mcp#connecting-a-custom-mcp-server).
+
+<Note>
+  Image placeholder below — replace with a real screenshot of the Custom MCP Servers panel before publishing.
+</Note>
+
+<Frame>
+  <img src="/images/mcp/manus-custom-mcp-servers.png" alt="Manus: Settings → Integrations → Custom MCP Servers" />
+</Frame>
+
+<Steps>
+  <Step title="Expose Breadbox over HTTPS">
+    Manus only accepts MCP servers reachable over HTTPS, so your Breadbox instance needs a public URL with TLS. If you're running locally, set that up first — see [Make Breadbox reachable from the internet](/installation/remote-hosting).
+  </Step>
+  <Step title="Open Custom MCP Servers in Manus">
+    In Manus, go to **Settings → Integrations → Custom MCP Servers** and click **Add Server**.
+  </Step>
+  <Step title="Fill in the server details">
+    - **Server name**: `Breadbox` (or whatever label makes sense to you).
+    - **Server URL**: `https://your-breadbox-host/mcp`
+    - **Authentication**: choose the header / API-key option and set:
+      - Header name: `X-API-Key`
+      - Header value: your Breadbox API key (`bb_...`) — generate one from **Settings → API Keys** in the admin dashboard.
+
+    Manus supports API keys, Bearer tokens, OAuth tokens, and other credentials; Breadbox today authenticates with a header, so the API-key flow is the supported path.
+  </Step>
+  <Step title="Save and test">
+    Manus verifies it can reach the server and lists the tools Breadbox exposes. Once the server shows as connected, Breadbox's tools appear in Manus's available integrations and become callable from any Manus task.
+  </Step>
+</Steps>
+
+<Note>
+  OAuth-over-MCP between Breadbox and Manus hasn't been validated end-to-end yet. For now, header-based `X-API-Key` auth is the recommended path. If you test OAuth and it works, please open an issue so we can update these docs.
+</Note>
+
+---
+
+{/* ------------------------------------------------------------------ */}
+{/* Generic / any MCP-compatible agent                                 */}
+{/* ------------------------------------------------------------------ */}
+## Any other MCP client
+
+Any agent that speaks MCP over Streamable HTTP can connect. Point it at `/mcp` and attach your API key:
+
+```text
+URL:    https://your-breadbox-host/mcp
+Header: X-API-Key: bb_your_api_key_here
+```
+
+The endpoint handles the Streamable HTTP verbs:
+
+- `POST /mcp` — JSON-RPC requests
+- `GET /mcp` — SSE stream (supports session resumption)
+- `DELETE /mcp` — terminates the session
 
 ---
 
