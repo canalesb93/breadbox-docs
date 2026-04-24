@@ -166,7 +166,8 @@
               "guides/multi-agent-reviewer",
               "guides/zelle-venmo-analysis",
               "guides/gmail-cross-referencing",
-              "guides/tracking-subscriptions"
+              "guides/tracking-subscriptions",
+              "guides/openclaw-recurring-workflows"
             ]
           },
           {
