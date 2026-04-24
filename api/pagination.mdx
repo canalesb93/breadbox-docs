@@ -1,34 +1,37 @@
 ---
-title: "Pagination"
+title: "API pagination"
+sidebarTitle: "Pagination"
 description: "How Breadbox cursor pagination works, how to pass the cursor parameter, default and max limits, and a complete pagination loop example."
 ---
 
-List endpoints in the Breadbox API use cursor-based pagination rather than offset-based pagination. This means you navigate through results by passing an opaque cursor token from one response into the next request, rather than specifying a page number or offset.
+Large list endpoints in the Breadbox API (`GET /transactions` and `GET /rules`) use cursor-based pagination rather than offset-based pagination. You navigate through results by passing an opaque cursor token from one response into the next request, rather than specifying a page number or offset.
 
 Cursor pagination is stable: if new transactions are synced while you are iterating through pages, you will not see duplicates or skip records. This makes it the right choice for transaction data, which can be modified by background syncs at any time.
 
+Smaller list endpoints (`GET /accounts`, `GET /categories`, `GET /connections`, `GET /users`, `GET /reports`) are **not** paginated — they return a top-level JSON array with every matching record.
+
 ## Response envelope
 
-Every paginated list response wraps results in a consistent envelope:
+Each paginated endpoint wraps its current page inside a resource-named array alongside `next_cursor` and `has_more`. The array key is different per endpoint (`transactions` or `rules`) — the pagination fields are identical.
 
 ```json
 {
-  "data": [ ... ],
+  "transactions": [ ... ],
   "next_cursor": "eyJkYXRlIjoiMjAyNS0xMi0xNSIsImlkIjoiYWJjZGVmIn0",
   "has_more": true
 }
 ```
 
-<ResponseField name="data" type="array" required>
-  The current page of results. May be an empty array when no records match the filters.
+<ResponseField name="transactions | rules" type="array" required>
+  The current page of results, keyed by resource name. May be an empty array when no records match the filters.
 </ResponseField>
 
-<ResponseField name="next_cursor" type="string | null" required>
-  An opaque, base64url-encoded token. Pass this value as the `cursor` query parameter in your next request to retrieve the following page. `null` when there are no more pages.
+<ResponseField name="next_cursor" type="string" required>
+  An opaque, base64url-encoded token. Pass this value as the `cursor` query parameter in your next request to retrieve the following page. An empty string when there are no more pages.
 </ResponseField>
 
 <ResponseField name="has_more" type="boolean" required>
-  `true` if additional pages exist beyond the current one. Equivalent to `next_cursor !== null`. When `has_more` is `false`, you have retrieved all matching records.
+  `true` if additional pages exist beyond the current one. When `has_more` is `false`, you have retrieved all matching records.
 </ResponseField>
 
 ## Request parameters
@@ -77,7 +80,7 @@ while True:
         params["cursor"] = cursor
 
     response = get("/api/v1/transactions", params=params)
-    all_transactions.extend(response["data"])
+    all_transactions.extend(response["transactions"])
 
     if not response["has_more"]:
         break

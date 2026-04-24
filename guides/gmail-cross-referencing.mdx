@@ -1,0 +1,152 @@
+---
+title: "Gmail cross-referencing for bills"
+description: "Use a Gmail MCP alongside Breadbox so an agent can confirm generic billers (PG&E, Comcast, Verizon) by matching the transaction amount to the billing email before categorizing."
+---
+
+A lot of generic-looking transactions — utility bills, phone bills, insurance premiums — are recognizable to a human because they match an email receipt the biller sent the week prior. An agent with access to both Breadbox and Gmail can do the same cross-check. This guide walks through the pattern with a sample prompt you can adapt.
+
+<Note>
+  **Draft — review before publishing.** The Gmail MCP ecosystem is still evolving; the tool names and authentication flow below are illustrative. Verify against the specific Gmail MCP you install before shipping this to your household. The shape of the workflow — use Gmail to confirm a transaction amount — is solid; the specific tool calls may need a light rename.
+</Note>
+
+## Why you'd want this
+
+Take a transaction like:
+
+```
+name             "PG&E WEB ONLINE"
+merchant_name    "PG&E"
+amount           83.42
+date             "2026-04-15"
+```
+
+On its own, it's clearly a utility. But the category in Breadbox might default to something generic (`RENT_AND_UTILITIES_OTHER`), and you probably want it classified as `rent_and_utilities_gas_and_electricity`. More importantly, for shared households, you may want to confirm that the amount on the charge matches the amount PG&E actually billed — catching a billing mistake the day it happens is worth real money.
+
+Gmail almost always has the corresponding statement email a few days earlier:
+
+```
+from:     PG&E <no-reply@billpay.pge.com>
+subject:  Your PG&E bill is ready — $83.42 due 2026-04-17
+date:     2026-04-10
+```
+
+Cross-referencing the two gives the agent confidence to categorize confidently, and surfaces any discrepancy as a flag for the household.
+
+## The prompt pattern
+
+Expose a Gmail MCP to the same agent that already has the Breadbox MCP. Instruct it to search Gmail for the merchant, confirm the amount, and categorize.
+
+<CodeGroup>
+
+```text Bill-confirming specialist
+You are the household bill reviewer. You handle transactions tagged
+`needs-review-bills` — utilities, phone, internet, insurance, and other
+recurring statements that typically arrive via email before posting to
+an account.
+
+For each transaction in the batch:
+
+1. From the transaction, note:
+   - `merchant_name` (fall back to a keyword extracted from `name` if
+     missing)
+   - `amount`
+   - `date`
+
+2. Search Gmail for a recent message from that merchant using your
+   Gmail MCP (e.g., `search_threads` with `q: "from:(pge.com) newer_than:14d"`
+   or an equivalent query). You want messages from the 14 days prior
+   to the transaction date.
+
+3. Open the most recent matching thread and look for:
+   - A stated amount due, and
+   - A stated due date or billing period end.
+
+4. Compare:
+   a) AMOUNT MATCHES (within $1 rounding) → this is a normal bill.
+      Categorize according to the merchant's category (utility, phone,
+      insurance, etc.), remove `needs-review-bills` with a note like
+      "Confirmed via PG&E statement email dated 2026-04-10, $83.42."
+   b) AMOUNT DIFFERS BY MORE THAN $1 → do NOT categorize. Leave the
+      `needs-review-bills` tag. Add a `billing-mismatch` tag with a note
+      describing both amounts and linking back to the email subject:
+      "Bill email said $76.10, charge was $83.42 — potential billing
+      error, household review needed."
+   c) NO MATCHING EMAIL → leave the tag in place and add
+      `bill-unverified` with a note "No statement email found in the
+      last 14 days from this merchant."
+
+5. Never categorize a bill from the transaction alone. The whole point
+   of this agent is the cross-check — if the email isn't there, defer.
+
+At the end of the run, submit a report listing:
+- How many bills were confirmed.
+- Any `billing-mismatch` items (these are the highest-priority flags
+  for the household).
+- Any `bill-unverified` items.
+```
+
+</CodeGroup>
+
+## A routing rule to feed the queue
+
+Have a rule pre-tag likely bills into `needs-review-bills` at sync time so this specialist has a clean batch to work.
+
+```json
+{
+  "name": "Route likely bills to the bill specialist",
+  "conditions": {
+    "or": [
+      { "field": "merchant_name", "op": "in", "value": [
+        "PG&E", "Con Edison", "Xcel Energy", "Duke Energy",
+        "Comcast", "Xfinity", "Verizon", "AT&T", "T-Mobile",
+        "Geico", "State Farm", "Allstate"
+      ] },
+      { "field": "name", "op": "matches", "value": "(?i)(utility|power|electric|water\\s*co)" }
+    ]
+  },
+  "actions": [
+    { "type": "add_tag", "tag_slug": "needs-review-bills" }
+  ],
+  "trigger": "on_create",
+  "stage": "baseline"
+}
+```
+
+Customize the merchant list to match the billers you actually use.
+
+## The shape of the Gmail MCP call
+
+Different Gmail MCP implementations name their tools differently, but they all offer the same basic capabilities: search messages by query, fetch a specific thread, and optionally label or reply. The agent needs just the first two.
+
+<Note>
+  **Draft — review before publishing.** Exact tool names depend on which Gmail MCP you run. Verify against your installed MCP's tool list; the query string syntax (`from:`, `newer_than:`, etc.) is Gmail's own and works with any MCP that exposes search as a pass-through.
+</Note>
+
+A typical search call (naming varies):
+
+```json
+{
+  "q": "from:(billpay.pge.com) newer_than:14d",
+  "max_results": 5
+}
+```
+
+A typical fetch call for the top result:
+
+```json
+{
+  "thread_id": "178c2f1b9a3e0abc"
+}
+```
+
+The response includes the subject line, sender, date, and message body. The agent extracts the dollar amount from the body using string parsing — most billers put the amount in the subject line too, which is easier to parse reliably.
+
+## Why this agent earns its keep
+
+The manual version of this task — opening Gmail, searching for the merchant, confirming the amount, categorizing the transaction — takes 30–60 seconds per bill. A household with 8 recurring bills spends 4–8 minutes a month on this; not a lot, but dull and error-prone. An agent doing it in parallel at sync time turns billing errors into a zero-effort flag, which is where the real value is.
+
+## Related reading
+
+- [Multi-agent reviewer flows](/guides/multi-agent-reviewer) — how the bill specialist fits alongside other agents.
+- [Understanding rules](/guides/understanding-rules) — the pre-tagging rule syntax.
+- [MCP overview](/mcp/overview) — how to connect a second MCP (Gmail) alongside the Breadbox MCP.

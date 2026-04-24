@@ -1,0 +1,109 @@
+---
+title: "Connections and sync read MCP reference"
+sidebarTitle: "Connections & sync"
+description: "MCP read tools for inspecting connection health and account links."
+---
+
+These are the read-only visibility tools for bank connections. Write tools for triggering syncs and managing account links are on [Connections writes](/mcp/reference/connections-write).
+
+---
+
+## get_sync_status
+
+Returns the status of all bank connections: provider type, sync state, last sync time, and any error details. Agents call this to check data freshness or diagnose "why don't I see yesterday's transactions".
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/connections`](/api/connections#list-connections)
+
+### Parameters
+
+None.
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "c1Xm9pQ2",
+      "institution_name": "Chase",
+      "provider": "plaid",
+      "status": "active",
+      "last_synced_at": "2026-04-23T14:32:00Z",
+      "error_message": null,
+      "accounts_count": 3,
+      "user_id": "u4Xm9pQ2",
+      "user_name": "Alice",
+      "created_at": "2026-01-15T09:00:00Z"
+    },
+    {
+      "id": "c2Yn0qR3",
+      "institution_name": "Bank of America",
+      "provider": "plaid",
+      "status": "pending_reauth",
+      "last_synced_at": "2026-04-18T09:15:00Z",
+      "error_message": "ITEM_LOGIN_REQUIRED: User must re-authenticate via Plaid Link.",
+      "accounts_count": 2,
+      "user_id": "u5Yn0qR3",
+      "user_name": "Bob",
+      "created_at": "2026-02-01T11:20:00Z"
+    }
+  ]
+}
+```
+
+### Status values
+
+| Status | Meaning |
+| --- | --- |
+| `active` | Healthy and syncing normally. |
+| `error` | Last sync failed. Check `error_message`. |
+| `pending_reauth` | Bank requires re-authentication in the admin UI. |
+| `disconnected` | Connection was removed; accounts and transactions are preserved with FKs set to `NULL`. |
+
+---
+
+## list_account_links
+
+Lists account links between primary and dependent/authorized-user accounts. Account links deduplicate transactions that appear in both feeds when two family members connect the same credit card. Each link entry returns match counts and unmatched counts so you can see reconciliation progress.
+
+**Scope:** Read
+
+### Parameters
+
+None.
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "L9Xm2pQr",
+      "primary_account_id": "a7Xm9pQ2",
+      "primary_account_name": "Amex Gold (Alice)",
+      "dependent_account_id": "a8Yn0qR3",
+      "dependent_account_name": "Amex Gold (Bob)",
+      "match_strategy": "date_amount_name",
+      "match_tolerance_days": 0,
+      "matched_count": 142,
+      "unmatched_primary_count": 3,
+      "unmatched_dependent_count": 7,
+      "created_at": "2026-01-20T16:45:00Z"
+    }
+  ]
+}
+```

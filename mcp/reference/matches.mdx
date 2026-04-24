@@ -1,0 +1,75 @@
+---
+title: "Transaction match MCP reference"
+sidebarTitle: "Matches"
+description: "Confirm or reject auto-matched transaction pairs produced by account links."
+---
+
+When two family members connect the same credit card (primary cardholder + authorized user), transactions appear in both feeds. An [account link](/mcp/reference/connections-write#create_account_link) pairs matching transactions by date and amount, excludes the dependent's copies from totals, and attributes matched primary-side transactions to the dependent user.
+
+Auto-matches start with `confidence="auto"`. Use `confirm_match` to promote a correct pairing to `confirmed`, or `reject_match` to remove a false pairing. List auto-matches with [`list_transaction_matches`](/mcp/reference/transactions#list_transaction_matches).
+
+All tools on this page are **Write** scope and require `session_id` + `reason`.
+
+---
+
+## confirm_match
+
+Confirm an auto-matched transaction pair as correct. Changes match confidence from `auto` to `confirmed`. The pairing and the dependent-user attribution remain intact.
+
+### Parameters
+
+<ParamField path="match_id" type="string" required>
+  The transaction match ID (UUID or short ID).
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "validated against statement — matches",
+  "match_id": "M4Xp9mQr"
+}
+```
+
+### Example output
+
+```json
+{ "status": "confirmed" }
+```
+
+---
+
+## reject_match
+
+Reject a false auto-match between two transactions. Removes the match record and restores the primary transaction's original user attribution. Use this when the matcher paired transactions that look similar but are actually distinct charges.
+
+### Parameters
+
+<ParamField path="match_id" type="string" required>
+  The transaction match ID.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "same amount/date coincidence — different merchants",
+  "match_id": "M4Xp9mQr"
+}
+```
+
+### Example output
+
+```json
+{ "status": "rejected" }
+```

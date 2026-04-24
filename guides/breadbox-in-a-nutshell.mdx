@@ -1,0 +1,101 @@
+---
+title: "Breadbox in a nutshell"
+description: "A two-minute tour of the three primitives that every workflow is built from — Categories, Tags, and Rules — plus the seeded `needs-review` tag that ties them together."
+---
+
+Before diving into specific workflows, it helps to have a shared vocabulary. Breadbox is built out of three primitives, and almost every guide in this tab is a different way of combining them. This page is the fastest path to understanding the pieces.
+
+## Categories — the two-level hierarchy
+
+A **category** is how a transaction is classified. Every transaction has (at most) two category fields: a primary group (like `FOOD_AND_DRINK`) and a detailed subcategory nested beneath it (like `FOOD_AND_DRINK_GROCERIES`). The detailed slug always carries its parent's prefix, which keeps the tree predictable.
+
+Categories come from one of three sources, in increasing precedence:
+
+1. **Provider-assigned** — Plaid or Teller guess the category during sync.
+2. **Rule-assigned** — a Breadbox rule overrides the provider value at sync time.
+3. **Manually overridden** — you (or an agent) set the category by hand. Manual overrides set `category_override = true`, which _protects the transaction from rules_ going forward.
+
+<Tip>
+  Manual overrides are sacred. Rules that would otherwise change the category are skipped for any transaction with `category_override = true`. Tag and comment actions still fire — only `set_category` is suppressed.
+</Tip>
+
+Full reference: [Category System](/transactions/categories).
+
+## Tags — open-ended workflow labels
+
+A **tag** is just a label you can attach to any transaction. Unlike categories, tags are flat (no hierarchy) and a single transaction can carry any number of them at once. Each tag has a stable `slug` (used in rules and MCP calls), a `display_name`, and an optional color and description.
+
+Tags are the primitive Breadbox uses any time the question is "which transactions are in this state?" The review queue, for example, is not a separate table — it's the set of transactions carrying the `needs-review` tag. You can build your own states the same way (`flagged`, `disputed`, `tax-deductible`, `subscription`, etc.).
+
+### The seeded `needs-review` tag
+
+Breadbox ships with one tag already defined: `needs-review`. A seeded `on_create` rule applies it to every newly synced transaction, and the `/reviews` URL in the dashboard is just a redirect to `/transactions?tags=needs-review`. Removing the tag is how you "close" a review — and you can attach a note to the removal, which gets saved as an annotation on the transaction's timeline.
+
+The default behavior is optional. The seed rule can be narrowed to only tag uncategorized transactions, or disabled entirely. See the [review workflow](/transactions/review-workflow) for the knobs.
+
+Full reference: [Tags](/transactions/tags).
+
+## Rules — the DSL that runs at sync time
+
+A **rule** pairs a **condition** (which transactions to match) with one or more **actions** (what to do with them). Rules run automatically during sync, and can also be applied retroactively to your full history.
+
+### Conditions are a recursive tree
+
+A leaf tests a single field:
+
+```json
+{ "field": "merchant_name", "op": "contains", "value": "Starbucks" }
+```
+
+Combinators glue leaves together:
+
+```json
+{ "and": [ <leaf>, <leaf> ] }
+{ "or":  [ <leaf>, <leaf> ] }
+{ "not":   <leaf> }
+```
+
+You can nest combinators up to 10 levels deep. An empty condition `{}` matches everything.
+
+### Actions
+
+A single rule can do any combination of:
+
+- `set_category` — assign a Breadbox category (skipped when `category_override = true`)
+- `add_tag` / `remove_tag` — manage tag state
+- `add_comment` — leave an automated note on the transaction
+
+### Pipeline stages
+
+Rules run in priority order. Lower stage numbers run first, higher stages have the final say.
+
+| Stage | Priority | Purpose |
+|---|---|---|
+| `baseline` | 0 | Broad defaults |
+| `standard` | 10 | General-purpose (the default) |
+| `refinement` | 50 | Reacts to earlier stages |
+| `override` | 100 | Has the final word |
+
+For `set_category`, **the last matching rule wins**. For `add_tag` and `add_comment`, every matching rule contributes.
+
+Full reference: [Auto-categorize transactions with rules](/transactions/rules).
+
+## How the three fit together
+
+The workflows in this tab all share the same shape:
+
+<Steps>
+  <Step title="Rules prepare the data">
+    At sync time, rules categorize what they can, flag what needs attention with a tag, and leave comments to explain themselves.
+  </Step>
+  <Step title="Tags act as the queue">
+    The `needs-review` tag (and any custom tags you layer on) capture which transactions still need a human or agent to look at them.
+  </Step>
+  <Step title="An agent or a human resolves the queue">
+    Using the dashboard or MCP tools, whoever is on review duty picks items off by tag, decides what to do, removes the tag with a note, and optionally sets a final category.
+  </Step>
+</Steps>
+
+A single agent running on a schedule can do this end-to-end. A team of specialist agents can split the queue by re-tagging. Rules alone can handle 80% of the decisions without ever waking an agent. Pick the shape that matches how much work you have and how picky you want to be.
+
+The rest of this tab is concrete patterns for each of those shapes. Start with [Understanding Rules](/guides/understanding-rules) for the DSL in more depth, then jump to a workflow that matches your situation.

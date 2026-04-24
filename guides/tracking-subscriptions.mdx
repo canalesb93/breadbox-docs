@@ -1,0 +1,121 @@
+---
+title: "Tracking your subscriptions"
+description: "Detect recurring charges by combining `merchant_summary` queries with amount-and-cadence heuristics, tag them `subscription`, and layer a rule that auto-tags known subscriptions at sync time."
+---
+
+Subscriptions are the quiet budget-killer of every household. Streaming services nobody watches anymore, a forgotten cloud backup, a free-trial-turned-monthly-charge — they accumulate, and they're easy to miss because each one is small. Breadbox gives you two complementary tools for wrangling them: an agent that periodically reviews transaction history to spot recurring patterns, and a rule that tags known subscriptions automatically on sync.
+
+This guide walks through both.
+
+## What counts as a subscription
+
+For this workflow, a subscription is any charge that:
+
+1. Repeats from the **same merchant** at roughly the **same amount**.
+2. Has a **monthly or annual cadence** (give or take a few days).
+3. Isn't a utility or bill with variable amounts (those belong in [the bill-cross-referencing workflow](/guides/gmail-cross-referencing)).
+
+Spotify at $11.99/month, Notion at $10/month, the $99 annual Costco membership — all subscriptions. PG&E's $83 one month and $94 the next — not a subscription, it's a variable bill.
+
+## The detection agent
+
+The detection agent runs less frequently than the reviewer — weekly or monthly is fine — because subscriptions don't change that often. Its job is to find _new_ recurring patterns, tag them, and surface them for the household to approve or cancel.
+
+<CodeGroup>
+
+```text Subscription detector
+You are the subscription-detection agent for this household. You run
+once a week. Your job is to find recurring charges we haven't already
+tagged as subscriptions, and either tag them automatically or flag them
+for the household.
+
+Each run:
+
+1. Use the merchant summary to pull top merchants by transaction count
+   over the last 180 days. Call `merchant_summary` with a date range
+   of the last 180 days, grouped by merchant, sorted by count.
+
+2. For each merchant with 3 or more transactions:
+   - Call `query_transactions(search="<merchant>", limit=30)` over the
+     same window to get the individual rows.
+   - Compute: typical amount (median), amount variance (max - min), and
+     average days between consecutive charges.
+   - Classify:
+     a) MONTHLY SUBSCRIPTION — 3+ charges, amount variance under $2,
+        cadence 25-35 days → tag every matching transaction
+        `subscription` with a note "Monthly recurring at $X from
+        <merchant>."
+     b) ANNUAL SUBSCRIPTION — 2+ charges, amount variance under $5,
+        cadence 350-380 days → tag `subscription-annual` with a
+        similar note.
+     c) LIKELY VARIABLE BILL — 3+ charges but amount variance over $5
+        → skip (this is a utility or usage-based charge, not a
+        subscription).
+     d) IRREGULAR — charges not matching any cadence → skip.
+
+3. Before tagging a batch, check whether any of these transactions
+   already carry the `subscription` or `subscription-annual` tag — only
+   tag the ones that don't (avoid re-applying).
+
+4. At the end, submit a report listing:
+   - New subscriptions found this run (merchant, amount, cadence).
+   - Any merchant that looks like a subscription but was near a
+     threshold — the household may want to review borderline cases.
+
+Amounts follow Plaid convention: positive = money out. Never treat a
+refund (negative amount) as a subscription charge.
+```
+
+</CodeGroup>
+
+## A rule for known subscriptions
+
+Once you've identified subscriptions you want to keep, layer a rule that auto-tags them on every future sync. This saves the detection agent from re-finding them each week and keeps your `subscription` tag filter always current.
+
+```json
+{
+  "name": "Auto-tag known subscriptions",
+  "conditions": {
+    "and": [
+      { "field": "merchant_name", "op": "in", "value": [
+        "Netflix", "Spotify", "Hulu", "Disney+", "HBO Max",
+        "Apple", "Google", "Notion", "1Password", "Dropbox"
+      ] },
+      { "field": "amount", "op": "gt", "value": 0 }
+    ]
+  },
+  "actions": [
+    { "type": "add_tag", "tag_slug": "subscription" },
+    { "type": "set_category", "category_slug": "entertainment_subscriptions" }
+  ],
+  "trigger": "on_create",
+  "stage": "standard"
+}
+```
+
+Tune the merchant list to match the services you actually subscribe to. Two nuances:
+
+- **Apple and Google** often appear as generic merchants for App Store or Play Store charges. You may want a more specific match (e.g., `name contains "APPLE.COM/BILL"`) to avoid catching one-off purchases.
+- Some subscriptions bill under a different merchant name than the service you recognize. Use the subscription detector's output to discover the actual string that shows up in your data.
+
+## Using the data once it's there
+
+With every subscription tagged, a few things get easy:
+
+**Audit your subscriptions.** Filter the transactions list to `/transactions?tags=subscription` for the last year. The unique merchants are your subscription portfolio.
+
+**Total monthly outflow.** An agent query:
+
+```
+query_transactions(tags=["subscription"], start_date=<30 days ago>, end_date=<today>, fields="core")
+```
+
+Sum the positive amounts. Anything with `iso_currency_code != USD` should be summed separately — don't mix currencies.
+
+**Spot a subscription that's creeping up.** Ask Claude "which subscriptions went up in price this year?" and point it at the tag. The agent can compare `merchant_summary` results from the current window against the prior year.
+
+## Related reading
+
+- [Understanding rules](/guides/understanding-rules) — rule DSL for the auto-tag rule.
+- [On-demand analysis](/guides/on-demand-analysis) — ask Claude questions like "which of my subscriptions are underused?" once they're tagged.
+- [MCP tools](/mcp/tools) — `merchant_summary`, `query_transactions`, `update_transactions`.

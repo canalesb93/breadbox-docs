@@ -1,37 +1,29 @@
 ---
 title: "MCP tools for querying financial data"
-description: "Reference for all seven MCP tools in Breadbox: parameters, example inputs, example outputs, and guidance on when to use each one."
+description: "A human-readable reference for the seven MCP tools Breadbox exposes — so you know exactly what surface area you're granting an AI client."
 ---
 
-// TODO: Overall not a terrible page but could use improvements in some sense. It's not clea if  this page is suppose to be for users or for agents? Most users don't need to know the intricacies of the MCP tools but a good overview would be good. And agents don't need to read docs for MCP tools as the entire purpose of MCP tools are that they work at inference stage during an agent's work. So no need to look up instructions during a session as they're part of the session.
-
-Breadbox exposes seven MCP tools that give AI agents structured access to your financial data. Each tool is a thin, callable function — the agent invokes it with a JSON input, and gets back a JSON response it can reason over. This page documents every tool, its parameters, and example inputs and outputs.
+This page is for **you** — the person deciding what to hand an agent. Agents receive these tool schemas at inference time and don't need to read this page; they see the parameters, descriptions, and JSON schemas directly through the MCP protocol. Use this reference to understand the surface area a connected AI client can touch, so you can pick the right API-key scope and know what will show up in your audit log.
 
 <Note>
-  **Amount convention:** Amounts follow Plaid's convention. Positive values are debits (money leaving an account). Negative values are credits (money entering). When an agent summarizes spending, it should sum positive amounts only.
+  **Looking for the full tool list?** This page walks through the handful of tools you're most likely to care about as a human. For the complete enumeration of every MCP tool with full parameters, examples, and scope labels, see the [MCP Reference](/mcp/reference/overview) tab.
 </Note>
 
-## Recommended agent workflow
+<Note>
+  **Amount convention:** Amounts follow Plaid's convention. Positive values are debits (money leaving an account). Negative values are credits (money entering). If an agent talks about "total spend," it's summing positive amounts only.
+</Note>
 
-Before querying transactions, a well-behaved agent should orient itself and size the result set:
+## What a typical agent session looks like
 
-<Steps>
-  <Step title="Understand the data structure">
-    Call `list_users` and `list_accounts` to learn who is in the household and which accounts exist. This gives the agent the IDs it needs to filter by person or account.
-  </Step>
-  <Step title="Estimate result size">
-    Call `count_transactions` with your intended filters before calling `query_transactions`. This tells the agent how many results to expect so it can decide whether to narrow the filters or paginate.
-  </Step>
-  <Step title="Query with appropriate filters and pagination">
-    Call `query_transactions` with specific filters. Use the `cursor` from each response to fetch the next page when `has_more` is `true`.
-  </Step>
-</Steps>
+An agent connected to Breadbox usually opens a session by orienting itself before it starts querying. First it calls `list_users` and `list_accounts` to see who's in the household and which accounts exist — this gives it the IDs it needs to filter anything downstream. Then, before pulling rows, it calls `count_transactions` with its intended filters so it knows whether to expect fifty results or five thousand. Only then does it call `query_transactions`, paginating with the returned cursor if `has_more` is `true`.
+
+That pattern — orient, size, query — keeps token usage predictable and matches how Breadbox's tools are designed. You don't need to enforce it from the outside; the tool descriptions nudge the agent toward it.
 
 ---
 
 ## `list_accounts`
 
-Lists all connected bank accounts with their current balances. Call this early in any session to understand what accounts exist.
+Lists all connected bank accounts with their current balances. An agent typically calls this early in a session to learn what accounts exist and get their IDs.
 
 **Input parameters**
 
@@ -39,17 +31,11 @@ Lists all connected bank accounts with their current balances. Call this early i
 | --- | --- | --- | --- |
 | `user_id` | string | No | Return only accounts owned by this family member. Omit to return all accounts. |
 
-<CodeGroup>
+**Example input**
 
-```json All accounts
-{}
-```
-
-```json Filter by user
+```json
 { "user_id": "usr_abc123" }
 ```
-
-</CodeGroup>
 
 **Example output**
 
@@ -89,14 +75,14 @@ Lists all connected bank accounts with their current balances. Call this early i
 ```
 
 <Note>
-  For credit accounts, `balance_current` represents the amount owed, not available funds. Do not sum balances across accounts with different `iso_currency_code` values.
+  For credit accounts, `balance_current` represents the amount owed, not available funds. Amounts across different `iso_currency_code` values should not be summed.
 </Note>
 
 ---
 
 ## `query_transactions`
 
-Searches transactions using a combination of filters. Results are cursor-paginated with a default page size of 100 and a maximum of 500. Call `count_transactions` first to understand result size before paginating through a large set.
+Searches transactions using a combination of filters. Results are cursor-paginated with a default page size of 100 and a maximum of 500. This is the workhorse tool — almost every non-trivial agent session goes through it.
 
 **Input parameters**
 
@@ -117,9 +103,9 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 | `limit` | integer | No | Results per page. Default: 100. Maximum: 500. |
 | `cursor` | string | No | Pagination cursor from the previous response. Omit for the first page. |
 
-<CodeGroup>
+**Example input**
 
-```json First page
+```json
 {
   "start_date": "2025-01-01",
   "end_date": "2025-01-31",
@@ -127,18 +113,6 @@ Searches transactions using a combination of filters. Results are cursor-paginat
   "limit": 100
 }
 ```
-
-```json Next page
-{
-  "start_date": "2025-01-01",
-  "end_date": "2025-01-31",
-  "category": "FOOD_AND_DRINK",
-  "cursor": "dHhuXzk4NzY1NA==",
-  "limit": 100
-}
-```
-
-</CodeGroup>
 
 **Example output**
 
@@ -171,7 +145,7 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 When there are no more pages, the response includes `"has_more": false` and `"next_cursor": null`.
 
 <Warning>
-  Each transaction object is roughly 50 tokens. At the default page size of 100, one call returns approximately 5,000 tokens of content. At the maximum of 500, a single call can reach 25,000 tokens. Use `count_transactions` first and apply filters to keep result sets manageable.
+  Each transaction object is roughly 50 tokens. At the default page size of 100, one call returns approximately 5,000 tokens of content. At the maximum of 500, a single call can reach 25,000 tokens. If your agent pulls large result sets unfiltered, your context budget will disappear fast.
 </Warning>
 
 **Page size guidance**
@@ -187,11 +161,9 @@ When there are no more pages, the response includes `"has_more": false` and `"ne
 
 ## `count_transactions`
 
-Counts matching transactions without returning any transaction data. Accepts the same filters as `query_transactions` (excluding `cursor` and `limit`). Use this before calling `query_transactions` to decide whether to narrow your filters or how many pages to expect.
+Counts matching transactions without returning any transaction data. Accepts the same filters as `query_transactions` (excluding `cursor`, `limit`, `sort_by`, and `sort_order`). It's the cheap pre-flight an agent uses to decide whether to narrow filters or brace for pagination.
 
 **Input parameters**
-
-Same filters as `query_transactions`, minus `cursor`, `limit`, `sort_by`, and `sort_order`.
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
@@ -206,6 +178,8 @@ Same filters as `query_transactions`, minus `cursor`, `limit`, `sort_by`, and `s
 | `pending` | boolean | No | Filter by pending status. |
 | `search` | string | No | Full-text search over merchant name and description. |
 
+**Example input**
+
 ```json
 {
   "start_date": "2025-01-01",
@@ -219,23 +193,17 @@ Same filters as `query_transactions`, minus `cursor`, `limit`, `sort_by`, and `s
 { "count": 347 }
 ```
 
-**When to use it**
-
-Call `count_transactions` before `query_transactions` whenever the result size is unknown:
-
-- If `count` is under 200, query directly in one or two pages.
-- If `count` is 200 or more, add category, account, or user filters and re-count before querying.
-- If the full dataset is genuinely needed, plan to paginate and process page by page.
-
 ---
 
 ## `list_categories`
 
-Lists all distinct transaction category pairs — primary category and detailed subcategory — that exist in your database. Use this to discover valid category values before filtering transactions.
+Lists all distinct transaction category pairs — primary category and detailed subcategory — that exist in your database. Useful for discovering valid category values before filtering transactions.
 
 **Input parameters**
 
 None. Pass an empty object.
+
+**Example input**
 
 ```json
 {}
@@ -253,19 +221,19 @@ None. Pass an empty object.
 }
 ```
 
-**When to use it**
-
-Call `list_categories` when you need to filter by category but aren't sure what values exist in your data. The returned `primary` values are valid for `query_transactions`'s `category` parameter; `detailed` values are valid for `category_detailed`.
+The returned `primary` values are valid for `query_transactions`'s `category` parameter; `detailed` values are valid for `category_detailed`.
 
 ---
 
 ## `list_users`
 
-Lists all family members tracked in Breadbox. Users are labels for account ownership — they are not login accounts. Use the returned IDs to filter accounts and transactions by person.
+Lists all family members tracked in Breadbox. Users are labels for account ownership — they are not login accounts. Returned IDs are what an agent uses to filter accounts and transactions by person.
 
 **Input parameters**
 
 None. Pass an empty object.
+
+**Example input**
 
 ```json
 {}
@@ -290,19 +258,17 @@ None. Pass an empty object.
 }
 ```
 
-**When to use it**
-
-Call `list_users` at the start of a session to discover who is in the household and get their IDs. Pass a `user_id` to `list_accounts` or `query_transactions` to scope results to a specific family member.
-
 ---
 
 ## `get_sync_status`
 
-Returns the health status of all bank connections: whether they are syncing successfully, when they last synced, and whether any connection needs re-authentication. Use this to diagnose why transactions might be missing or out of date.
+Returns the health status of all bank connections: whether they are syncing successfully, when they last synced, and whether any connection needs re-authentication. This is how an agent answers "why don't I see yesterday's transactions?" without guessing.
 
 **Input parameters**
 
 None. Pass an empty object.
+
+**Example input**
 
 ```json
 {}
@@ -344,15 +310,11 @@ None. Pass an empty object.
 | `pending_reauth` | Connection requires user re-authentication (e.g., bank login changed). |
 | `disconnected` | Connection has been disconnected or removed. |
 
-**When to use it**
-
-Call `get_sync_status` when a user asks why recent transactions are missing, or after calling `trigger_sync` to check whether the sync completed successfully.
-
 ---
 
 ## `trigger_sync`
 
-Triggers a manual data sync to fetch the latest transactions and balances from the bank. Syncs all connections by default, or a specific connection if you provide a `connection_id`. This tool returns immediately after enqueuing the sync — it does not wait for the sync to finish. Call `get_sync_status` afterward to check progress.
+Triggers a manual data sync to fetch the latest transactions and balances from the bank. Syncs all connections by default, or a specific connection if `connection_id` is provided. Returns immediately after enqueuing the sync — it does not wait for completion.
 
 **Input parameters**
 
@@ -360,23 +322,13 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 | --- | --- | --- | --- |
 | `connection_id` | string | No | Sync only this connection. Omit to sync all active connections. |
 
-<CodeGroup>
+**Example input**
 
-```json Sync all connections
-{}
-```
-
-```json Sync one connection
+```json
 { "connection_id": "conn_aaa111" }
 ```
 
-</CodeGroup>
-
 **Example output**
-
-```json
-{ "message": "Sync triggered for all connections." }
-```
 
 ```json
 {
@@ -385,10 +337,6 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 }
 ```
 
-<Note>
-  `trigger_sync` requires a full access API key. It is not available with a read-only key.
-</Note>
-
-**When to use it**
-
-Call `trigger_sync` when a user wants the latest data before running an analysis, or when `get_sync_status` shows that a connection's `last_synced_at` is stale. After triggering, wait a moment and call `get_sync_status` to confirm the sync succeeded.
+<Warning>
+  `trigger_sync` requires a **full access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
+</Warning>

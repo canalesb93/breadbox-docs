@@ -1,5 +1,6 @@
 ---
-title: "Categories"
+title: "Categories API"
+sidebarTitle: "Categories"
 description: "Reference for Breadbox category endpoints: list, create, update, delete, export as TSV, import from TSV, and merge categories together."
 ---
 
@@ -37,30 +38,28 @@ Returns all categories in the two-level hierarchy.
 ### Response
 
 ```json
-{
-  "data": [
-    {
-      "id": "c1a2b3c4-d5e6-f789-0abc-def123456789",
-      "short_id": "Ab1cDe2f",
-      "slug": "food-and-drink",
-      "name": "Food & Drink",
-      "primary_slug": null,
-      "description": "Restaurants, groceries, coffee, and bars.",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2025-11-01T09:00:00Z"
-    },
-    {
-      "id": "c2b3c4d5-e6f7-890a-bcde-f12345678901",
-      "short_id": "Bc2dEf3g",
-      "slug": "food-and-drink-groceries",
-      "name": "Groceries",
-      "primary_slug": "food-and-drink",
-      "description": "Supermarkets and grocery stores.",
-      "created_at": "2025-11-01T09:00:00Z",
-      "updated_at": "2025-11-01T09:00:00Z"
-    }
-  ]
-}
+[
+  {
+    "id": "c1a2b3c4-d5e6-f789-0abc-def123456789",
+    "short_id": "Ab1cDe2f",
+    "slug": "food-and-drink",
+    "name": "Food & Drink",
+    "primary_slug": null,
+    "description": "Restaurants, groceries, coffee, and bars.",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  },
+  {
+    "id": "c2b3c4d5-e6f7-890a-bcde-f12345678901",
+    "short_id": "Bc2dEf3g",
+    "slug": "food-and-drink-groceries",
+    "name": "Groceries",
+    "primary_slug": "food-and-drink",
+    "description": "Supermarkets and grocery stores.",
+    "created_at": "2025-11-01T09:00:00Z",
+    "updated_at": "2025-11-01T09:00:00Z"
+  }
+]
 ```
 
 ```bash

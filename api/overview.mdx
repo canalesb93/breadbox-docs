@@ -1,10 +1,8 @@
 ---
-title: "Overview"
+title: "API overview"
 sidebarTitle: "Overview"
 description: "Base URL structure, authentication, JSON response format, error codes, amount sign conventions, and health check endpoints for the Breadbox REST API."
 ---
-
-// TODO: API Reference overall looks ok? I think could use some improvements. like with the base url setup? Have some agents review it and come up with better page titles and suggest improvements. Then apply those improvements.
 
 The Breadbox REST API gives you programmatic access to your household's financial data — accounts, transactions, categories, rules, and more. All endpoints follow a consistent JSON request/response structure, use API key authentication, and return errors in a machine-readable envelope.
 
@@ -17,6 +15,10 @@ http://your-host:8080/api/v1/
 ```
 
 For a local installation the full base URL is typically `http://localhost:8080/api/v1/`. Replace `localhost:8080` with your actual host and port in all examples.
+
+<Note>
+  The curl snippets throughout this reference use `http://localhost:8080` as a stand-in for your Breadbox host. Substitute your real host and port before running them — if you're exposing Breadbox beyond your local machine, see [Remote hosting](/installation/remote-hosting) for guidance on picking a URL.
+</Note>
 
 The health check and version endpoints are exceptions — they sit outside the versioned prefix:
 
@@ -79,15 +81,27 @@ X-API-Key: bb_your_api_key_here
 
 ## Response format
 
-All successful responses return JSON with a `Content-Type: application/json` header. List endpoints wrap results in a `data` array and include a `pagination` object. Single-resource endpoints return the object directly.
+All successful responses return JSON with a `Content-Type: application/json` header.
 
-```json
-{
-  "data": [ ... ],
-  "next_cursor": "eyJ...",
-  "has_more": false
-}
-```
+List endpoints use one of two shapes depending on whether the endpoint is cursor-paginated:
+
+- **Small, finite lists** (`GET /accounts`, `GET /categories`, `GET /connections`, `GET /users`, `GET /reports`) return a top-level JSON array. No pagination is applied — all matching records fit in a single response.
+
+  ```json
+  [ { "id": "...", "short_id": "...", "..." : "..." } ]
+  ```
+
+- **Cursor-paginated lists** (`GET /transactions`, `GET /rules`) wrap results in a resource-named array alongside `next_cursor` and `has_more`. See [Pagination](/api/pagination) for the full iteration contract.
+
+  ```json
+  {
+    "transactions": [ ... ],
+    "next_cursor": "eyJ...",
+    "has_more": false
+  }
+  ```
+
+Single-resource endpoints return the object directly.
 
 ## Error format
 

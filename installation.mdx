@@ -1,119 +1,143 @@
 ---
 title: "How to Install Breadbox"
-description: "Install Breadbox using Docker Compose, a pre-built binary, or from source. All methods end at the same setup wizard at http://localhost:8080."
+description: "Install Breadbox with Docker Compose, a pre-built binary, go install, or the one-liner remote installer. Every method ends at the same first-run setup wizard."
 sidebarTitle: "How to Install"
 ---
 
-Breadbox ships as a single Go binary that bundles the REST API, MCP server, admin dashboard, webhooks, and sync scheduler. You can run it with Docker Compose (recommended), download a pre-built binary, build from source with Go, or deploy it to a server with automatic HTTPS in one command. All installation methods end at the same first-run setup wizard.
+Breadbox ships as a single Go binary that bundles the REST API, MCP server, admin dashboard, webhooks, and sync scheduler. Pick the install method you're most comfortable with below — they all land at the same first-run setup wizard.
 
-// TODO: Improve overall installation process, should be industry standard, professional and simple. We should offer various options with a tabbed view or an index to various sections. Use mintlify components to improve screen further and but mainly first improve overall install experience in the main repo. We should include either a section or a new page around making your breadbox instance remotely available and options to have it https protected. For many AI integrations MCP servers require https and 3rd party apps need to be able to reach the service. It's a big requirement. I currently use [exe.dev](http://exe.dev) to run my breadbox instance but would love more options to offer the user for a quick and easy setup (Vercel?? cloudfare tunnel?? idk). Again that _could_ be its own page but good to link from here since a lot of times you want to do the initial setup in the VM itself.
+<Card title="Planning to use MCP or bank webhooks?" icon="globe" href="/installation/remote-hosting">
+  Those need a public HTTPS URL, not `localhost`. See the remote-hosting guide for exe.dev, Cloudflare Tunnel, Caddy-on-a-VPS, and Tailscale Funnel walk-throughs.
+</Card>
 
-// TODO: for main repo -- do we need a better way to handle the encryption key in the setup? I think it currently allows for users to easily lose it during start-up. Is there a better way? What is the standard way to handle this for a small service?
+<Tabs>
+  <Tab title="Docker Compose (recommended)">
+    Docker Compose is the fastest way to run Breadbox. It starts both Breadbox and PostgreSQL for you — no separate database setup required.
 
-## Docker (recommended)
+    <Steps>
+      <Step title="Download the Compose file">
+        Create a directory for Breadbox and download the production Compose file:
 
-Docker Compose is the fastest way to run Breadbox. It starts both Breadbox and PostgreSQL for you — no separate database setup required.
+        ```bash
+        mkdir breadbox && cd breadbox
+        curl -O https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/docker-compose.prod.yml
+        mv docker-compose.prod.yml docker-compose.yml
+        ```
+      </Step>
+      <Step title="Create your .env file">
+        Generate a `.env` file with the required configuration. The commands below generate a random encryption key and database password for you:
 
-<Steps>
-  <Step title="Download the Compose file">
-    Create a directory for Breadbox and download the production Compose file:
+        ```bash
+        cat > .env <<EOF
+        DATABASE_URL=postgres://breadbox:breadbox@db:5432/breadbox?sslmode=disable
+        ENCRYPTION_KEY=$(openssl rand -hex 32)
+        SERVER_PORT=8080
+        ENVIRONMENT=docker
+        POSTGRES_USER=breadbox
+        POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '=/+')
+        POSTGRES_DB=breadbox
+        EOF
+        ```
+
+        <Warning>
+          Save your `.env` file somewhere safe. The `ENCRYPTION_KEY` encrypts all stored bank credentials. If you lose it after connecting a bank, you cannot recover those credentials.
+        </Warning>
+      </Step>
+      <Step title="Start Breadbox">
+        Start Breadbox and PostgreSQL:
+
+        ```bash
+        docker compose up -d breadbox db
+        ```
+
+        This starts both services and runs any pending database migrations automatically. Open `http://your-host:8080` to access the setup wizard.
+      </Step>
+    </Steps>
+
+    <Note>
+      This command starts Breadbox and PostgreSQL without the Caddy reverse proxy, exposing port 8080 directly. For a production server with automatic HTTPS, see [Production deployment](#production-deployment) below or the [remote-hosting guide](/installation/remote-hosting).
+    </Note>
+
+    To pin a specific version instead of `latest`, edit `docker-compose.yml` and change the image tag:
+
+    ```yaml
+    image: ghcr.io/canalesb93/breadbox:v0.1.0
+    ```
+  </Tab>
+
+  <Tab title="Binary download">
+    Pre-built binaries for Linux and macOS (amd64/arm64) are available on the [GitHub Releases](https://github.com/canalesb93/breadbox/releases) page. You'll need a running PostgreSQL 16+ instance before starting.
 
     ```bash
-    mkdir breadbox && cd breadbox
-    curl -O https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/docker-compose.prod.yml
-    mv docker-compose.prod.yml docker-compose.yml
+    # Download the binary for your platform (example: Linux amd64)
+    curl -fsSL https://github.com/canalesb93/breadbox/releases/latest/download/breadbox-linux-amd64 -o breadbox
+    chmod +x breadbox
+
+    # Set required environment variables
+    export DATABASE_URL="postgres://user:pass@localhost:5432/breadbox?sslmode=disable"
+    export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+
+    ./breadbox serve
+    # Visit http://your-host:8080
     ```
-  </Step>
-  <Step title="Create your .env file">
-    Generate a `.env` file with the required configuration. The commands below generate a random encryption key and database password for you:
+  </Tab>
+
+  <Tab title="Go install">
+    Build from source using Go 1.24 or later. You'll need a running PostgreSQL 16+ instance.
 
     ```bash
-    cat > .env <<EOF
-    DATABASE_URL=postgres://breadbox:breadbox@db:5432/breadbox?sslmode=disable
-    ENCRYPTION_KEY=$(openssl rand -hex 32)
-    SERVER_PORT=8080
-    ENVIRONMENT=docker
-    POSTGRES_USER=breadbox
-    POSTGRES_PASSWORD=$(openssl rand -base64 32 | tr -d '=/+')
-    POSTGRES_DB=breadbox
-    EOF
+    git clone https://github.com/canalesb93/breadbox.git && cd breadbox
+    go install ./cmd/breadbox
+
+    # Set required environment variables
+    export DATABASE_URL="postgres://user:pass@localhost:5432/breadbox?sslmode=disable"
+    export ENCRYPTION_KEY="$(openssl rand -hex 32)"
+
+    breadbox serve
+    # Visit http://your-host:8080
     ```
 
-    <Warning>
-      Save your `.env` file somewhere safe. The `ENCRYPTION_KEY` encrypts all stored bank credentials. If you lose it after connecting a bank, you cannot recover those credentials.
-    </Warning>
-  </Step>
-  <Step title="Start Breadbox">
-    Start Breadbox and PostgreSQL:
+    <Note>
+      The module path is `breadbox`, so `go install github.com/...@latest` is not supported. Clone the repo and install locally as shown above.
+    </Note>
+  </Tab>
+
+  <Tab title="One-liner (remote server)">
+    For a production server with automatic HTTPS via Caddy, use the one-liner install script. It installs Docker if needed, downloads the deployment files, generates secrets, and starts Breadbox with Caddy for automatic TLS:
 
     ```bash
-    docker compose up -d breadbox db
+    curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | sudo bash
     ```
 
-    This starts both services and runs any pending database migrations automatically. Open [http://localhost:8080](http://localhost:8080) to access the setup wizard.
-  </Step>
-</Steps>
+    After the script completes, set your domain in `breadbox/.env` (`DOMAIN=breadbox.example.com`) and start all services including the Caddy reverse proxy:
 
-<Note>
-  This command starts Breadbox and PostgreSQL without the Caddy reverse proxy, exposing port 8080 directly. For production with automatic HTTPS, see [Production deployment](#production-deployment) below.
-</Note>
+    ```bash
+    docker compose up -d
+    ```
 
-To pin a specific version instead of `latest`, edit `docker-compose.yml` and change the image tag:
+    See [Production deployment](#production-deployment) for the full walk-through, or the [remote-hosting guide](/installation/remote-hosting) for alternatives like Cloudflare Tunnel.
+  </Tab>
+</Tabs>
 
-```yaml
-image: ghcr.io/canalesb93/breadbox:v0.1.0
-```
-
-## Binary download
-
-Pre-built binaries for Linux and macOS (amd64/arm64) are available on the [GitHub Releases](https://github.com/canalesb93/breadbox/releases) page. You'll need a running PostgreSQL 16\+ instance before starting.
-
-```bash
-# Download the binary for your platform (example: Linux amd64)
-curl -fsSL https://github.com/canalesb93/breadbox/releases/latest/download/breadbox-linux-amd64 -o breadbox
-chmod +x breadbox
-
-# Set required environment variables
-export DATABASE_URL="postgres://user:pass@localhost:5432/breadbox?sslmode=disable"
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
-
-./breadbox serve
-# Visit http://localhost:8080
-```
-
-## Go install
-
-Build from source using Go 1.24 or later. You'll need a running PostgreSQL 16\+ instance.
-
-```bash
-git clone https://github.com/canalesb93/breadbox.git && cd breadbox
-go install ./cmd/breadbox
-
-# Set required environment variables
-export DATABASE_URL="postgres://user:pass@localhost:5432/breadbox?sslmode=disable"
-export ENCRYPTION_KEY="$(openssl rand -hex 32)"
-
-breadbox serve
-# Visit http://localhost:8080
-```
-
-<Note>
-  The module path is `breadbox`, so `go install github.com/...@latest` is not supported. Clone the repo and install locally as shown above.
-</Note>
+<Tip>
+  `http://localhost:8080` is fine for the first-run wizard when you're installing on your own laptop. Once you want to use MCP from a cloud AI client (Claude Desktop, ChatGPT) or receive Plaid/Teller webhooks, you'll need a real HTTPS URL — see the [remote-hosting guide](/installation/remote-hosting).
+</Tip>
 
 ## Production deployment
 
-For a production server with automatic HTTPS via Caddy, use the one-liner install script. It installs Docker if needed, downloads the deployment files, generates secrets, and starts Breadbox with Caddy for automatic TLS:
+For a production server with automatic HTTPS via Caddy, the one-liner installer wires up Docker, Breadbox, PostgreSQL, and Caddy in one shot:
 
 ```bash
 curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | sudo bash
 ```
 
-After the script completes, configure your domain in the Caddyfile and start all services including the Caddy reverse proxy:
+After the script completes, configure your domain in the Caddyfile (via the `DOMAIN` variable in `.env`) and start all services including the Caddy reverse proxy:
 
 ```bash
 docker compose up -d
 ```
+
+If you don't have a VPS (or don't want to open port 443 on a home network), the [remote-hosting guide](/installation/remote-hosting) covers tunnel-based alternatives like Cloudflare Tunnel, exe.dev, and Tailscale Funnel.
 
 ## Environment variables
 
@@ -129,12 +153,12 @@ All Breadbox configuration is done through environment variables. Set these in y
 | `TELLER_APP_ID` | No | Teller application ID. Can also be set through the setup wizard. |
 
 <Tip>
-  You can leave `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `TELLER_APP_ID` out of your `.env` file and configure them later through the admin setup wizard at [http://localhost:8080](http://localhost:8080).
+  You can leave `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `TELLER_APP_ID` out of your `.env` file and configure them later through the admin setup wizard.
 </Tip>
 
 ## After installing
 
-Once Breadbox is running, open [http://localhost:8080](http://localhost:8080) to complete the setup wizard. The wizard walks you through creating your admin account and configuring your bank provider credentials before you connect any banks.
+Once Breadbox is running, open `http://your-host:8080` (or your HTTPS domain if you've set one up) to complete the setup wizard. The wizard walks you through creating your admin account and configuring your bank provider credentials before you connect any banks.
 
 <Card title="Get started" icon="rocket" href="/quickstart">
   Follow the quickstart guide to connect a bank and query your first transaction.

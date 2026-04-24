@@ -1,5 +1,6 @@
 ---
-title: "Rules"
+title: "Rules API"
+sidebarTitle: "Rules"
 description: "Reference for Breadbox rules endpoints: list, get, create, update, delete rules, apply retroactively, and dry-run conditions against existing transactions."
 ---
 
@@ -13,15 +14,37 @@ Rules automatically categorize transactions during sync by matching conditions o
 GET /api/v1/rules
 ```
 
-Returns all transaction rules. Accepts optional filters for active/inactive status and creator type.
+Returns transaction rules with cursor pagination, ordered by creation time descending.
 
 **Auth:** Read
+
+### Query parameters
+
+<ParamField query="enabled" type="boolean">
+  Filter to only enabled (`true`) or only disabled (`false`) rules. Omit to return both.
+</ParamField>
+
+<ParamField query="category_slug" type="string">
+  Filter to rules that set the given category (via the `set_category` action).
+</ParamField>
+
+<ParamField query="search" type="string">
+  Case-insensitive substring match against rule name.
+</ParamField>
+
+<ParamField query="cursor" type="string">
+  Opaque pagination cursor from a previous response's `next_cursor`. Omit to fetch the first page.
+</ParamField>
+
+<ParamField query="limit" type="integer" default="50">
+  Results per page. Minimum `1`, maximum `500`.
+</ParamField>
 
 ### Response
 
 ```json
 {
-  "data": [
+  "rules": [
     {
       "id": "r1a2b3c4-d5e6-f789-0abc-def123456789",
       "short_id": "Pq7rSt8u",
@@ -41,13 +64,16 @@ Returns all transaction rules. Accepts optional filters for active/inactive stat
       "created_at": "2025-12-01T10:00:00Z",
       "updated_at": "2025-12-01T10:00:00Z"
     }
-  ]
+  ],
+  "next_cursor": "",
+  "has_more": false,
+  "total": 1
 }
 ```
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
-  "http://localhost:8080/api/v1/rules"
+  "http://localhost:8080/api/v1/rules?enabled=true&limit=100"
 ```
 
 ---
@@ -90,17 +116,15 @@ Creates a new categorization rule. The rule runs automatically on every future s
 ```json
 {
   "name": "Netflix subscription",
-  "enabled": true,
   "stage": "standard",
-  "condition": {
-    "type": "and",
-    "conditions": [
-      { "field": "name", "operator": "contains", "value": "NETFLIX" },
-      { "field": "amount", "operator": "gt", "value": 0 }
+  "trigger": "on_create",
+  "conditions": {
+    "and": [
+      { "field": "name", "op": "contains", "value": "NETFLIX" },
+      { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
-  "action_field": "category_slug",
-  "action_value": "entertainment-streaming-services"
+  "category_slug": "entertainment-streaming-services"
 }
 ```
 
@@ -108,28 +132,32 @@ Creates a new categorization rule. The rule runs automatically on every future s
   Human-readable name for the rule (e.g., `"Netflix subscription"`).
 </ParamField>
 
-<ParamField body="enabled" type="boolean" default="true">
-  Whether the rule is active. Disabled rules are skipped during sync.
-</ParamField>
-
 <ParamField body="stage" type="string" default="standard">
   Pipeline stage. One of: `baseline`, `standard`, `refinement`, `override`. Resolves to priority `0`, `10`, `50`, or `100` respectively. Stage names are case-insensitive. If both `stage` and `priority` are provided, `priority` wins.
 </ParamField>
 
 <ParamField body="priority" type="integer">
-  Raw pipeline priority integer from `0` to `1000`. Lower numbers run first. Overrides `stage` when both are provided.
+  Raw pipeline priority integer. Lower numbers run first. Overrides `stage` when both are provided.
 </ParamField>
 
-<ParamField body="condition" type="object" required>
-  The condition tree to evaluate. See [Condition structure](#condition-structure) below.
+<ParamField body="trigger" type="string" default="on_create">
+  When the rule fires. One of: `on_create` (default), `on_change`, `always`. `on_update` is accepted as an alias for `on_change`.
 </ParamField>
 
-<ParamField body="action_field" type="string" required>
-  The field to set when the condition matches. Typically `"category_slug"`.
+<ParamField body="conditions" type="object" required>
+  The condition tree to evaluate. See [Condition structure](#condition-structure) below. A zero-value `{}` matches every transaction.
 </ParamField>
 
-<ParamField body="action_value" type="string" required>
-  The value to assign to `action_field`. For category rules, this is the category slug.
+<ParamField body="category_slug" type="string">
+  Sugar for a single `set_category` action. Provide this **or** an explicit `actions` array — one of the two is required.
+</ParamField>
+
+<ParamField body="actions" type="array">
+  Explicit list of action objects to apply when the conditions match. Each action has a `type` (e.g., `set_category`, `add_tag`, `add_comment`) and type-specific fields like `category_slug`, `tag_slug`, or `content`.
+</ParamField>
+
+<ParamField body="expires_in" type="string">
+  Optional Go-format duration (e.g., `"720h"`) after which the rule auto-disables.
 </ParamField>
 
 ### Response
@@ -143,14 +171,12 @@ curl -X POST \
   -d '{
     "name": "Netflix subscription",
     "stage": "standard",
-    "condition": {
-      "type": "and",
-      "conditions": [
-        { "field": "name", "operator": "contains", "value": "NETFLIX" }
-      ]
+    "conditions": {
+      "field": "name",
+      "op": "contains",
+      "value": "NETFLIX"
     },
-    "action_field": "category_slug",
-    "action_value": "entertainment-streaming-services"
+    "category_slug": "entertainment-streaming-services"
   }' \
   "http://localhost:8080/api/v1/rules"
 ```
@@ -227,7 +253,8 @@ Runs a single rule against all existing transactions in the database. Transactio
 
 ```json
 {
-  "updated_count": 23
+  "rule_id": "r1a2b3c4-d5e6-f789-0abc-def123456789",
+  "affected_count": 23
 }
 ```
 
@@ -251,10 +278,15 @@ Runs all active rules against all existing transactions, in priority order. Tran
 
 ### Response
 
+The `rules_applied` object maps each applied rule's UUID to the number of transactions it affected. `total_affected` is the sum across all rules.
+
 ```json
 {
-  "rules_applied": 8,
-  "transactions_updated": 142
+  "rules_applied": {
+    "r1a2b3c4-d5e6-f789-0abc-def123456789": 34,
+    "r2b3c4d5-e6f7-890a-bcde-f12345678901": 108
+  },
+  "total_affected": 142
 }
 ```
 
@@ -280,23 +312,23 @@ Runs a condition tree against existing transactions without making any changes. 
 
 ```json
 {
-  "condition": {
+  "conditions": {
     "type": "and",
     "conditions": [
       { "field": "name", "operator": "contains", "value": "AMAZON" },
       { "field": "amount", "operator": "gt", "value": 50 }
     ]
   },
-  "limit": 20
+  "sample_size": 20
 }
 ```
 
-<ParamField body="condition" type="object" required>
+<ParamField body="conditions" type="object" required>
   The condition tree to evaluate. Uses the same structure as rule conditions.
 </ParamField>
 
-<ParamField body="limit" type="integer" default="50">
-  Maximum number of matching transactions to return for preview.
+<ParamField body="sample_size" type="integer" default="50">
+  Maximum number of matching transactions to return in the preview sample.
 </ParamField>
 
 ### Response
@@ -320,7 +352,7 @@ curl -X POST \
   -H "X-API-Key: bb_your_key" \
   -H "Content-Type: application/json" \
   -d '{
-    "condition": {
+    "conditions": {
       "type": "and",
       "conditions": [
         { "field": "name", "operator": "contains", "value": "AMAZON" }
@@ -334,26 +366,24 @@ curl -X POST \
 
 ## Condition structure
 
-Rules use a recursive JSON condition tree. A condition node is either a **leaf** (field comparison) or a **composite** (logical combination of other nodes).
+Rules use a recursive JSON condition tree. A condition node is either a **leaf** (`field` / `op` / `value`) or a **combinator** (`and`, `or`, or `not` nesting other conditions). Mixing a leaf and a combinator in the same node is rejected. A zero-value `{}` matches every transaction. See the canonical [rule DSL spec](https://github.com/canalesb93/breadbox/blob/main/docs/rule-dsl.md) for the full grammar.
 
-### Composite nodes
+### Combinators
 
-| Type | Description |
-|------|-------------|
-| `and` | All child conditions must match. |
-| `or` | At least one child condition must match. |
-| `not` | The single child condition must not match. |
+| Combinator | Description |
+| --- | --- |
+| `and` | Array of sub-conditions that must **all** match. |
+| `or`  | Array of sub-conditions where **any** may match. |
+| `not` | A single sub-condition that must **not** match. |
 
 ```json
 {
-  "type": "and",
-  "conditions": [
-    { "field": "name", "operator": "contains", "value": "AMAZON" },
+  "and": [
+    { "field": "name", "op": "contains", "value": "AMAZON" },
     {
-      "type": "or",
-      "conditions": [
-        { "field": "amount", "operator": "gt", "value": 50 },
-        { "field": "merchant_name", "operator": "eq", "value": "Amazon" }
+      "or": [
+        { "field": "amount", "op": "gt", "value": 50 },
+        { "field": "merchant_name", "op": "eq", "value": "Amazon" }
       ]
     }
   ]
@@ -363,43 +393,43 @@ Rules use a recursive JSON condition tree. A condition node is either a **leaf**
 ### Leaf nodes
 
 | Field | Description |
-|-------|-------------|
+| --- | --- |
 | `field` | Transaction field to evaluate (see available fields below). |
-| `operator` | Comparison operator (see operators below). |
+| `op` | Comparison operator (see operators below). |
 | `value` | The value to compare against. |
 
 ### Available fields
 
 | Field | Type | Description |
-|-------|------|-------------|
+| --- | --- | --- |
 | `name` | string | Raw transaction name from the institution. |
 | `merchant_name` | string | Cleaned merchant name from the provider. |
 | `amount` | numeric | Transaction amount (Plaid convention: positive = debit). |
-| `category_primary` | string | Current primary category. |
-| `category_detailed` | string | Current detailed subcategory. |
+| `category_primary` | string | Raw provider primary category. |
+| `category_detailed` | string | Raw provider detailed category. |
+| `category` | string | Assigned Breadbox category slug. |
 | `pending` | boolean | Whether the transaction is pending. |
 | `provider` | string | Data provider (`plaid`, `teller`, `csv`). |
 | `account_id` | string | Breadbox account UUID. |
-| `user_id` | string | Breadbox user UUID. |
-| `user_name` | string | Family member display name. |
+| `account_name` | string | Account display name. |
 
 ### Operators by field type
 
 **String operators**
 
 | Operator | Description |
-|----------|-------------|
+| --- | --- |
 | `eq` | Exact match (case-sensitive). |
 | `neq` | Not equal. |
 | `contains` | Case-insensitive substring match. |
 | `not_contains` | Does not contain the substring. |
-| `matches` | Regular expression match. |
+| `matches` | Regular expression match (RE2, case-sensitive; prefix with `(?i)` for insensitive). |
 | `in` | Value is one of a list (pass `value` as an array). |
 
 **Numeric operators**
 
 | Operator | Description |
-|----------|-------------|
+| --- | --- |
 | `eq` | Equal. |
 | `neq` | Not equal. |
 | `gt` | Greater than. |
@@ -410,7 +440,7 @@ Rules use a recursive JSON condition tree. A condition node is either a **leaf**
 **Boolean operators**
 
 | Operator | Description |
-|----------|-------------|
+| --- | --- |
 | `eq` | Equal to `true` or `false`. |
 | `neq` | Not equal. |
 
@@ -421,7 +451,7 @@ Rules use a recursive JSON condition tree. A condition node is either a **leaf**
 Rules run in priority order during sync. Lower priority numbers run first, so earlier stages can set a baseline that later stages can refine or override.
 
 | Stage | Priority | Description |
-|-------|----------|-------------|
+| --- | --- | --- |
 | `baseline` | `0` | Broad catch-all rules that categorize the most common transactions. |
 | `standard` | `10` | Default stage. Regular categorization rules. |
 | `refinement` | `50` | Rules that correct or narrow categories set by earlier stages. |
@@ -434,9 +464,10 @@ Transactions with a manual `category_override` are skipped by all pipeline stage
 ## Error codes
 
 | Condition | Status | Code |
-|-----------|--------|------|
+| --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
 | Rule not found | `404` | `NOT_FOUND` |
-| Unknown `stage` value | `400` | `VALIDATION_ERROR` |
-| Invalid condition structure | `422` | `VALIDATION_ERROR` |
-| Attempting to delete a system rule | `422` | `VALIDATION_ERROR` |
+| Missing `name` or no action provided | `400` | `VALIDATION_ERROR` |
+| Unknown `stage` value or invalid condition | `400` | `VALIDATION_ERROR` |
+| Invalid `cursor` | `400` | `INVALID_PARAMETER` |
+| Referenced `category_slug` does not exist | `400` | `VALIDATION_ERROR` |

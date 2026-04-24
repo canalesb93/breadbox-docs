@@ -19,7 +19,7 @@
     }
   },
   "banner": {
-    "content": "🚧 Breadbox is available Early Access. Some features described here may still be in-progress or innaccurate.",
+    "content": "🚧 Breadbox is available Early Access. Some features described here may still be in-progress or inaccurate.",
     "dismissible": true
   },
   "navbar": {
@@ -39,6 +39,7 @@
             "pages": [
               "introduction",
               "installation",
+              "installation/remote-hosting",
               "quickstart"
             ]
           },
@@ -111,9 +112,70 @@
         ]
       },
       {
+        "tab": "MCP Reference",
+        "groups": [
+          {
+            "group": "Overview",
+            "pages": [
+              "mcp/reference/overview",
+              "mcp/reference/conventions"
+            ]
+          },
+          {
+            "group": "Data access (read)",
+            "pages": [
+              "mcp/reference/transactions",
+              "mcp/reference/accounts",
+              "mcp/reference/categories",
+              "mcp/reference/tags",
+              "mcp/reference/rules",
+              "mcp/reference/connections-sync"
+            ]
+          },
+          {
+            "group": "Mutations (write)",
+            "pages": [
+              "mcp/reference/sessions",
+              "mcp/reference/categorization",
+              "mcp/reference/transactions-write",
+              "mcp/reference/tags-write",
+              "mcp/reference/rules-write",
+              "mcp/reference/categories-write",
+              "mcp/reference/matches",
+              "mcp/reference/connections-write",
+              "mcp/reference/reports"
+            ]
+          }
+        ]
+      },
+      {
         "tab": "Guides",
         "pages": [
-          "automating-breadbox"
+          "guides/overview",
+          {
+            "group": "Getting Started",
+            "pages": [
+              "guides/breadbox-in-a-nutshell",
+              "guides/understanding-rules"
+            ]
+          },
+          {
+            "group": "Common Workflows",
+            "pages": [
+              "guides/single-routine-reviewer",
+              "guides/multi-agent-reviewer",
+              "guides/zelle-venmo-analysis",
+              "guides/gmail-cross-referencing",
+              "guides/tracking-subscriptions"
+            ]
+          },
+          {
+            "group": "Advanced",
+            "pages": [
+              "guides/on-demand-analysis",
+              "guides/custom-dashboard-with-claude"
+            ]
+          }
         ]
       }
     ]
@@ -122,6 +184,10 @@
     {
       "source": "/transactions/review-queue",
       "destination": "/transactions/review-workflow"
+    },
+    {
+      "source": "/automating-breadbox",
+      "destination": "/guides/overview"
     }
   ],
   "search": {

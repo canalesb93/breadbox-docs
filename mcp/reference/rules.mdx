@@ -1,0 +1,183 @@
+---
+title: "Rule read MCP reference"
+sidebarTitle: "Rules"
+description: "MCP read tools for listing transaction rules and previewing condition matches. Rule writes live on a separate page."
+---
+
+Transaction rules are condition trees that fire during sync to auto-categorize, tag, or annotate transactions. These read tools let agents inspect the existing rule set and dry-run conditions before creating new rules.
+
+See [Rule writes](/mcp/reference/rules-write) for `create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `batch_create_rules`, and `apply_rules`.
+
+---
+
+## list_transaction_rules
+
+Lists transaction rules with optional filters. Agents should always call this before creating new rules to avoid duplicates. Returns each rule's actions, trigger, priority, hit count, and last-hit timestamp — useful for spotting stale or never-matching rules.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/rules`](/api/rules#list-rules)
+
+### Parameters
+
+<ParamField path="category_slug" type="string">
+  Filter to rules that set this category.
+</ParamField>
+
+<ParamField path="enabled" type="boolean">
+  `true` for only enabled, `false` for only disabled, omit for both.
+</ParamField>
+
+<ParamField path="search" type="string">
+  Search by rule name. Comma-separated values are ORed.
+</ParamField>
+
+<ParamField path="search_mode" type="string" default="contains">
+  `contains`, `words`, or `fuzzy`.
+</ParamField>
+
+<ParamField path="limit" type="integer" default="50">
+  Max 500.
+</ParamField>
+
+<ParamField path="cursor" type="string">
+  Pagination cursor.
+</ParamField>
+
+<ParamField path="session_id" type="string">
+  Optional session ID.
+</ParamField>
+
+<ParamField path="reason" type="string">
+  Optional rationale.
+</ParamField>
+
+### Example input
+
+```json
+{ "enabled": true, "search": "starbucks" }
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "r9Xm2pQr",
+      "name": "name: Starbucks → food_and_drink_coffee",
+      "conditions": {
+        "field": "merchant_name",
+        "op": "contains",
+        "value": "starbucks"
+      },
+      "actions": [
+        { "type": "set_category", "category_slug": "food_and_drink_coffee" }
+      ],
+      "trigger": "on_create",
+      "priority": 10,
+      "enabled": true,
+      "hit_count": 47,
+      "last_hit_at": "2026-04-12T14:32:00Z",
+      "created_at": "2026-01-15T09:00:00Z",
+      "created_by": "alice@example.com",
+      "expires_at": null
+    }
+  ],
+  "next_cursor": null,
+  "has_more": false
+}
+```
+
+---
+
+## preview_rule
+
+Dry-run a condition tree against existing transactions — no writes, no hit-count bump. Returns the match count, total scanned, and a sample of matching transactions. Agents use this to test a condition before committing to a rule.
+
+**Scope:** Read
+
+<Warning>
+  **Preview does not simulate the rule pipeline.** It evaluates the supplied condition in isolation against stored data. Tags or categories that earlier-stage rules would have added mid-pass are not visible. For questions like "what does this condition match today?" preview is exactly right; for "what would this rule actually categorize once I ship it?", you still need to create the rule (ideally disabled) and use [`apply_rules`](/mcp/reference/categorization#apply_rules) on a scoped filter.
+</Warning>
+
+### Parameters
+
+<ParamField path="conditions" type="object" required>
+  Condition tree. Same grammar as [`create_transaction_rule.conditions`](/mcp/reference/rules-write#create_transaction_rule). Leaf: `{"field":"...","op":"...","value":...}`. Combinators: `{"and":[...]}`, `{"or":[...]}`, `{"not":{...}}`.
+</ParamField>
+
+<ParamField path="sample_size" type="integer" default="10">
+  Number of sample matching transactions to return. Max 50. The `match_count` reflects the full match set regardless of sample size.
+</ParamField>
+
+<ParamField path="session_id" type="string">
+  Optional session ID.
+</ParamField>
+
+<ParamField path="reason" type="string">
+  Optional rationale.
+</ParamField>
+
+### Example input
+
+```json
+{
+  "conditions": {
+    "and": [
+      { "field": "merchant_name", "op": "contains", "value": "starbucks" },
+      { "field": "amount", "op": "gte", "value": 5 }
+    ]
+  },
+  "sample_size": 3
+}
+```
+
+### Example output
+
+```json
+{
+  "match_count": 47,
+  "total_scanned": 12540,
+  "sample": [
+    {
+      "id": "k7Xm9pQ2",
+      "date": "2026-04-12",
+      "amount": 6.85,
+      "merchant_name": "Starbucks",
+      "name": "STARBUCKS STORE #4591",
+      "category": "food_and_drink_coffee"
+    },
+    {
+      "id": "k8Yn0qR3",
+      "date": "2026-04-10",
+      "amount": 12.40,
+      "merchant_name": "Starbucks",
+      "name": "STARBUCKS STORE #4591",
+      "category": "food_and_drink_coffee"
+    },
+    {
+      "id": "k9Zo1rS4",
+      "date": "2026-04-08",
+      "amount": 5.25,
+      "merchant_name": "Starbucks",
+      "name": "STARBUCKS MOBILE ORDER",
+      "category": "food_and_drink_coffee"
+    }
+  ]
+}
+```
+
+### Condition grammar
+
+Full DSL is in the Breadbox repo's `docs/rule-dsl.md`. Short form:
+
+- **Fields** — `name`, `merchant_name`, `amount`, `category_primary`, `category_detailed`, `category` (the assigned slug, live-updated by earlier-stage rules), `pending`, `provider`, `account_id`, `account_name`, `user_id`, `user_name`, `tags`.
+- **Operators** —
+  - String/category: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
+  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`.
+  - Bool: `eq`, `neq`.
+  - Tags: `contains`, `not_contains`, `in`.
+- **Combinators** — `and`, `or`, `not` (nest freely, max depth 10).
+
+Pass `{}` (or omit conditions entirely on rule creation) to match every transaction.

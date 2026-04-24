@@ -1,0 +1,180 @@
+---
+title: "Connections and sync write MCP reference"
+sidebarTitle: "Connections writes"
+description: "Trigger syncs and manage account links. Connection read tools live on Connections & sync."
+---
+
+Write tools for bank connections and account-link management. Read tools (`get_sync_status`, `list_account_links`) live on [Connections & sync](/mcp/reference/connections-sync).
+
+All tools on this page are **Write** scope and require `session_id` + `reason`.
+
+<Warning>
+  `trigger_sync` requires a **full access** API key. It is not available to `read_only` keys — in fact, write tools are filtered out of the server entirely for read-only scopes, so a read-only agent never sees it. See [Set up MCP](/mcp/setup#read-only-vs-read-write).
+</Warning>
+
+---
+
+## trigger_sync
+
+Trigger a manual sync of bank data from the provider (Plaid or Teller). Optionally specify a `connection_id` to sync a single connection; otherwise syncs all active connections. Returns immediately — the sync runs in the background. Check `get_sync_status` for results.
+
+**Mirrors:** [`POST /api/v1/connections/{id}/sync`](/api/connections#trigger-sync)
+
+### Parameters
+
+<ParamField path="connection_id" type="string">
+  Sync a specific connection by ID (UUID or short ID). If omitted, syncs all active connections.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "checking for charges since last sync",
+  "connection_id": "c1Xm9pQ2"
+}
+```
+
+### Example output
+
+```json
+{ "text": "Sync triggered for connection c1Xm9pQ2." }
+```
+
+With no `connection_id`, the response is `Sync triggered for all connections.`
+
+---
+
+## create_account_link
+
+Link a dependent account to a primary account for cross-connection deduplication. When two family members connect the same credit card (primary cardholder + authorized user), transactions appear in both feeds. This link pairs matching transactions by date + amount, excludes the dependent's copies from totals, and attributes matched primary-side transactions to the dependent user.
+
+Automatically runs initial reconciliation after creation — the response includes both the link and the first-pass match results.
+
+### Parameters
+
+<ParamField path="primary_account_id" type="string" required>
+  The primary cardholder's account ID (UUID or short ID).
+</ParamField>
+
+<ParamField path="dependent_account_id" type="string" required>
+  The authorized/dependent user's account ID.
+</ParamField>
+
+<ParamField path="match_strategy" type="string" default="date_amount_name">
+  Matching strategy. Currently only `date_amount_name` is supported.
+</ParamField>
+
+<ParamField path="match_tolerance_days" type="integer" default="0">
+  Date tolerance in days. `0` = same day.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "linking Amex authorized user account to primary for dedup",
+  "primary_account_id": "a7Xm9pQ2",
+  "dependent_account_id": "a8Yn0qR3"
+}
+```
+
+### Example output
+
+```json
+{
+  "link": {
+    "id": "L9Xm2pQr",
+    "primary_account_id": "a7Xm9pQ2",
+    "dependent_account_id": "a8Yn0qR3",
+    "match_strategy": "date_amount_name",
+    "match_tolerance_days": 0,
+    "created_at": "2026-04-23T14:50:00Z"
+  },
+  "reconciliation": {
+    "matched_count": 142,
+    "unmatched_primary_count": 3,
+    "unmatched_dependent_count": 7
+  }
+}
+```
+
+---
+
+## delete_account_link
+
+Remove an account link and clear all transaction attribution set by it. Transactions from the dependent account will be included in totals again.
+
+### Parameters
+
+<ParamField path="link_id" type="string" required>
+  The account link ID.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "primary cardholder closed card — unlinking",
+  "link_id": "L9Xm2pQr"
+}
+```
+
+### Example output
+
+```json
+{ "status": "deleted" }
+```
+
+---
+
+## reconcile_account_link
+
+Manually trigger match reconciliation for an account link. Finds unmatched dependent transactions and attempts to pair them with primary account transactions by date and exact amount. Matched primary transactions are attributed to the dependent user.
+
+Use after `create_account_link` has already run (it reconciles on create) if you want to pick up new charges without waiting for the next sync cycle.
+
+### Parameters
+
+<ParamField path="link_id" type="string" required>
+  The account link ID to reconcile.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "after sync — checking for new matches",
+  "link_id": "L9Xm2pQr"
+}
+```
+
+### Example output
+
+```json
+{
+  "matched_count": 3,
+  "unmatched_primary_count": 0,
+  "unmatched_dependent_count": 4
+}
+```

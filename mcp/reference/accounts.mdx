@@ -1,0 +1,125 @@
+---
+title: "Accounts and users MCP reference"
+sidebarTitle: "Accounts & users"
+description: "MCP read tools for listing bank accounts and family members — the ID-discovery tools most agent sessions start with."
+---
+
+These are the tools an agent reaches for first to orient itself. `list_users` returns the family members in the household; `list_accounts` returns the bank accounts those users own. Both are read-only and typically run once at the top of a session.
+
+---
+
+## list_accounts
+
+Lists all bank accounts synced from Plaid, Teller, or CSV import. Each account belongs to a connection and optionally a user. Returns account type, balances, institution name, and currency.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/accounts`](/api/accounts#list-accounts)
+
+### Parameters
+
+<ParamField path="user_id" type="string">
+  Filter accounts by user ID (UUID or short ID). Omit to return every account.
+</ParamField>
+
+<ParamField path="session_id" type="string">
+  Optional session ID.
+</ParamField>
+
+<ParamField path="reason" type="string">
+  Optional rationale.
+</ParamField>
+
+### Example input
+
+```json
+{ "user_id": "u4Xm9pQ2" }
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "a7Xm9pQ2",
+      "name": "Chase Checking",
+      "type": "depository",
+      "subtype": "checking",
+      "mask": "4321",
+      "balance_current": 2450.18,
+      "balance_available": 2380.00,
+      "balance_limit": null,
+      "iso_currency_code": "USD",
+      "institution_name": "Chase",
+      "user_id": "u4Xm9pQ2",
+      "user_name": "Alice",
+      "connection_id": "c1Xm9pQ2",
+      "provider": "plaid",
+      "is_dependent_linked": false
+    },
+    {
+      "id": "a8Yn0qR3",
+      "name": "Amex Gold",
+      "type": "credit",
+      "subtype": "credit card",
+      "mask": "1008",
+      "balance_current": -541.20,
+      "balance_available": null,
+      "balance_limit": 10000.00,
+      "iso_currency_code": "USD",
+      "institution_name": "American Express",
+      "user_id": "u4Xm9pQ2",
+      "user_name": "Alice",
+      "connection_id": "c2Yn0qR3",
+      "provider": "plaid",
+      "is_dependent_linked": false
+    }
+  ]
+}
+```
+
+<Note>
+  For credit accounts, `balance_current` represents the amount owed, not available funds. Never sum balances across different `iso_currency_code` values.
+</Note>
+
+---
+
+## list_users
+
+Lists all users (family members) in the system. Each user can own bank connections. User IDs are used to filter transactions and accounts by family member.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/users`](/api/users#list-users)
+
+### Parameters
+
+None. Pass an empty object (or just `session_id` / `reason` if you want to associate this read with a session).
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "u4Xm9pQ2",
+      "name": "Alice",
+      "email": "alice@example.com",
+      "role": "admin"
+    },
+    {
+      "id": "u5Yn0qR3",
+      "name": "Bob",
+      "email": "bob@example.com",
+      "role": "editor"
+    }
+  ]
+}
+```

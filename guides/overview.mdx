@@ -1,0 +1,41 @@
+---
+title: "Guides"
+description: "Practical, opinionated workflows that combine Breadbox's primitives — Categories, Tags, and Rules — with AI agents over MCP."
+---
+
+The Guides tab is where the rest of the documentation stops being a reference and starts being a playbook. Breadbox ships a small, composable set of primitives — a two-level category hierarchy, open-ended tags, a rule engine, and an MCP server — and most of the value comes from wiring them together into a workflow that matches how your household actually wants to handle its transaction history. These guides walk through the combinations that have worked well for us and for the people we've watched use Breadbox day to day.
+
+Each guide is self-contained: it names the problem, sketches a shape of the solution, and gives you an example you can paste into an agent prompt or a curl command. None of this is mandatory — Breadbox will run just fine if you only ever look at the dashboard — but if you want to get leverage out of the AI tooling, start here.
+
+## How this tab is organized
+
+<CardGroup cols={3}>
+  <Card title="Getting Started" icon="rocket" href="/guides/breadbox-in-a-nutshell">
+    Orient yourself to the primitives. Read these first if you've just finished the installation and want the shortest possible explanation of what the pieces are and why they matter.
+  </Card>
+  <Card title="Common Workflows" icon="wand-magic-sparkles" href="/guides/single-routine-reviewer">
+    Concrete setups for the most frequent jobs: running a reviewer agent, splitting work across specialists, categorizing peer-to-peer transfers, cross-referencing Gmail, and tracking subscriptions.
+  </Card>
+  <Card title="Advanced" icon="chart-line" href="/guides/on-demand-analysis">
+    Ad-hoc analysis and building your own UI on top of Breadbox with Claude. These are the "stretch" patterns — useful once the basics are humming.
+  </Card>
+</CardGroup>
+
+## What's in each group
+
+**Getting Started** covers the vocabulary. If terms like _pipeline stage_, _condition tree_, or _seeded `needs-review` tag_ don't mean anything yet, start with [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) and then [Understanding Rules](/guides/understanding-rules).
+
+**Common Workflows** starts with the single-agent review loop and then branches out. [Single Routine Reviewer](/guides/single-routine-reviewer) is the baseline — one agent, one schedule, the `needs-review` tag. [Multi-Agent Reviewer](/guides/multi-agent-reviewer) shows two ways to split the work once a single agent isn't enough. [Zelle / Venmo Analysis](/guides/zelle-venmo-analysis), [Gmail Cross-Referencing](/guides/gmail-cross-referencing), and [Tracking Subscriptions](/guides/tracking-subscriptions) each tackle a narrow job that's hard to automate with rules alone but falls within reach once an agent is involved.
+
+**Advanced** covers the ad-hoc and the exploratory. [On-Demand Analysis](/guides/on-demand-analysis) is for the "hey Claude, how much did we spend on coffee last quarter?" style of question. [Custom Dashboard with Claude](/guides/custom-dashboard-with-claude) shows how to hand Claude the API and let it build you a React artifact you can live in.
+
+## What to expect
+
+- Every guide links back to the underlying reference docs. If you want the full surface area for a primitive, click through to `/transactions/*` or `/mcp/*`.
+- Examples use real MCP tool names (`query_transactions`, `update_transactions`, `count_transactions`, etc.) and real Breadbox API endpoints. Paste them into your agent's system prompt or adapt them to your setup.
+- Amounts in every example follow Plaid convention: **positive = money out**, negative = money in. Summarize "spending" by summing positive amounts only.
+- Some workflows lean on capabilities that aren't yet stable (third-party MCPs, in-flight features). Those sections are marked with a draft note so you know to verify before relying on them.
+
+<Note>
+  These guides assume you've already installed Breadbox, connected at least one bank, and generated an API key with MCP access. If any of that is new to you, start at the [Quick start](/quick-start).
+</Note>

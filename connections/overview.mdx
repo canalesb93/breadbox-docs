@@ -4,37 +4,27 @@ description: "Learn how Breadbox connects to your banks via Plaid, Teller, or CS
 mode: "default"
 ---
 
-// TODO: Improve writing, improve "When to use.." or remove section. Note how we're working to support more provider options and alternatives. 
-
-Breadbox is open-source and self-hosted, meaning the one downside is you have to bring your own API keys.
-
-A connection in Breadbox is a link between your self-hosted instance and a bank account source. Each connection belongs to a family member and is managed through the admin dashboard. Once a connection is established, Breadbox pulls in your transactions automatically — or lets you import them manually — and keeps everything in your local database.
+A **connection** in Breadbox is the link between your self-hosted instance and a bank data source, owned by a specific family member. Once a connection is established, Breadbox pulls in that person's transactions automatically — or lets you import them manually — and keeps everything in your local database.
 
 ## Providers supported
 
-Breadbox supports three ways to bring in bank data. Each has different setup requirements and capabilities.
+Breadbox currently supports three ways to bring in bank data. If you're setting up for the first time, **Teller is the easiest starting point**: the free Development tier connects to real accounts immediately, with no production approval process to wait on.
 
 <CardGroup cols={3}>
-  <Card title="Plaid" icon="building-columns" href="/connections/plaid">
-    Connects to thousands of US financial institutions using Plaid's secure link flow. Supports automatic sync and real-time webhooks.
+  <Card title="Teller" icon="landmark" href="/connections/teller">
+    Recommended starter. Real bank connections on the free Development tier without a production approval process. Uses mTLS-based authentication.
   </Card>
 
-  <Card title="Teller" icon="landmark" href="/connections/teller">
-    An alternative to Plaid for some US banks. Uses mTLS-based authentication and the same dashboard-driven connection flow.
+  <Card title="Plaid" icon="building-columns" href="/connections/plaid">
+    Widest US coverage — thousands of institutions, automatic sync, webhooks, and balance tracking. Worth the extra setup once you're ready for production.
   </Card>
 
   <Card title="CSV import" icon="file-csv" href="/connections/csv-import">
-    Manually import transactions from a CSV file your bank provides. Works for any institution, with no API credentials required. <Badge color="blue" icon="hammer" iconType="solid">BETA</Badge>
+    Works for any institution, with no API credentials. Useful for banks Plaid and Teller don't cover, historical data, and migrations from other tools. <Badge color="blue" icon="hammer" iconType="solid">BETA</Badge>
   </Card>
 </CardGroup>
 
-### When to use each provider
-
-| Provider | Best for |
-| --- | --- |
-| Teller | Most US banks or credit unions where Teller has coverage. |
-| Plaid | Most US banks and credit cards. Widest coverage, automatic sync, balance tracking. |
-| CSV | Institutions not covered by Plaid or Teller, historical data imports, and one-time migrations from other tools. |
+More provider integrations are on the roadmap — see the [GitHub repo](https://github.com/canalesb93/breadbox) for current status.
 
 ## Connection statuses
 
@@ -87,12 +77,12 @@ From this page you can:
 ## Next steps
 
 <CardGroup cols={3}>
-  <Card title="Connect with Plaid" icon="plug" href="/connections/plaid">
-    Set up Plaid credentials and link your first bank account.
-  </Card>
-
   <Card title="Connect with Teller" icon="plug" href="/connections/teller">
     Configure Teller and enroll a bank using the Teller Connect flow.
+  </Card>
+
+  <Card title="Connect with Plaid" icon="plug" href="/connections/plaid">
+    Set up Plaid credentials and link your first bank account.
   </Card>
 
   <Card title="Import from CSV" icon="file-import" href="/connections/csv-import">

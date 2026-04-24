@@ -1,0 +1,58 @@
+---
+title: "Tag read MCP reference"
+sidebarTitle: "Tags"
+description: "MCP read tool for listing tags. Tag writes live on the Tag writes page; tagging transactions lives on Transaction writes."
+---
+
+Tags are open-ended labels attached to transactions. Each tag has a stable `slug` (for queries and rules) and a `display_name` (for humans). The review queue is just transactions tagged `needs-review` — a system-seeded rule auto-tags every new transaction during sync, and agents close reviews by removing the tag via [`update_transactions`](/mcp/reference/transactions-write#update_transactions).
+
+---
+
+## list_tags
+
+Returns all tags registered in the system. Filter transactions by tag via the `tags` / `any_tag` parameters on `query_transactions`.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/tags`](/api/overview) (REST endpoint — see the admin UI at `/tags` for the canonical list)
+
+### Parameters
+
+None. Pass an empty object.
+
+### Example input
+
+```json
+{}
+```
+
+### Example output
+
+```json
+{
+  "data": [
+    {
+      "id": "t1Xm9pQ2",
+      "slug": "needs-review",
+      "display_name": "Needs Review",
+      "description": "Automatically added by sync; removed when a human or agent closes the review.",
+      "color": "#F59E0B",
+      "icon": "inbox",
+      "created_at": "2026-01-01T00:00:00Z"
+    },
+    {
+      "id": "t2Yn0qR3",
+      "slug": "subscription:monthly",
+      "display_name": "Monthly Subscription",
+      "description": "Recurring monthly charge.",
+      "color": "#8B5CF6",
+      "icon": "refresh-cw",
+      "created_at": "2026-02-14T14:30:00Z"
+    }
+  ]
+}
+```
+
+<Note>
+  **Tag discovery.** When agents add a tag via [`add_transaction_tag`](/mcp/reference/transactions-write#add_transaction_tag) or [`update_transactions`](/mcp/reference/transactions-write#update_transactions) with a slug that doesn't exist yet, Breadbox auto-registers it as a persistent tag with the slug as the display name. Use [`create_tag`](/mcp/reference/tags-write#create_tag) up front only when you need to set a custom display name, color, or icon.
+</Note>

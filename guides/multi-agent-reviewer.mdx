@@ -1,0 +1,155 @@
+---
+title: "Multi-agent reviewer flows"
+description: "Two patterns for splitting the review queue across specialist agents — a delegator that re-tags work for downstream agents, and a flat set of specialists that filter by their own tags."
+---
+
+Once your household outgrows a single reviewer agent — because the queue is large, or because different categories of transaction need genuinely different reasoning — the next step is to split work across specialists. Breadbox doesn't prescribe a shape. Tags and rules are general enough that you can build this two fundamentally different ways. This guide lays out both patterns and the tradeoffs between them.
+
+Start with [Single Routine Reviewer](/guides/single-routine-reviewer) if you haven't already; multi-agent setups assume you're comfortable with the core loop.
+
+## Pattern A — Delegator + specialists
+
+A single **coordinator agent** owns the top of the funnel. It fetches the `needs-review` backlog, decides which specialist each transaction belongs to, and re-tags accordingly (e.g., `needs-review-gmail`, `needs-review-subscriptions`, `needs-review-p2p`). Each specialist watches its own tag and works through its slice independently.
+
+```
+[needs-review] ──┐
+                 ▼
+           [coordinator]
+           │    │    │
+           ▼    ▼    ▼
+   [...-gmail] [...-subs] [...-p2p]
+```
+
+### How it's wired
+
+1. **Coordinator**: runs first on each cadence. Queries `needs-review`, inspects each transaction, and calls `update_transactions` to:
+   - Remove `needs-review` with a note ("routed to gmail specialist").
+   - Add the specialist tag (`needs-review-gmail`, etc.).
+2. **Specialists**: each runs on its own schedule (or on a webhook trigger), queries _its_ tag, and works the batch like a solo reviewer. It closes items by removing the specialist tag with a note and a final category.
+
+### Coordinator system prompt sketch
+
+<CodeGroup>
+
+```text Coordinator prompt
+You are the routing coordinator for this household's transaction review
+queue. You do NOT categorize transactions yourself. Your job is to sort
+items in the `needs-review` queue into specialist queues, so other agents
+can work them.
+
+Each run:
+
+1. `count_transactions(tags=["needs-review"])`. If zero, submit a report
+   and stop.
+2. `query_transactions(tags=["needs-review"], fields="core,category",
+   limit=50)`.
+3. For each transaction, pick a specialist:
+   - Zelle / Venmo / Cash App / Apple Cash / opaque P2P descriptions →
+     `needs-review-p2p`.
+   - Merchant clearly matches a generic utility or bill (electric, water,
+     gas, internet, phone) → `needs-review-gmail`.
+   - Recurring monthly charge, known subscription service → 
+     `needs-review-subscriptions`.
+   - Anything else → `needs-review-generic`.
+4. Apply the routing as a single `update_transactions` call. Each op
+   should remove `needs-review` with a short routing note, and add the
+   chosen specialist tag.
+
+Do not change categories. Do not leave comments. You are strictly a
+router.
+```
+
+</CodeGroup>
+
+### Pros and cons
+
+**Pros**
+- One queue to monitor. Humans look at `needs-review` and know nothing has fallen through.
+- Routing logic lives in a single place — easier to evolve as patterns emerge.
+- Specialists can stay narrow and cheap; they don't need to understand every transaction shape.
+
+**Cons**
+- Adds an extra hop. A transaction is touched twice before resolution.
+- The coordinator is a single point of failure: if it stops running, specialists never see new work.
+- Debugging routing mistakes means tracing annotations across two agents.
+
+## Pattern B — Specialists with scoped filters, no delegator
+
+Instead of routing via a coordinator, each specialist queries its own tag _directly_, and rules at sync time pre-populate those tags based on conditions. No agent is responsible for routing — the rules engine does it.
+
+```
+         [rules @ sync]
+         │    │    │
+         ▼    ▼    ▼
+[subs] [p2p] [gmail]   [needs-review — leftovers]
+   │     │     │              │
+   ▼     ▼     ▼              ▼
+(specialist agents)     (generalist agent)
+```
+
+### How it's wired
+
+1. **Rules at sync time** tag transactions into the right specialist queues as they arrive. Example rules:
+   - P2P rule: `name contains "ZELLE" OR name contains "VENMO" OR name contains "CASH APP"` → `add_tag p2p-review` (and optionally still add `needs-review`).
+   - Subscription rule: matches known merchant list → `add_tag subscription-review`.
+   - Fallback: the seeded `needs-review` rule still runs for everything the other rules didn't catch.
+2. **Specialists** each query `tags=["<their-slug>", "needs-review"]` (all-of semantics) to work the intersection.
+3. **Generalist agent** handles anything that's still `needs-review` after the specialists have had their pass.
+
+### Example P2P routing rule
+
+```json
+{
+  "name": "Tag peer-to-peer transfers for specialist review",
+  "conditions": {
+    "or": [
+      { "field": "name", "op": "contains", "value": "ZELLE" },
+      { "field": "name", "op": "contains", "value": "VENMO" },
+      { "field": "name", "op": "contains", "value": "CASH APP" },
+      { "field": "name", "op": "matches", "value": "(?i)APPLE\\s*CASH" }
+    ]
+  },
+  "actions": [
+    { "type": "add_tag", "tag_slug": "p2p-review" }
+  ],
+  "trigger": "on_create",
+  "stage": "standard"
+}
+```
+
+### Pros and cons
+
+**Pros**
+- No routing hop — specialists act directly on what rules produced.
+- No single point of failure. A specialist that stops running only affects its own slice.
+- Cheaper at steady state: one pass per specialist, no coordinator inference on every transaction.
+
+**Cons**
+- Routing is spread across rule definitions. If you want to change how P2P is routed, you edit rules (one more layer than a prompt tweak).
+- Rules can't reason about context the way an LLM can. Edge cases — a Zelle that's actually a rent payment, for instance — will slip through to the wrong specialist.
+- The fallback generalist has to be robust enough to handle anything that fell out of the rule mesh.
+
+## Which to choose
+
+<Note>
+  Pattern A is better when your transactions need _contextual_ routing decisions — "this looks like a subscription because the amount is $14.99 and it matches last month's charge from the same merchant." Pattern B is better when routing is _pattern-based_ — merchant substring or amount threshold. Most households we've watched start with Pattern B for the bulk of traffic and layer a small Pattern A coordinator only for the ambiguous edge cases.
+</Note>
+
+A pragmatic hybrid: use rules (Pattern B) for the bulk routing, and have a lightweight coordinator (Pattern A) only scan transactions that made it to plain `needs-review` without any specialist tag. Best of both — cheap in the common case, smart when it matters.
+
+## Coordinating the cadence
+
+However you split the work, agree on a schedule. A typical setup:
+
+- Sync runs: hourly (cron).
+- Rules fire: on every sync (automatic).
+- Specialist agents: run 15 minutes after sync, each one narrowly scoped.
+- Coordinator (if using Pattern A): runs 5 minutes after sync.
+- Generalist fallback: runs nightly, sweeps whatever remains.
+
+## Related reading
+
+- [Single Routine Reviewer](/guides/single-routine-reviewer) — the baseline loop each specialist reuses.
+- [Understanding Rules](/guides/understanding-rules) — the DSL you'll lean on heavily in Pattern B.
+- [Zelle / Venmo Analysis](/guides/zelle-venmo-analysis) — what a P2P specialist actually does once it's handed a batch.
+- [Tracking Subscriptions](/guides/tracking-subscriptions) — what a subscriptions specialist focuses on.

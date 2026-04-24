@@ -4,9 +4,11 @@ description: "Set up your Teller App ID and mTLS certificates, then link bank ac
 sidebarTitle: "Teller API"
 ---
 
-// TODO: Teller should be the provider we "subtly" push the users to try out first as its easier. Plaid is more complete but testing with production data is much harder than it is with Plaid. We should reflect this through out all of our documentation (where reasonable)
+<Tip>
+  Just getting started? Teller is the easier path to test Breadbox with real bank data — no production approval process, and no paid tier to unlock live accounts.
+</Tip>
 
-Teller is an alternative to Plaid for connecting US bank accounts. It uses a different authentication model — mutual TLS (mTLS) certificates instead of API keys — but the experience from the admin dashboard is nearly identical to connecting with Plaid. Use Teller when your bank is supported by Teller but not Plaid, or when you prefer Teller's coverage for your institutions.
+Teller connects Breadbox to US bank accounts using mutual TLS (mTLS) certificates instead of API keys. The experience from the admin dashboard is nearly identical to connecting with Plaid, but the onboarding curve is gentler: you can link real accounts on the free Development tier immediately, without applying for production access. Use Teller when your bank is supported and you want the fastest path to real-data testing, or when you prefer Teller's coverage for your institutions.
 
 ## What you need
 

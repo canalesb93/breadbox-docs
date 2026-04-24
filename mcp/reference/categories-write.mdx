@@ -1,0 +1,60 @@
+---
+title: "Category write MCP reference"
+sidebarTitle: "Category writes"
+description: "Import category definitions from TSV. Category reads live on the Categories page."
+---
+
+The only category write surface exposed to MCP agents. Category writes are TSV-based, round-tripped with [`export_categories`](/mcp/reference/categories#export_categories) — the UI and REST API support finer-grained edits, but MCP intentionally keeps the surface narrow.
+
+This tool is **Write** scope and requires `session_id` + `reason`.
+
+---
+
+## import_categories
+
+Import category definitions from TSV text. Existing slugs are updated (`display_name`, `icon`, `color`, `sort_order`, `hidden`). New slugs are created. Missing slugs are **not** deleted. Parents must appear before children in the input.
+
+The typical workflow is round-trip: call [`export_categories`](/mcp/reference/categories#export_categories) to get the current state, edit the TSV, then call `import_categories` with the edited content.
+
+<Note>
+  **Merging categories.** Set the `merge_into` column on a source row to a target slug to merge the source into the target. All transactions and rule mappings from the source are reassigned to the target, then the source is deleted. Useful for simplifying a complex taxonomy without losing transaction categorization.
+</Note>
+
+### Parameters
+
+<ParamField path="content" type="string" required>
+  TSV content. Columns: `slug`, `display_name`, `parent_slug`, `icon`, `color`, `sort_order`, `hidden`, `merge_into`.
+</ParamField>
+
+<ParamField path="session_id" type="string" required />
+
+<ParamField path="reason" type="string" required />
+
+### Example input
+
+```json
+{
+  "session_id": "s9Xm2pQk",
+  "reason": "consolidating groceries and bulk_buys into one category",
+  "content": "slug\tdisplay_name\tparent_slug\ticon\tcolor\tsort_order\thidden\tmerge_into\nfood_and_drink\tFood and Drink\t\tutensils\t#C8482E\t10\tfalse\t\nfood_and_drink_groceries\tGroceries\tfood_and_drink\tshopping-basket\t#C8482E\t0\tfalse\t\nfood_and_drink_bulk_buys\t\t\t\t\t\t\tfood_and_drink_groceries\n"
+}
+```
+
+### Example output
+
+```json
+{
+  "created": 0,
+  "updated": 2,
+  "merged": 1,
+  "total_rows": 3,
+  "merged_transactions": 18
+}
+```
+
+### TSV format reminder
+
+- Tab-separated. Quotes are not required.
+- Empty cells for optional fields are allowed — the server keeps the current value.
+- `sort_order` is an integer. `hidden` is `true` / `false`.
+- When `merge_into` is set on a row, all other fields on that row are ignored — only the source slug and the target slug matter.

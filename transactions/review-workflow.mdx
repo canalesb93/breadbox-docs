@@ -3,8 +3,6 @@ title: "Review workflow"
 description: "Understand how Breadbox's needs-review tag, seeded rule, and tag-based workflow combine into a configurable review workflow you can extend or turn off."
 ---
 
-// TODO: We should revisit this page after finishing the Guides tab/section. This page has too much curl guidance that may seem confusing for regular human users and Disabling the auto-tag rule is something human user should do proactively. I'm thinking we can mention here the top-level setup but link users to guide section to hopefuly explain more setup
-
 Breadbox does not have a dedicated review-queue table. The "review queue" is a **tag view** — the list of transactions that carry the `needs-review` tag. The workflow is built out of general-purpose primitives (tags, rules, annotations), which means you can reshape it to fit how your household actually wants to triage transactions.
 
 ## How the workflow is assembled
@@ -51,23 +49,7 @@ Common customizations:
 
 ### Disabling the auto-tag rule
 
-The seeded rule is named **Auto-tag new transactions for review** and is owned by the `system` creator type. Find its ID from **Rules** in the dashboard (it is listed as system-created), or look it up via the API:
-
-```bash
-curl -H "X-API-Key: bb_your_key" \
-  http://localhost:8080/api/v1/rules \
-  | jq '.rules[] | select(.name == "Auto-tag new transactions for review") | {id, short_id, enabled}'
-```
-
-Then disable it (either `id` or `short_id` works):
-
-```bash
-curl -X PUT \
-  -H "X-API-Key: bb_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{"enabled": false}' \
-  http://localhost:8080/api/v1/rules/<rule_id>
-```
+The seeded rule is named **Auto-tag new transactions for review** and is owned by the `system` creator type. You can disable the seeded rule from **Rules** in the admin UI (or, if you're scripting, via the rules API — see [Rules API](/api/rules)).
 
 System-seeded rules can be disabled but not deleted, so you can always turn the default back on.
 
@@ -97,30 +79,11 @@ A typical agent loop:
     `update_transactions` with up to 50 compound ops — set category if needed, remove `needs-review` with a short rationale, optionally leave a comment.
   </Step>
   <Step title="Submit a report">
-    `POST /api/v1/reports` with a title and markdown body summarizing the session and surfacing anything that was deferred.
+    The agent submits a short Markdown summary via the reports API so the household can see what was done and what was deferred.
   </Step>
 </Steps>
 
-## Agent reports
-
-Reports are separate from the review workflow itself — they're how an agent summarizes what it just did. A report is a title \+ markdown body that lands in the dashboard under **Reports** with an unread badge until you open it.
-
-```bash
-curl -X POST \
-  -H "X-API-Key: bb_your_key" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "title": "Weekly transaction review — April 14–20",
-    "body": "Reviewed 47 transactions. Resolved 41. Deferred 6 (still tagged needs-review):\n\n- k7Xm9pQ2: Unusually large charge at an unfamiliar merchant..."
-  }' \
-  http://localhost:8080/api/v1/reports
-```
-
-```bash
-# Check unread count from a dashboard widget or automation
-curl -H "X-API-Key: bb_your_key" \
-  http://localhost:8080/api/v1/reports/unread-count
-```
+Agents summarize each session via the reports API. For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer).
 
 <Note>
   See the [MCP overview](/mcp/overview) for how to connect an AI agent to your Breadbox instance.
