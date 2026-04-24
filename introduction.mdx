@@ -3,7 +3,7 @@ title: "What is Breadbox?"
 description: "Breadbox syncs your household’s financial data into a PostgreSQL database you control, then exposes it through a built-in MCP server and a REST API."
 ---
 
-Breadbox is an open-source, self-hosted financial aggregator for households. It manages connections to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database you control, and hands that data to the AI apps you already use through a built-in <Tooltip tip="Model Context Protocol — the open standard for giving AI agents access to tools and data. See modelcontextprotocol.io">[MCP](https://modelcontextprotocol.io)</Tooltip> server.
+Breadbox is an open-source, self-hosted financial aggregator for households. It manages connections to your banks via [Plaid](https://plaid.com/) or [Teller](https://teller.io/), syncs your transactions into a structured database you control, and hands that data to the AI apps you already use through a built-in <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip> server.
 
 **Breadbox is not an agent.** It's the infrastructure that makes the agents you already trust — Claude, ChatGPT, Manus, Openclaw — dramatically more useful for personal finance. You host it, you own the data, you pick the agents.
 
@@ -25,7 +25,7 @@ Breadbox is free to run and [open source on GitHub](https://github.com/canalesb9
 
 <CardGroup cols={2}>
   <Card title="AI-ready via MCP" icon="robot" href="/mcp/overview">
-    A built-in <Tooltip tip="Model Context Protocol — modelcontextprotocol.io">MCP</Tooltip> server lets AI agents like Claude, ChatGPT, Manus, and Openclaw query and reason over your financial data — using the context they already have about you — without ever touching your bank credentials.
+    A built-in <Tooltip headline="Model Context Protocol" tip="The open standard for giving AI agents structured access to tools and data." cta="Read the MCP spec" href="https://modelcontextprotocol.io">MCP</Tooltip> server lets AI agents like Claude, ChatGPT, Manus, and Openclaw query and reason over your financial data — using the context they already have about you — without ever touching your bank credentials.
   </Card>
 
   <Card title="Self-improving rules" icon="sparkles" href="/transactions/rules">
