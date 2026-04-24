@@ -143,22 +143,23 @@ This page covers four ways to put a real URL in front of Breadbox, from easiest 
   </Tab>
 
   <Tab title="Caddy on a VPS">
-    If you already have a VPS (DigitalOcean, Hetzner, Fly machine, a home server with port 443 forwarded), Breadbox ships a Caddy reverse proxy you can turn on with one environment variable. Caddy requests a Let's Encrypt cert automatically the first time a request lands on your domain.
+    If you already have a VPS (DigitalOcean, Hetzner, Fly machine, a home server with port 443 forwarded), Breadbox ships a Caddy reverse proxy you can turn on with a single flag at install time. Caddy requests a Let's Encrypt cert automatically the first time a request lands on your domain.
 
     1. Point an `A` record (or `AAAA`) for your chosen domain at the VPS's public IP.
-    2. Run the production installer on the VPS:
+    2. Run the one-liner installer with `--domain` to enable the Caddy profile up front:
 
        ```bash
-       curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | sudo bash
+       curl -fsSL https://breadbox.sh/install.sh | bash -s -- --yes --domain=breadbox.example.com
        ```
-    3. Edit `breadbox/.env` and set `DOMAIN=breadbox.example.com`.
-    4. Bring up the full stack including the Caddy service:
+
+       This starts Breadbox, PostgreSQL, **and** Caddy in one shot. Caddy is gated behind a `caddy` compose profile — localhost-only installs skip it and leave ports 80/443 unbound.
+    3. If you already installed without a domain, edit `breadbox/.env` to set `DOMAIN=breadbox.example.com` and bring the Caddy profile up:
 
        ```bash
-       cd breadbox && docker compose -f docker-compose.prod.yml up -d
+       cd breadbox && docker compose --profile caddy up -d
        ```
 
-    The bundled `Caddyfile` is a single `reverse_proxy breadbox:8080` block keyed on `{$DOMAIN}`. See [Production deployment](/installation#production-deployment) in the main installation guide for the full walk-through.
+    The bundled `Caddyfile` is a single `reverse_proxy breadbox:8080` block keyed on `{$DOMAIN}`. See [Install Breadbox](/installation) for the full installer reference.
   </Tab>
 
   <Tab title="Tailscale Funnel">
