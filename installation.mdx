@@ -4,24 +4,52 @@ description: "The recommended one-liner installs Breadbox on macOS or Linux; alt
 sidebarTitle: "Install"
 ---
 
-Breadbox ships as a single Go binary that bundles the REST API, MCP server, admin dashboard, webhooks, and sync scheduler. The recommended setup is a single command that handles Docker, secrets, optional HTTPS, and starts the stack for you.
+Breadbox runs in minutes — after that, any MCP-compatible AI agent can query your bank data. The one-liner below handles Docker, generates your secrets, optionally wires up HTTPS, and starts the stack on your machine.
 
-<Card title="Planning to use MCP or bank webhooks?" icon="globe" href="/installation/remote-hosting">
-  Those need a public HTTPS URL, not `localhost`. See the remote-hosting guide for exe.dev, Cloudflare Tunnel, Caddy-on-a-VPS, and Tailscale Funnel walk-throughs.
-</Card>
+<Tip>
+  **How long does this take?** The one-liner finishes in about 2 minutes. First-run setup (admin account + bank provider + first sync) takes another 5–10 minutes.
+</Tip>
 
 ## Quick install
 
-Run this on the machine where you want Breadbox to live (a VPS, a spare laptop, a NAS running Docker — anywhere `docker` can run):
+Run this on the machine where you want Breadbox to live (a VPS, a spare laptop, a NAS with Docker — anywhere `docker` can run):
+
+<Tip>
+  `breadbox.sh/install.sh` is a thin bootstrap shim that downloads the real installer from the [`canalesb93/breadbox` GitHub repo](https://github.com/canalesb93/breadbox/blob/main/deploy/install.sh). You can read the script before piping it to bash.
+</Tip>
 
 ```bash
 curl -fsSL https://breadbox.sh/install.sh | bash
 ```
 
-The installer detects your OS (macOS or Linux) and architecture (`amd64` / `arm64`), checks for Docker (and offers to install it on Linux via `get.docker.com` when missing), prompts for an optional public domain, generates an `ENCRYPTION_KEY` and database password, writes a version-pinned `docker-compose.prod.yml`, starts the stack, and — on success — offers to register a launchd agent (macOS) or systemd unit (Linux) so Breadbox restarts on boot. The final step runs `breadbox doctor` inside the container to verify the install.
+What the installer does, in order:
+
+<Steps>
+  <Step title="Detects your platform">
+    Reads your OS (macOS / Linux) and architecture (`amd64` / `arm64`) so it can pick the right binary.
+  </Step>
+  <Step title="Checks Docker">
+    If Docker is missing on Linux, the installer offers to install it for you via the official `get.docker.com` script. On macOS you'll need Docker Desktop installed already.
+  </Step>
+  <Step title="Prompts for a public domain (optional)">
+    Enter a hostname if you have one ready (e.g. `breadbox.example.com`) to enable HTTPS via <Tooltip tip="Caddy is an open-source web server that handles HTTPS certificates automatically from Let's Encrypt.">Caddy</Tooltip>. Leave blank for a localhost-only install — you can add a domain later.
+  </Step>
+  <Step title="Generates secrets and Compose config">
+    Creates your `ENCRYPTION_KEY` and Postgres password, then writes a version-pinned `docker-compose.prod.yml` to the install directory. Both secrets land in `.env` — **back up this file**; see the [`ENCRYPTION_KEY` notes](#back-up-your-env-file) below.
+  </Step>
+  <Step title="Starts the stack">
+    Runs `docker compose up -d` and waits for the containers to become healthy.
+  </Step>
+  <Step title="Offers to run on boot">
+    On Linux, registers a systemd unit; on macOS, a launchd agent. Either way, Breadbox starts automatically when your machine reboots.
+  </Step>
+  <Step title="Runs `breadbox doctor`">
+    A pre-flight health check confirms your config, database, and encryption key are all consistent. You should see all green checks.
+  </Step>
+</Steps>
 
 <Note>
-  `breadbox.sh/install.sh` is a thin bootstrap shim that fetches the real installer from the `canalesb93/breadbox` GitHub repo. If you'd rather skip the shim (or if `breadbox.sh` isn't reachable), the direct URL works the same way:
+  If `breadbox.sh` is unreachable, the direct URL works the same way:
 
   ```bash
   curl -fsSL https://raw.githubusercontent.com/canalesb93/breadbox/main/deploy/install.sh | bash
@@ -36,7 +64,8 @@ Skip the prompts and configure a public domain in one shot:
 curl -fsSL https://breadbox.sh/install.sh | bash -s -- --yes --domain=breadbox.example.com
 ```
 
-`--domain=<host>` enables the Caddy reverse proxy (HTTPS on :443 with automatic Let's Encrypt certs). Leave it off for a localhost-only install — the Caddy service is gated behind a compose profile and doesn't start when no domain is set, so ports 80/443 are not bound.
+- `--yes` accepts all defaults — random generated credentials, auto-detected architecture, daemon registration — and skips interactive prompts. Use this in CI or when you want a hands-off install.
+- `--domain=<host>` enables the <Tooltip tip="A Docker Compose profile is an optional service that only starts when you explicitly include its profile flag. Breadbox uses this to keep Caddy off by default on localhost installs.">`caddy` compose profile</Tooltip> — a reverse proxy on :80/:443 that requests HTTPS certificates automatically. Without `--domain`, Caddy is left off and ports 80/443 stay free on your host.
 
 ### Install directory
 
@@ -48,18 +77,28 @@ curl -fsSL https://breadbox.sh/install.sh | bash -s -- --yes --domain=breadbox.e
 
 ### Updates
 
-`./update.sh` inside the install directory pulls the pinned version on every run. Change the pin explicitly:
+`./update.sh` inside the install directory pulls the pinned version on every run. For a regular-user install, that looks like:
 
 ```bash
-./update.sh --bump=v0.4.0   # pin to a specific tag
-./update.sh --bump=latest   # track latest (not recommended for production)
+cd ~/.breadbox
+./update.sh                   # pull the pinned version
+./update.sh --bump=v0.4.0     # pin to a specific tag
+./update.sh --bump=latest     # track latest (not recommended for production)
 ```
 
-<Warning>
-  **Remote hosting is the intended default.** Most of Breadbox's value — MCP access from Claude, ChatGPT, Manus, Openclaw, and other cloud AI clients, plus real-time webhooks from Plaid/Teller — requires a public HTTPS URL. Pass `--domain` to the installer (or come back and set `DOMAIN=` in `.env` later), then pick a host approach from the [remote-hosting guide](/installation/remote-hosting).
+### Back up your `.env` file
 
-  The exception: if the only agent touching Breadbox is a local autonomous runner (e.g., Openclaw on the same machine), you can run on `http://localhost:8080` indefinitely.
+The installer writes your `ENCRYPTION_KEY` to `.env` and you don't need to do anything with it day to day — Breadbox decrypts your bank credentials automatically on every run. But if you ever lose `.env` (host migration, accidental `rm`, container volume wipe), the encrypted bank credentials in your database become unrecoverable.
+
+<Warning>
+  Copy `.env` somewhere safe outside the install directory — a password manager vault, a secure notes app, or an encrypted backup. You can always re-generate the other vars, but `ENCRYPTION_KEY` is the one that matters.
 </Warning>
+
+## Are you planning to use cloud AI clients?
+
+<Card title="Need Claude, ChatGPT, or other cloud AI to reach Breadbox?" icon="globe" href="/installation/remote-hosting">
+  Cloud AI clients and real-time webhooks from Plaid/Teller need a public HTTPS URL, not `localhost`. If you want any of that, follow the [Remote Hosting guide](/installation/remote-hosting) — exe.dev, Cloudflare Tunnel, Caddy on a VPS, and Tailscale Funnel walkthroughs. Localhost-only is fine if you're just evaluating, or if the only agent touching Breadbox is a local autonomous runner (e.g., Openclaw on the same machine).
+</Card>
 
 ## Alternative install methods
 
@@ -91,7 +130,7 @@ The one-liner above is the supported default. The methods below are for specific
         ```
 
         <Warning>
-          Save your `.env` somewhere safe. The `ENCRYPTION_KEY` encrypts all stored bank credentials — lose it and you can't recover those credentials after the fact.
+          Save `.env` somewhere safe (password manager, secure notes, encrypted backup). `ENCRYPTION_KEY` encrypts your stored bank credentials — if it's lost, those credentials can't be recovered and every bank has to be re-linked.
         </Warning>
       </Step>
       <Step title="Start Breadbox">
@@ -107,7 +146,7 @@ The one-liner above is the supported default. The methods below are for specific
         docker compose --profile caddy up -d
         ```
 
-        Caddy is gated behind the `caddy` compose profile — it only binds ports 80/443 when you opt in. Open `http://your-host:8080` (or your HTTPS domain) to hit the setup wizard.
+        Caddy only binds ports 80/443 when you pass `--profile caddy`. Open `http://your-host:8080` (or your HTTPS domain) to hit the setup wizard.
       </Step>
     </Steps>
 
@@ -156,7 +195,9 @@ The one-liner above is the supported default. The methods below are for specific
 
 ## Environment variables
 
-Most Breadbox configuration is done through environment variables. Set these in your `.env` file or export them directly before running the binary. The table below covers the essentials; the [environment variables reference](/configuration/environment) documents every variable, precedence rules, and how env vars interact with dashboard settings.
+Most Breadbox configuration is done through environment variables. The **one-liner and Docker Compose methods generate these for you automatically** — you only need this table if you're doing a manual or binary install.
+
+The table below covers the essentials; the [environment variables reference](/configuration/environment) documents every variable, precedence rules, and how env vars interact with dashboard settings.
 
 | Variable | Required | Description |
 | --- | --- | --- |
@@ -169,36 +210,45 @@ Most Breadbox configuration is done through environment variables. Set these in 
 | `TELLER_APP_ID` | No | Teller application ID. Can also be set through the setup wizard. |
 
 <Tip>
-  You can leave `PLAID_CLIENT_ID`, `PLAID_SECRET`, and `TELLER_APP_ID` out of your `.env` file and configure them later through the admin setup wizard.
+  Not sure whether to use Plaid or Teller? **Start with Teller** — its free Development tier connects to real bank accounts with no production approval required. Plaid has broader US coverage but takes more setup. Either way, you can skip the credentials in `.env` and configure them from the setup wizard later. See [Bank Connections](/connections/overview) for the full comparison.
 </Tip>
 
 ## Verify the install
 
-Run `breadbox doctor` at any time to check config and connectivity without booting the server:
+After the installer finishes, run `breadbox doctor` to confirm everything is healthy — you should see all checks pass in green:
 
 ```bash
 # Docker install: exec into the container
 docker compose exec breadbox breadbox doctor
 
-# Binary / go install: run against your env directly
+# Binary / go install: run directly
 breadbox doctor
 ```
 
-The command walks a fixed list of pre-flight checks — config-load, database connection, migrations, `ENCRYPTION_KEY`, Plaid/Teller configuration, bank-connection credentials decrypting, an admin account exists, scheduler cron expressions parse, and (when `PUBLIC_URL`/`DOMAIN` is set) your public URL resolves and `/health/ready` responds. Exits non-zero if anything fails so install scripts and CI can gate on it.
-
-Handy flags:
-
-- `--json` — structured output for scripting.
-- `--skip-external` — skip DNS and outbound HTTP (air-gapped installs).
+The command walks through: config load, database connection, migrations, `ENCRYPTION_KEY`, Plaid/Teller configuration, bank-connection credential decryption, admin account, scheduler cron expressions, and (when you've set a public URL) DNS + `/health/ready` reachability. It exits non-zero on any failure, so you can gate CI or install scripts on it.
 
 <Note>
   `breadbox doctor` is read-only and safe to run repeatedly. It does **not** boot the HTTP server and does **not** probe Plaid or Teller with your credentials — it only validates that your env vars, database, and locally-encrypted tokens are internally consistent. To verify a Plaid/Teller connection is actually talking to the provider, trigger a sync from the admin dashboard.
 </Note>
 
+Power-user flags (optional): `--json` emits structured output for CI scripts; `--skip-external` skips DNS and outbound HTTP checks for air-gapped installs.
+
 ## After installing
 
-Once Breadbox is running, open `http://your-host:8080` (or your HTTPS domain if you set one) to complete the first-run setup wizard. The wizard walks you through creating your admin account and configuring bank provider credentials.
+Open `http://your-host:8080` (or your HTTPS domain if you set one) in a browser. Breadbox redirects you to a one-time setup wizard that covers:
 
-<Card title="Get started" icon="rocket" href="/quickstart">
-  Follow the onboarding guide to connect a bank, sync your first transactions, and attach an AI agent over MCP.
-</Card>
+- **Admin account** — username and password for the dashboard.
+- **Bank provider** — Plaid Client ID + Secret, or Teller App ID (whichever you picked above). You can skip this and fill it in later.
+- **Sync interval** — how often Breadbox pulls new transactions (4 / 8 / 12 / 24 hours).
+- **Webhook URL (optional)** — your public HTTPS host, if you have one, so Plaid and Teller can push real-time updates.
+
+After the wizard, you'll land in the admin dashboard ready to link your first bank. The full onboarding guide has the click-by-click walkthrough including connecting an AI agent over MCP — which is where Breadbox starts earning its keep.
+
+<CardGroup cols={2}>
+  <Card title="Onboarding walkthrough" icon="rocket" href="/quickstart">
+    Connect a bank, sync your first transactions, and attach an AI agent over MCP — about 10 minutes end to end.
+  </Card>
+  <Card title="MCP setup" icon="robot" href="/mcp/setup">
+    Once Breadbox is running, wire up Claude, ChatGPT, Openclaw, or any MCP-compatible agent to query your data.
+  </Card>
+</CardGroup>
