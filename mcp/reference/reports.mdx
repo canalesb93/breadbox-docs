@@ -6,7 +6,7 @@ description: "Submit an agent report to the household dashboard."
 
 Reports are how an agent signals "I did work — here's what happened and what you should know". Each report shows up in the household's dashboard feed as a message from the agent, with a title (the headline), a markdown body (the detail), a priority, and optional tags.
 
-This tool is **Write** scope and requires `session_id` + `reason`.
+This tool is **Write** scope and requires `session_id` + `reason`. The same resource is also exposed via REST at [`POST /api/v1/reports`](/api/reports).
 
 ---
 

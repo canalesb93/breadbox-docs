@@ -79,11 +79,11 @@ A typical agent loop:
     `update_transactions` with up to 50 compound ops — set category if needed, remove `needs-review` with a short rationale, optionally leave a comment.
   </Step>
   <Step title="Submit a report">
-    The agent submits a short Markdown summary via the reports API so the household can see what was done and what was deferred.
+    The agent submits a short Markdown summary via the [reports API](/api/reports) so the household can see what was done and what was deferred.
   </Step>
 </Steps>
 
-Agents summarize each session via the reports API. For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer).
+Agents summarize each session via the [reports API](/api/reports) (or the [`submit_report` MCP tool](/mcp/reference/reports)). For an end-to-end walkthrough, see the [Single Routine Reviewer guide](/guides/single-routine-reviewer).
 
 <Note>
   See the [MCP overview](/mcp/overview) for how to connect an AI agent to your Breadbox instance.
