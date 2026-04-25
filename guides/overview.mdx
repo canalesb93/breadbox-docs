@@ -26,7 +26,7 @@ The first time you run this loop, every transaction gets the agent's full attent
 
 The three patterns below are ordered by increasing autonomy. Start at the top and move down only when the one above isn't enough.
 
-<CardGroup cols={3}>
+<Columns cols={3}>
   <Card title="One agent, on demand" icon="user" href="/guides/single-routine-reviewer">
     You open Claude (or another MCP client) when you have a few minutes, ask it to walk the `needs-review` backlog, and approve its suggestions. Simplest possible setup.
   </Card>
@@ -36,7 +36,7 @@ The three patterns below are ordered by increasing autonomy. Start at the top an
   <Card title="Always-on autonomous agent" icon="bot" href="/guides/openclaw-recurring-workflows">
     Openclaw (or similar) runs on a VM, wakes up on a cron, drains the backlog, and pings you via Slack/email when something needs attention. Set-and-forget, with escape valves.
   </Card>
-</CardGroup>
+</Columns>
 
 ## Tactical recipes
 

@@ -9,7 +9,7 @@ A **connection** in Breadbox is the link between your self-hosted instance and a
 
 Breadbox currently supports three ways to bring in bank data. If you're setting up for the first time, **Teller is the easiest starting point**: the free Development tier connects to real accounts immediately, with no production approval process to wait on.
 
-<CardGroup cols={3}>
+<Columns cols={3}>
   <Card title="Teller" icon="landmark" href="/connections/teller">
     Recommended starter. Real bank connections on the free Development tier without a production approval process. Uses mTLS-based authentication.
   </Card>
@@ -21,7 +21,7 @@ Breadbox currently supports three ways to bring in bank data. If you're setting 
   <Card title="CSV import" icon="file-spreadsheet" href="/connections/csv-import">
     Works for any institution, with no API credentials. Useful for banks Plaid and Teller don't cover, historical data, and migrations from other tools. <Badge color="blue" icon="hammer">BETA</Badge>
   </Card>
-</CardGroup>
+</Columns>
 
 More provider integrations are on the roadmap — see the [GitHub repo](https://github.com/canalesb93/breadbox) for current status.
 
@@ -77,7 +77,7 @@ The same operations are available programmatically via the [Connections API](/ap
 
 ## Next steps
 
-<CardGroup cols={3}>
+<Columns cols={3}>
   <Card title="Connect with Teller" icon="plug" href="/connections/teller">
     Configure Teller and enroll a bank using the Teller Connect flow.
   </Card>
@@ -89,4 +89,4 @@ The same operations are available programmatically via the [Connections API](/ap
   <Card title="Import from CSV" icon="upload" href="/connections/csv-import">
     Upload a CSV export from your bank and map columns to Breadbox fields.
   </Card>
-</CardGroup>
+</Columns>

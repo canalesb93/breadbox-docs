@@ -10,9 +10,7 @@ Remote hosting is the intended default for Breadbox. Almost every integration th
 - **Bank webhooks.** Plaid and Teller push real-time updates (new transactions, reauth events) to a webhook URL you register with them. Without a public URL those events are dropped and you fall back to polling.
 - **Reading from anywhere.** Phone, laptop, a browser at work — any of those assumes Breadbox is more than `localhost` on the one machine you installed it on.
 
-The one case where pure-localhost is legitimate: you're running a local autonomous agent (e.g., an Openclaw runner on the same box) that is the *only* client that will ever touch Breadbox. If that's not you, pick one of the options below.
-
-This page covers four ways to put a real URL in front of Breadbox, from easiest to most hands-on.
+The one case where pure-localhost is legitimate: you're running a local autonomous agent (e.g., an Openclaw runner on the same box) that is the *only* client that will ever touch Breadbox. If that's not you, pick one of the four options below — they're ordered easiest to most hands-on.
 
 <Note>
   None of these replace the admin login. They put Breadbox on the public internet; Breadbox still authenticates every request against your admin account, API keys, and MCP mode.

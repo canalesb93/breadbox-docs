@@ -145,9 +145,9 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 
 When there are no more pages, the response includes `"has_more": false` and `"next_cursor": null`.
 
-<Warning>
+<Note>
   Each transaction object is roughly 50 tokens. At the default page size of 100, one call returns approximately 5,000 tokens of content. At the maximum of 500, a single call can reach 25,000 tokens. If your agent pulls large result sets unfiltered, your context budget will disappear fast.
-</Warning>
+</Note>
 
 **Page size guidance**
 
@@ -338,6 +338,6 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 }
 ```
 
-<Warning>
+<Info>
   `trigger_sync` requires a **full access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
-</Warning>
+</Info>
