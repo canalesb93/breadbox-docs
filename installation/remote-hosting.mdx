@@ -149,7 +149,7 @@ This page covers four ways to put a real URL in front of Breadbox, from easiest 
   </Tab>
 
   <Tab title="Caddy on a VPS">
-    If you already have a VPS (DigitalOcean, Hetzner, Fly machine, a home server with port 443 forwarded), Breadbox ships a Caddy reverse proxy you can turn on with a single flag at install time. Caddy requests a Let's Encrypt cert automatically the first time a request lands on your domain.
+    If you already have a VPS (DigitalOcean, Hetzner, Fly machine, a home server with ports 80 and 443 reachable from the public internet), Breadbox ships a Caddy reverse proxy you can turn on with a single flag at install time. Caddy requests a Let's Encrypt cert automatically the first time a request lands on your domain. Both ports must be open: port 80 is used for the Let's Encrypt HTTP-01 challenge, port 443 for the actual HTTPS traffic.
 
     1. Point an `A` record (or `AAAA`) for your chosen domain at the VPS's public IP.
     2. Run the one-liner installer with `--domain` to enable the Caddy profile up front:
