@@ -210,5 +210,9 @@ A few conventions help make agent reports useful in the admin dashboard:
 | Condition | Status | Code |
 | --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
-| Missing `title` or `body` | `422` | `VALIDATION_ERROR` |
-| Report not found | `404` | `NOT_FOUND` |
+| Missing `title` or `body` | `400` | `INVALID_PARAMETER` |
+| `priority` not one of `info` / `warning` / `critical` | `400` | `INVALID_PARAMETER` |
+| More than 10 `tags` | `400` | `INVALID_PARAMETER` |
+| Invalid report ID format on mark-read | `400` | `INVALID_PARAMETER` |
+
+The mark-read endpoint silently no-ops on a non-existent report ID — only a malformed UUID surfaces as `400`. There is no `404 NOT_FOUND` path on this resource today.
