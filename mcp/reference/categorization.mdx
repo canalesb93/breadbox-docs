@@ -208,9 +208,9 @@ Removes a manual category override from one transaction and re-resolves its cate
 
 Applies rules retroactively to existing transactions. Pass `rule_id` to run one rule in isolation, or omit to run the full active-rule pipeline in priority-ASC order. Materializes `set_category`, `add_tag`, and `remove_tag` actions; `add_comment` is sync-only and does not fire here. Hit counts increment per condition match, matching sync-time semantics.
 
-<Warning>
+<Note>
   **Use sparingly.** This is for initial setup and explicit back-fills — not routine reviews. During normal work, create the rule and let it match future syncs naturally. Running the full pipeline across thousands of historical transactions can take time.
-</Warning>
+</Note>
 
 ### Parameters
 

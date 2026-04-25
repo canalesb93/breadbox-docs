@@ -617,8 +617,13 @@ Recategorizes all transactions matching a set of filters in a single server-side
 | `limit` out of range | `400` | `INVALID_PARAMETER` |
 | Date not in `YYYY-MM-DD` format | `400` | `INVALID_PARAMETER` |
 | `start_date` is after `end_date` | `400` | `INVALID_PARAMETER` |
+| `min_amount` greater than `max_amount` | `400` | `INVALID_PARAMETER` |
 | Invalid UUID for `account_id` or `user_id` | `400` | `INVALID_PARAMETER` |
 | `search` shorter than 2 characters | `400` | `INVALID_PARAMETER` |
+| `search_mode` not one of `contains` / `words` / `fuzzy` | `400` | `INVALID_PARAMETER` |
+| `sort_order` not `asc` or `desc` | `400` | `INVALID_PARAMETER` |
+| `group_by` missing or invalid (`/summary`) | `400` | `INVALID_PARAMETER` |
+| Unknown field name in `fields=` | `400` | `INVALID_FIELDS` |
 | Malformed or expired `cursor` | `400` | `INVALID_CURSOR` |
 | Transaction not found | `404` | `NOT_FOUND` |
-| Invalid `category_slug` | `422` | `VALIDATION_ERROR` |
+| Category not found (set / bulk-recategorize) | `404` | `CATEGORY_NOT_FOUND` |

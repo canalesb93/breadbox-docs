@@ -1,9 +1,10 @@
 ---
 title: "How Breadbox syncs, stores, and exposes transactions"
+sidebarTitle: "Overview"
 description: "Learn how Breadbox syncs, stores, and represents transactions from your connected bank accounts, including field definitions and amount conventions."
 ---
 
-Breadbox automatically pulls transactions from your connected bank accounts on a scheduled sync. Each transaction is stored in your PostgreSQL database and exposed through the admin dashboard, REST API, and MCP server. This page explains how transactions are structured, what each field means, and what to expect as your data accumulates.
+Breadbox automatically pulls transactions from your connected bank accounts on a scheduled sync. Each transaction is stored in your PostgreSQL database and exposed through the admin dashboard, REST API, and MCP server.
 
 ## How transactions are synced
 
@@ -34,7 +35,7 @@ Every transaction record includes the following fields:
 | --- | --- | --- |
 | `id` | UUID | Internal Breadbox identifier. Stable for the lifetime of the record. |
 | `short_id` | string | 8-character base62 alias for the same record. Accepted anywhere `id` is accepted. |
-| `account_id` | UUID | The account this transaction belongs to. Set to `null` if the parent account is later removed (the transaction is preserved). |
+| `account_id` | UUID | The account this transaction belongs to. Set to `null` if the parent account is later removed (the transaction is preserved). See the [Accounts API](/api/accounts) for account-level fields. |
 | `amount` | decimal | Transaction amount. Positive = money out, negative = money in. |
 | `iso_currency_code` | string | ISO 4217 currency code (e.g., `USD`). Never aggregate across different values. |
 | `date` | date | Settlement date for posted transactions; occurrence date for pending ones. Format: `YYYY-MM-DD`. |
