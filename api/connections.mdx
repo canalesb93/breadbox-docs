@@ -277,6 +277,9 @@ curl -X POST \
     <ResponseField name="duration" type="string">
       Human-formatted duration (e.g., `"15s"`, `"2m4s"`). Omitted when the sync is still in progress.
     </ResponseField>
+    <ResponseField name="duration_ms" type="integer">
+      Same elapsed time in milliseconds. Convenient for charting or thresholding without parsing the human-formatted `duration`. Omitted when the sync is still in progress.
+    </ResponseField>
   </Expandable>
 </ResponseField>
 
@@ -287,7 +290,7 @@ curl -X POST \
 | Condition | Status | Code |
 | --- | --- | --- |
 | Missing or invalid API key | `401` | `MISSING_API_KEY` / `INVALID_API_KEY` |
-| `user_id` is not a valid UUID | `400` | `INVALID_PARAMETER` |
-| `connection_id` is not a valid UUID | `400` | `INVALID_PARAMETER` |
 | Connection not found | `404` | `NOT_FOUND` |
-| Sync already in progress for this connection | `409` | `SYNC_IN_PROGRESS` |
+| Internal sync failure | `500` | `INTERNAL_ERROR` |
+
+The `user_id` and `connection_id` parameters are passed through to the service layer without strict UUID-shape validation — short IDs are accepted, and unknown values resolve to a `404 NOT_FOUND` rather than a `400`.
