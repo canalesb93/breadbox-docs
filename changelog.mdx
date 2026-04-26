@@ -7,6 +7,14 @@ description: "What's new in Breadbox — user-facing changes since the V1 docs l
 {/* Scope: user-visible changes from the V1 docs rollout onward. */}
 {/* Do not backfill pre-V1 history. */}
 
+<Update label="April 25, 2026" description="MCP annotations: kinds filter and generic event shape" tags={["MCP", "API"]}>
+  - `list_annotations` now accepts an optional `kinds` filter using generic, agent-friendly names: `comment`, `rule`, `tag`, `category`. Empty (default) preserves the full-timeline behavior.
+  - Each response row now carries the generic `kind` plus a separate `action` field (`added` / `removed` for `tag`, `set` for `category`, `applied` for `rule`) so agents can branch on the specific event without parsing the kind string. `kinds=['tag']` returns both add and remove events in one call.
+  - The DB-level kinds (`tag_added`, `tag_removed`, `rule_applied`, `category_set`) are no longer accepted at the MCP boundary — pass the generic names instead. Internal admin views are unchanged.
+  - `list_transaction_comments` is **deprecated** in favor of `list_annotations` with `kinds=['comment']`. The legacy tool still works but will be removed in a future release; note the field renames (`author_*` → `actor_*`, `content` → `payload.content`) when migrating.
+  {/* closes #776 */}
+</Update>
+
 <Update label="April 24, 2026" description="V1 polish: install UX, transaction timeline, and keyboard nav" tags={["Install", "UI"]}>
   - `breadbox doctor` is now available as a standalone pre-flight command. Run it before starting the server to verify your database connection, encryption key, and provider credentials in one pass — no server boot required. Use `--json` for CI or scripted installs.
   - The transaction activity timeline now groups events by day with clear date headers. Same-day events no longer blur together, and tapping a rule row on mobile navigates directly to the rule that fired.

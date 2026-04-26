@@ -359,6 +359,10 @@ Lists distinct merchants with aggregated stats — count, total, average, and da
 
 ## list_transaction_comments
 
+<Warning>
+  **Deprecated.** Use [`list_annotations`](#list-annotations) with `kinds=['comment']` instead. The new tool returns the same comment data using the canonical annotation shape — note the field renames: `actor_type` / `actor_id` / `actor_name` (was `author_*`) and `payload.content` (was top-level `content`). `list_transaction_comments` will be removed in a future release.
+</Warning>
+
 Returns all comments attached to a transaction, ordered chronologically. Agents should check comments before writing to understand prior context.
 
 **Scope:** Read
@@ -438,7 +442,16 @@ Lists transaction pairs matched by an account link. Used to audit which primary-
 
 ## list_annotations
 
-Returns the full activity timeline for a single transaction: comments, tag adds/removes, rule applications, and category sets. Ordered by `created_at` ascending. Use this to reconstruct "what happened to this transaction and when" before making further changes.
+Returns the activity timeline for a single transaction: comments, tag adds/removes, rule applications, and category sets. Ordered by `created_at` ascending. Use this to reconstruct "what happened to this transaction and when" before making further changes.
+
+Each row carries a generic `kind` plus an `action` for the specific event, so you can branch on the action without parsing the kind string:
+
+| `kind`     | `action` values       | Notes                                                                            |
+| ---------- | --------------------- | -------------------------------------------------------------------------------- |
+| `comment`  | _(omitted)_           | Free-form comment. `payload.content` carries the body.                           |
+| `rule`     | `applied`             | A transaction rule fired. `payload.rule_name` and `rule_id` are populated.       |
+| `tag`      | `added` / `removed`   | Tag attached to or detached from the transaction. `tag_id` and `payload.slug` are populated. |
+| `category` | `set`                 | Category was set (manual override or via rule).                                  |
 
 **Scope:** Read
 
@@ -448,10 +461,28 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
   UUID or short ID of the transaction.
 </ParamField>
 
+<ParamField path="kinds" type="string[]">
+  Optional kind filter. Any of `comment`, `rule`, `tag`, `category`. Empty (default) returns the full timeline. Pass `['comment']` for the comment-only view (replaces the deprecated `list_transaction_comments`); pass `['tag']` for both add and remove tag events; pass `['comment','tag','category']` to skip rule-application churn.
+
+  Only the generic kinds above are accepted at the MCP boundary — the underlying DB-level values (`tag_added`, `tag_removed`, `rule_applied`, `category_set`) will be rejected with an `invalid kind` error.
+</ParamField>
+
 ### Example input
 
 ```json
 { "transaction_id": "k7Xm9pQ2" }
+```
+
+Comment-only view (replaces `list_transaction_comments`):
+
+```json
+{ "transaction_id": "k7Xm9pQ2", "kinds": ["comment"] }
+```
+
+All tag events (added and removed):
+
+```json
+{ "transaction_id": "k7Xm9pQ2", "kinds": ["tag"] }
 ```
 
 ### Example output
@@ -461,7 +492,8 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
   {
     "id": "a1Xm2pQ9",
     "transaction_id": "k7Xm9pQ2",
-    "kind": "tag_added",
+    "kind": "tag",
+    "action": "added",
     "actor_type": "system",
     "actor_name": "system",
     "tag_id": "t1Xm9pQ2",
@@ -471,7 +503,8 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
   {
     "id": "a2Yn3qR0",
     "transaction_id": "k7Xm9pQ2",
-    "kind": "category_set",
+    "kind": "category",
+    "action": "set",
     "actor_type": "agent",
     "actor_name": "Review Agent",
     "session_id": "s9Xm2pQk",
@@ -484,7 +517,8 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
   {
     "id": "a3Zo4rS1",
     "transaction_id": "k7Xm9pQ2",
-    "kind": "tag_removed",
+    "kind": "tag",
+    "action": "removed",
     "actor_type": "agent",
     "actor_name": "Review Agent",
     "session_id": "s9Xm2pQk",
@@ -496,5 +530,5 @@ Returns the full activity timeline for a single transaction: comments, tag adds/
 ```
 
 <Note>
-  The event type lives in `kind` — values are `comment`, `rule_applied`, `tag_added`, `tag_removed`, and `category_set`. Actor identity is split across `actor_type` (`user` / `agent` / `system`), `actor_name`, and optional `actor_id`. When a write tool passed a `session_id`, it's echoed here so you can group events by session. Rule applications set `rule_id`; tag events set `tag_id`.
+  `kind` carries the generic event family (`comment`, `rule`, `tag`, `category`) and `action` carries the specific event (`added`, `removed`, `set`, `applied`). Comment rows omit `action` because there is only one event. Actor identity is split across `actor_type` (`user` / `agent` / `system`), `actor_name`, and optional `actor_id`. When a write tool passed a `session_id`, it's echoed here so you can group events by session. Rule applications set `rule_id`; tag events set `tag_id`.
 </Note>
