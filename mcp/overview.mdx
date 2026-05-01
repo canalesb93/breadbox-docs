@@ -28,11 +28,17 @@ The server advertises two capability types: **tools** and **resources**.
 
 | Resource URI | What it contains |
 |---|---|
-| `breadbox://overview` | A live summary of your dataset: users, connections, account counts, transaction date range, 30-day spending by top category, and pending transaction count |
+| `breadbox://overview` | Live dataset summary organized as scope (counts, date range), freshness (last sync, ingest signals, errored connections), and backlog (needs-review and unmapped counts), plus the household roster |
+| `breadbox://accounts` | Bank accounts (checking, savings, credit cards, loans, investments) with balances, institution names, and currency |
+| `breadbox://categories` | Two-level category taxonomy keyed by slug; the source of valid `category_slug` values |
+| `breadbox://tags` | Current tag vocabulary keyed by slug; the `needs-review` tag is the review-queue handle |
+| `breadbox://users` | Household members with their roles (admin, editor, viewer) |
+| `breadbox://sync-status` | Per-connection sync status and last-sync timestamps |
 | `breadbox://review-guidelines` | Guidelines for reviewing transactions and creating categorization rules; editable from the MCP Settings page |
 | `breadbox://report-format` | Templates and formatting rules for agent-submitted reports; editable from the MCP Settings page |
+| `breadbox://rule-dsl` | Reference grammar for transaction rules: condition fields, action types, priority bands, and provider quirks |
 
-The `breadbox://overview` resource gives the agent ambient context about your household's financial state without requiring a round-trip tool call. An agent that reads it first knows how many accounts you have, which providers are connected, and roughly what your recent spending looks like — before it asks a single question.
+The `breadbox://overview` resource gives the agent ambient context about your household's financial state without requiring a round-trip tool call. An agent that reads it first knows how big the dataset is, whether it's currently in sync, and what's open in the review backlog — before it asks a single question.
 
 ## What agents can do
 
