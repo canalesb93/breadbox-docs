@@ -1,0 +1,117 @@
+---
+title: "CLI authentication"
+sidebarTitle: "Authentication"
+description: "How the breadbox CLI manages credentials — device-code login, paste-mode, local bootstrap, the hosts.toml file, and the BREADBOX_HOST and BREADBOX_TOKEN env vars."
+---
+
+The CLI keeps per-host credentials in `~/.config/breadbox/hosts.toml`. Each entry has a name, a base URL, and an API key. You add hosts with `breadbox auth login`, switch with `--host <name>` or the `BREADBOX_HOST` env var, and drop credentials with `breadbox auth logout`.
+
+The CLI talks to the unauthenticated [device-code endpoints](/api/authentication#device-code-flow-cli-and-headless-agents) under the hood — the long-lived `bb_` key is never copied across an untrusted channel.
+
+## Three ways to add a host
+
+<Tabs>
+  <Tab title="Device-code (recommended)">
+    Run `breadbox auth login --host <URL>` on the machine that needs the key. The CLI prints a short user code and a verification URL — the operator opens that URL on a trusted device (a laptop with the dashboard logged in), enters the code, approves, and the CLI saves the issued `bb_` key. No secret crosses the untrusted machine.
+
+    ```bash
+    breadbox auth login --host https://breadbox.example.com
+
+    # → Open https://breadbox.example.com/auth/device on the host you trust,
+    #   then enter code: ABCD-1234
+    # → Waiting for approval... ✓ Logged in as agent:reviewer
+    ```
+
+    The session is short-lived (~10 minutes). If the operator doesn't approve in time, the CLI exits `3` (auth error) and you can retry.
+  </Tab>
+  <Tab title="Paste mode (headless)">
+    When you've already minted a key elsewhere (admin dashboard, `breadbox keys create`, the device-code flow on a different machine), pass it directly with `--token`:
+
+    ```bash
+    breadbox auth login --host https://breadbox.example.com \
+                        --token bb_4xK9mZ2nQpR7sT1vW3yA5bC8dE6fG0hJqLnP
+    ```
+
+    The CLI validates the key against `GET /api/v1/keys/me` before saving. If the key is invalid or revoked, nothing is written to `hosts.toml`.
+  </Tab>
+  <Tab title="auth bootstrap (local only)">
+    On a machine running `breadbox serve` where you don't already have a key, `breadbox auth bootstrap` mints a `full_access` `user`-actor key via the service layer (no HTTP round-trip, no device-code flow) and saves it under the host name `local`. Useful right after `breadbox init` to give yourself a CLI-usable key without opening the dashboard.
+
+    ```bash
+    breadbox auth bootstrap
+    # ✓ Created local API key, saved as host 'local'
+
+    breadbox transactions list
+    # (works against http://localhost:8080)
+    ```
+
+    Re-running `bootstrap` against an existing `local` host is a no-op — it won't replace the saved key.
+  </Tab>
+</Tabs>
+
+## Switching hosts
+
+```bash
+# Show every configured host and which is the default
+breadbox auth status
+
+# Pick a default host for this shell
+export BREADBOX_HOST=production
+
+# Or override per command
+breadbox transactions list --host staging
+
+# Or change the saved default
+breadbox auth use production
+```
+
+`--host` accepts either a configured name (`production`) or a bare URL (`https://breadbox.example.com`). With a bare URL, the CLI falls back to `BREADBOX_TOKEN` from the environment, since there's no `hosts.toml` entry to read from.
+
+## Checking what you're authenticated as
+
+```bash
+breadbox auth whoami
+# Host: production (https://breadbox.example.com)
+# Actor: agent / reviewer (full_access)
+```
+
+`whoami` calls `GET /api/v1/keys/me` and prints the actor type (`user` / `agent` / `system`), the actor name, the host, and the key scope.
+
+## Environment variable overrides
+
+| Variable | Purpose |
+| --- | --- |
+| `BREADBOX_HOST` | Default host name or base URL for every command. Overrides `auth use`. |
+| `BREADBOX_TOKEN` | API key to use when `BREADBOX_HOST` is a bare URL (no `hosts.toml` entry). |
+
+These overrides matter most in CI and container environments where you don't want to bake credentials into `hosts.toml`.
+
+## Logging out
+
+```bash
+breadbox auth logout production    # drop one host
+breadbox auth logout               # drop every host
+```
+
+Logout deletes the entry from `hosts.toml`. It does **not** revoke the key on the server — if you need to invalidate the credential too, run `breadbox keys revoke <id>` against a host that still has access, or revoke from the admin dashboard.
+
+## File layout
+
+```text
+~/.config/breadbox/
+└── hosts.toml         # API keys, host base URLs, default host marker
+```
+
+`hosts.toml` is plaintext. Protect it with `chmod 600` (the CLI does this automatically on first write) and treat it as a secret. On macOS the file lives at `~/Library/Application Support/breadbox/hosts.toml` only when `XDG_CONFIG_HOME` is unset — the CLI follows the XDG base directory spec.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Output formats" icon="terminal" href="/cli/output">
+    JSON, NDJSON, field selection, exit codes.
+  </Card>
+
+  <Card title="Headless deployment" icon="rocket" href="/cli/headless">
+    Patterns for agent and CI environments.
+  </Card>
+</Columns>

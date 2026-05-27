@@ -18,7 +18,7 @@ All tools on this page are **Write** scope and require `session_id` + `reason`.
 
 Manually overrides one transaction's category. Pass `transaction_id` plus either `category_id` or `category_slug` — slug is resolved automatically.
 
-**Mirrors:** [`PATCH /api/v1/transactions/{id}/category`](/api/transactions#set-category-override)
+**Mirrors:** [`PATCH /api/v1/transactions/{id}/category`](/api/overview)
 
 ### Parameters
 
@@ -65,7 +65,7 @@ Manually overrides one transaction's category. Pass `transaction_id` plus either
 
 Categorize multiple transactions at once. Each item is a `{transaction_id, category_slug}` pair. Max 500 items per request. Sets `category_override=true` on every affected transaction.
 
-**Mirrors:** [`POST /api/v1/transactions/batch-categorize`](/api/transactions#batch-categorize)
+**Mirrors:** [`POST /api/v1/transactions/batch-categorize`](/api/overview)
 
 ### Parameters
 
@@ -107,7 +107,7 @@ Categorize multiple transactions at once. Each item is a `{transaction_id, categ
 
 Moves every transaction matching `from_category` (plus any other filters) to `to_category`. Requires `to_category` and at least one filter as a safety requirement. Sets `category_override=true` because this is an explicit action. Typical use: "move everything currently in `general_merchandise` for March to `groceries`".
 
-**Mirrors:** [`POST /api/v1/transactions/bulk-recategorize`](/api/transactions#bulk-recategorize)
+**Mirrors:** [`POST /api/v1/transactions/bulk-recategorize`](/api/overview)
 
 ### Parameters
 
@@ -176,7 +176,7 @@ Moves every transaction matching `from_category` (plus any other filters) to `to
 
 Removes a manual category override from one transaction and re-resolves its category from the automatic mapping + rule pipeline. Use this to undo a `categorize_transaction` action.
 
-**Mirrors:** [`DELETE /api/v1/transactions/{id}/category`](/api/transactions#reset-category-override)
+**Mirrors:** [`DELETE /api/v1/transactions/{id}/category`](/api/overview)
 
 ### Parameters
 

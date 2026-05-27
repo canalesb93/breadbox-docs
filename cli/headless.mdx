@@ -1,0 +1,232 @@
+---
+title: "Headless deployment"
+sidebarTitle: "Headless"
+description: "Patterns for driving Breadbox from agent hosts, CI runners, and remote scripts using the lite (breadbox-cli) build — same-host agents, remote agents, scheduled jobs."
+---
+
+The same CLI surface that's pleasant to type at a prompt is also the primary way external automation drives Breadbox. This page covers three production patterns: same-host agents, remote agents over HTTP, and scheduled jobs / CI.
+
+If you're new to the build flavors, start with [Installation](/cli/installation).
+
+## Pattern 1 — Same-host agent
+
+An AI agent or script running on the same machine as `breadbox serve`. The CLI talks to `http://localhost:8080` over loopback; no exposed network surface.
+
+<Steps>
+  <Step title="Mint a scoped key">
+    From the dashboard or via the CLI, mint a key with the `agent` actor type so the audit trail shows what the agent did:
+
+    ```bash
+    breadbox keys create --actor=agent --name="claude-reviewer" --scope=full_access
+    # bb_xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx
+    ```
+
+    The plaintext key is returned once — store it in the agent's secret manager.
+  </Step>
+  <Step title="Wire the key into the agent">
+    Pass the key as `BREADBOX_TOKEN` and `BREADBOX_HOST` on the agent's environment:
+
+    ```bash
+    BREADBOX_HOST=http://localhost:8080 \
+    BREADBOX_TOKEN=bb_xxxxx \
+      ./your-agent.sh
+    ```
+
+    Or save it to the CLI's host file:
+
+    ```bash
+    breadbox auth login --host http://localhost:8080 --token bb_xxxxx --name local-agent
+    ```
+  </Step>
+  <Step title="Drive Breadbox">
+    Every CLI command "just works":
+
+    ```bash
+    breadbox transactions list --has-comment=false --tag needs-review --json
+    breadbox transactions update tx_abc --category groceries
+    breadbox reports submit --kind weekly --json /tmp/report.json
+    ```
+  </Step>
+</Steps>
+
+## Pattern 2 — Remote agent (lite CLI)
+
+An agent running on a different machine — a VPS, a phone, a corporate workstation, a cloud function. Use the lite build (`breadbox-cli`) so there's no server code on the agent host at all.
+
+<Steps>
+  <Step title="Build or download the lite binary">
+    ```bash
+    # From source
+    git clone https://github.com/canalesb93/breadbox.git
+    cd breadbox
+    go build -tags=lite -o breadbox-cli ./cmd/breadbox
+
+    # Or grab a pre-built release artifact named `breadbox-cli-<platform>`.
+    ```
+
+    Ship `breadbox-cli` to the agent host (single static binary, no dependencies).
+  </Step>
+  <Step title="Mint a key on the server">
+    From an authenticated session on the Breadbox host:
+
+    ```bash
+    breadbox keys create --actor=agent --name="remote-reviewer" --scope=full_access
+    # bb_yyyyyyyyyyyyyyyyyyyyyyyyyyyyyyyy
+    ```
+
+    Or use the device-code flow (no operator copy-paste of secrets):
+
+    ```bash
+    # On the agent host
+    breadbox-cli auth login --host https://breadbox.example.com
+    # → Open https://breadbox.example.com/auth/device, enter code: ABCD-1234
+    # The operator approves on a trusted device; the lite CLI saves the issued key.
+    ```
+  </Step>
+  <Step title="Drive Breadbox from anywhere">
+    ```bash
+    breadbox-cli transactions list --from 2026-01-01 --json
+    breadbox-cli sync trigger
+    breadbox-cli connections list
+    ```
+
+    Same commands as the full binary — exit codes, output formats, and flags are identical.
+  </Step>
+</Steps>
+
+## Pattern 3 — Scheduled jobs and CI
+
+The CLI shines in cron, systemd timers, GitHub Actions, and any other "fire a command on a schedule" surface.
+
+### Cron — nightly sync
+
+```bash
+# /etc/cron.d/breadbox
+BREADBOX_HOST=http://localhost:8080
+BREADBOX_TOKEN=bb_xxxxx
+
+# Sync at 2am, log to journal
+0 2 * * *   breadbox  breadbox sync trigger --quiet || logger -t breadbox "sync failed: $?"
+```
+
+`--quiet` suppresses table output. The exit code (`0` success, `4` server down, etc.) is still set, so `logger` only fires on failure.
+
+### Systemd — `breadbox doctor` health check
+
+```ini
+# /etc/systemd/system/breadbox-health.service
+[Service]
+Type=oneshot
+Environment="BREADBOX_HOST=http://localhost:8080"
+Environment="BREADBOX_TOKEN=bb_xxxxx"
+ExecStart=/usr/local/bin/breadbox doctor --skip-external
+```
+
+```ini
+# /etc/systemd/system/breadbox-health.timer
+[Timer]
+OnCalendar=*:0/15
+Persistent=true
+
+[Install]
+WantedBy=timers.target
+```
+
+A non-zero exit makes the unit "failed", which Prometheus' `node_exporter` can scrape.
+
+### GitHub Actions — export transactions to a private repo
+
+```yaml
+- name: Install breadbox-cli
+  run: |
+    curl -L https://github.com/canalesb93/breadbox/releases/latest/download/breadbox-cli-linux-amd64 \
+      -o /usr/local/bin/breadbox-cli
+    chmod +x /usr/local/bin/breadbox-cli
+
+- name: Export last week
+  env:
+    BREADBOX_HOST: ${{ secrets.BREADBOX_HOST }}
+    BREADBOX_TOKEN: ${{ secrets.BREADBOX_TOKEN }}
+  run: |
+    breadbox-cli transactions list \
+      --all --ndjson \
+      --from $(date -d '7 days ago' +%Y-%m-%d) \
+      > export-$(date +%Y-%m-%d).ndjson
+```
+
+Pin the secrets in repository settings; never commit them.
+
+## Authentication recipes
+
+<Tabs>
+  <Tab title="One agent, many hosts">
+    Add each host once; switch with `--host`:
+
+    ```bash
+    breadbox auth login --host https://breadbox.prod.example.com --name prod
+    breadbox auth login --host https://breadbox.staging.example.com --name staging
+
+    breadbox transactions list --host prod
+    breadbox transactions list --host staging
+    ```
+  </Tab>
+  <Tab title="Many agents, one host">
+    Mint a separate key per agent so the audit trail (and revocation) stays clean:
+
+    ```bash
+    breadbox keys create --actor=agent --name=reviewer
+    breadbox keys create --actor=agent --name=tagger
+    breadbox keys create --actor=agent --name=reporter
+    ```
+
+    If one agent goes rogue, revoke its key without touching the others.
+  </Tab>
+  <Tab title="Ephemeral CI">
+    Use environment variables, not `hosts.toml`. Lite binaries on CI runners shouldn't be writing config files.
+
+    ```bash
+    export BREADBOX_HOST=https://breadbox.example.com
+    export BREADBOX_TOKEN=$CI_BREADBOX_TOKEN
+    breadbox-cli sync trigger
+    ```
+  </Tab>
+</Tabs>
+
+## Error handling
+
+Branch on exit codes — they're the cheapest way to distinguish "retry" from "give up":
+
+| Exit | Meaning | Action |
+| --- | --- | --- |
+| `0` | Success | Continue. |
+| `1` | Runtime (I/O, parsing) | Log and surface to operator. |
+| `2` | Usage (bad flags) | Bug in your script; fix and re-run. |
+| `3` | Auth | Key revoked or missing; surface to operator. |
+| `4` | Upstream (server 5xx) | Retry with exponential backoff. |
+| `5` | Validation (server 4xx) | Don't retry; the request is wrong. |
+
+See [Output and exit codes](/cli/output) for the full table.
+
+## Connection link in agent flows
+
+`breadbox connections link --wait` is the canonical way an agent helps a user add a new bank:
+
+```bash
+breadbox connections link --provider plaid --wait --json
+```
+
+The CLI mints a hosted-link session, prints the URL (and emits it to JSON for the agent to surface to the user), then polls every two seconds. Once the user finishes the OAuth flow in the browser, the CLI prints the resulting connection IDs and exits `0`.
+
+If the agent only needs to mint the URL — letting a separate process handle the polling — omit `--wait` and call `breadbox connections link get <session-id>` periodically.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Agent automation" icon="bot" href="/cli/agents">
+    Scheduled agents, runs, and the agent SDK smoke test.
+  </Card>
+
+  <Card title="Multi-agent reviewer guide" icon="users" href="/guides/multi-agent-reviewer">
+    A worked example chaining multiple agents over the same CLI surface.
+  </Card>
+</Columns>

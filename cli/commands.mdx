@@ -1,0 +1,249 @@
+---
+title: "Command reference"
+sidebarTitle: "Commands"
+description: "Every breadbox CLI command grouped by noun — auth, server, accounts, transactions, categories, tags, rules, connections, sync, csv, providers, users, logins, reports, keys, config, backup, webhooks, and agent."
+---
+
+This page lists every command the CLI exposes. Scope codes follow the same convention as the [REST API](/api/authentication#key-scopes):
+
+- **R** — readable with any API key (`read_only` or `full_access`).
+- **W** — requires a `full_access` key.
+- **L** — local-only; talks to the service layer or filesystem directly (no HTTP call). Stripped from the lite build.
+- **—** — no auth (`version`, `auth login`, `completion`).
+
+Standard flags apply to every command — `--host`, `--json`, `--ndjson`, `--fields`, `--limit`, `--all`, `--quiet`, `--debug`. See [Output and exit codes](/cli/output) for what they do. Per-command flags are listed inline below; full flag sets live in `breadbox <noun> <verb> --help`.
+
+## Auth
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox auth login --host URL [--token KEY]` | — | Add a host. With `--token`, validates and saves the key (paste mode). Without it, runs the interactive device-code flow. |
+| `breadbox auth logout [name]` | — | Drop credentials for one host, or every host if no name. |
+| `breadbox auth status` | — | List configured hosts and the current default. |
+| `breadbox auth use <name>` | — | Set the default host. |
+| `breadbox auth bootstrap [--base-url URL]` | L | Mint a `full_access` `user` key via the service layer and save as host `local`. |
+| `breadbox auth whoami` | R | Print the actor (type + name) and host the current key authenticates as. |
+
+See [CLI authentication](/cli/authentication) for the full flow.
+
+## Server and process management
+
+These commands operate on the local box (filesystem, DB, embedded migrations) — they do not call the REST API. They are stripped from the lite (`-tags=lite`) build.
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox serve [--no-dashboard]` | L | Start the HTTP server (REST + MCP-over-HTTP + dashboard + hosted-link + webhooks). `--no-dashboard` suppresses the dashboard at runtime without recompiling. |
+| `breadbox mcp` | L | MCP server over stdio; Claude Desktop spawns this per session and blocks until stdin closes. |
+| `breadbox mcp-stdio` | L | Deprecated hidden alias for `breadbox mcp`. Kept so existing Claude Desktop configs keep working. |
+| `breadbox init` | L | First-run setup: mints `ENCRYPTION_KEY` if absent, creates the first admin login + household user, prints the first API key. |
+| `breadbox reveal-key` | L | Print the configured `ENCRYPTION_KEY` to stdout for recovery. Exit `1` when no key is set. |
+| `breadbox migrate [--down] [--to N]` | L | Run goose migrations against `DATABASE_URL`. Local-only — there is no remote migration endpoint by design. |
+| `breadbox doctor [--skip-external] [--with-live]` | R/L | Remote mode (host configured) consumes `GET /api/v1/headless/bootstrap`; local mode (no host) runs env / DB / provider preflight. `--with-live` fires the agent SDK round-trip (~$0.01, local-only). |
+| `breadbox version` | — | Print build version, commit, and upgrade availability. |
+| `breadbox completion [bash\|zsh\|fish]` | — | Print a shell-completion script. |
+
+## Accounts
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox accounts list` | R | List household bank accounts. |
+| `breadbox accounts get <id>` | R | Single account summary. |
+| `breadbox accounts detail <id>` | R | Detail + last 25 transactions + per-currency balances. |
+| `breadbox accounts update <id> [--name] [--excluded] [--dependent-linked]` | W | Patch display name; hide from views (`--excluded`); exclude from household totals (`--dependent-linked`, e.g. a kid's account you fund but don't count toward your spending). |
+| `breadbox accounts links list <account-id>` | R | List account-link reconciliation rows where this account is primary or dependent. |
+| `breadbox accounts links add <primary-id> --dependent <id> [--strategy] [--tolerance-days]` | W | Link a dependent account to a primary for reconciliation. |
+| `breadbox accounts links remove <link-id>` | W | Delete an account-link row. |
+
+## Transactions
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox transactions list [filters]` | R | Cursor-paginated list. Filters: `--account`, `--category`, `--from`, `--to`, `--search`, `--user`, `--tag`, `--has-comment`, `--cursor`. `--all` walks every page. |
+| `breadbox transactions get <id>` | R | Single transaction. |
+| `breadbox transactions count [filters]` | R | Count matching the same filters as `list`. |
+| `breadbox transactions summary [--by=category\|month\|week\|day] [filters]` | R | Aggregates with grouping dimension. |
+| `breadbox transactions update <id> [--category] [--note] [--tags]` | W | Atomic multi-field update. |
+| `breadbox transactions batch <file>` | W | Batch update from a JSON file (max 50 rows). |
+| `breadbox transactions categorize <id> <category>` | W | Set category as an override. |
+| `breadbox transactions uncategorize <id>` | W | Drop the override; revert to provider-default category. |
+| `breadbox transactions recategorize --target-category <slug> [filters]` | W | Server-side recategorize: every row matching the filters becomes `--target-category`. |
+| `breadbox transactions delete <id>` | W | Soft-delete (sets `deleted_at`). |
+| `breadbox transactions restore <id>` | W | Restore a soft-deleted transaction. |
+| `breadbox transactions tag <id> <slug>` | W | Attach a tag. |
+| `breadbox transactions untag <id> <slug>` | W | Detach a tag. |
+| `breadbox transactions annotations <id>` | R | Activity-timeline rows (category changes, comments, tags, system events). |
+| `breadbox transactions comments add <id> <message>` | W | Add a comment. |
+| `breadbox transactions comments list <id>` | R | List comments on a transaction. |
+| `breadbox transactions comments edit <id> <comment-id> <message>` | W | Edit an existing comment. |
+| `breadbox transactions comments delete <id> <comment-id>` | W | Delete a comment. |
+
+## Categories
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox categories list` | R | List every category. |
+| `breadbox categories get <id>` | R | Single category. |
+| `breadbox categories create [--name] [--parent]` | W | Create a category. |
+| `breadbox categories update <id> [...]` | W | Update name or parent. |
+| `breadbox categories delete <id>` | W | Delete (blocked if any transactions reference it). |
+| `breadbox categories merge <from> <to>` | W | Merge `from` → `to` (migrate transactions, drop source). |
+| `breadbox categories export [--format=tsv\|json]` | R | Dump the category tree. |
+| `breadbox categories import <file>` | W | Import categories from TSV. |
+
+## Tags
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox tags list` | R | List every tag. |
+| `breadbox tags get <slug>` | R | Single tag. |
+| `breadbox tags create <slug> [--label] [--color]` | W | Create a tag. |
+| `breadbox tags update <slug> [...]` | W | Update label or color. |
+| `breadbox tags delete <slug>` | W | Delete the tag (transactions keep their other tags). |
+
+## Rules
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox rules list [--enabled]` | R | List transaction rules. |
+| `breadbox rules get <id>` | R | Single rule. |
+| `breadbox rules create --json <file>` | W | Create a rule from a DSL JSON file. |
+| `breadbox rules update <id> --json <file>` | W | Update a rule. |
+| `breadbox rules delete <id>` | W | Delete a rule. |
+| `breadbox rules preview <id>` | R | Preview which transactions a rule would touch without applying it. |
+| `breadbox rules apply <id>` | W | Apply retroactively to existing transactions. |
+| `breadbox rules batch <file>` | W | Create or update many rules atomically. |
+
+See [Rule DSL](/transactions/rules) for the condition grammar.
+
+## Connections
+
+A **connection** is a bank-side OAuth link — a Plaid item, Teller enrollment, or CSV-import bucket. Different from account-links (`breadbox accounts links`) which map household users to bank accounts.
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox connections list` | R | List bank connections (active + disconnected). |
+| `breadbox connections get <id>` | R | Single connection. |
+| `breadbox connections link [--provider=plaid\|teller] [--user] [--wait]` | W | Mint a hosted-link session. Prints the URL operators or agents open in a browser. `--wait` polls every two seconds until terminal status or 5-minute timeout. |
+| `breadbox connections link get <session-id>` | R | Check a hosted-link session's status (`active` / `completed` / `failed` / `expired`) and the resulting connection IDs. |
+| `breadbox connections relink <connection-id> [--wait]` | W | Mint a relink hosted-link session for an existing (broken or pending-reauth) connection. |
+| `breadbox connections disconnect <id>` | W | Mark connection disconnected (preserves history). |
+| `breadbox connections delete <id>` | W | Currently aliases `disconnect` — there is no hard-delete endpoint today. |
+
+## Sync
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox sync trigger [--connection] [--account]` | W | Kick a manual sync. |
+| `breadbox sync status` | R | Last sync per connection and scheduler state. |
+| `breadbox sync logs [--connection] [--limit] [--follow]` | R | Sync history. `--follow` tails new entries. |
+
+## CSV
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox csv preview <file> [--account]` | R | Dry-run parse + dedupe report (no rows written). |
+| `breadbox csv import <file> --account <id>` | W | Import a CSV into an account. |
+
+See the [CSV import guide](/connections/csv-import) for column mapping rules.
+
+## Providers
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox providers list` | R | What's configured and per-provider status. |
+| `breadbox providers config plaid [--client-id] [--secret] [--env]` | W | Set Plaid credentials. |
+| `breadbox providers config teller [--app-id] [--signing-secret] [--pem-file]` | W | Set Teller credentials. |
+| `breadbox providers test <provider>` | W | Round-trip a credentials check against the provider. |
+| `breadbox providers disable <provider>` | W | Disable a provider (existing connections keep working until they break). |
+
+## Users
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox users list` | R | List household members. |
+| `breadbox users get <id>` | R | Single user. |
+| `breadbox users create --name [--email]` | W | Add a household member. |
+| `breadbox users update <id> [--name] [--email]` | W | Update a member. |
+| `breadbox users delete <id>` | W | Remove a member. |
+
+## Logins
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox logins list` | W | List admin login accounts. |
+| `breadbox logins create --user --email [--role]` | W | Create a login account linked to a household user (one-time `setup_token` returned in the response). |
+| `breadbox logins update <id> --role` | W | Update login role (`admin` / `editor` / `viewer`). |
+| `breadbox logins delete <id>` | W | Delete a login. |
+| `breadbox logins reset-password <id>` | W | Generate a one-time reset token (returned in the response). |
+
+## Reports
+
+Agent reports — summaries an AI agent submits back to the household. See the [agent reports concept](/mcp/reference/reports).
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox reports list [--kind] [--status]` | R | List agent reports. |
+| `breadbox reports get <id>` | R | Single report. |
+| `breadbox reports submit --kind --json <file>` | W | Submit a report on behalf of the current actor. |
+| `breadbox reports read <id>` | W | Mark a report read. |
+| `breadbox reports unread <id>` | W | Mark a report unread. |
+
+## API keys
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox keys list` | W | List every API key (the plaintext is never returned). |
+| `breadbox keys create [--scope=read_only\|full_access] [--actor=user\|agent\|system] [--name]` | W | Mint a new key. The full secret is returned **once** in the response. |
+| `breadbox keys revoke <id>` | W | Soft-revoke a key. |
+
+## App config
+
+The `app_config` table lets you override certain server settings without restarting (sync interval, agent transcript dir, dashboard banners, …). Precedence is env vars → DB → defaults.
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox config list` | W | List `app_config` entries with their source (env / db / default). |
+| `breadbox config get <key>` | W | Get one config value. |
+| `breadbox config set <key> <value>` | W | Set a config value (DB source). |
+| `breadbox config unset <key>` | W | Remove a DB-sourced value (falls back to env / default). |
+
+See [App config precedence](/configuration/app-config) for what's configurable.
+
+## Backup
+
+Local-only. Wraps `pg_dump`. The server must be stopped before `backup restore`.
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox backup create [--out path]` | L | Dump the database. |
+| `breadbox backup list` | L | List existing backups. |
+| `breadbox backup restore <file>` | L | Restore from a backup. |
+
+## Webhooks
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox webhooks tail [--provider]` | W | Tail recent webhook events as Server-Sent Events from the server. |
+| `breadbox webhooks replay <id>` | W | Re-process a stored webhook event. |
+
+## Agent
+
+Drive the Claude Agent SDK subsystem (scheduled agent definitions + on-demand runs). See [Scheduled agents](/guides/scheduled-agents) for the full pattern and [`breadbox agent`](/cli/agents) for cookbook examples.
+
+| Command | Scope | Description |
+| --- | --- | --- |
+| `breadbox agent list [--json]` | L | Every agent definition with status, schedule, model, and next-fire time. |
+| `breadbox agent run <slug> [--json] [--prefix "..."]` | L | Trigger an immediate run — same path as the admin "Run now" button. `--prefix` prepends a per-run operator note to the prompt. |
+| `breadbox agent test` | L | Smoke test: credential configured, sidecar binary discoverable, "say OK" prompt round-trips. Cost-bounded to ~5¢. Exit `3` = no auth; exit `5` = no binary. |
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Headless deployment" icon="rocket" href="/cli/headless">
+    Patterns for driving Breadbox from agent hosts.
+  </Card>
+
+  <Card title="Agent runs" icon="bot" href="/cli/agents">
+    Trigger and inspect scheduled agent runs.
+  </Card>
+</Columns>

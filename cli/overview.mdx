@@ -1,0 +1,70 @@
+---
+title: "CLI overview"
+sidebarTitle: "Overview"
+description: "The breadbox command-line tool — what it is, the three build flavors, and where it fits alongside the REST API and MCP server."
+---
+
+`breadbox` is a single Go binary that plays three roles. It hosts the HTTP server (`breadbox serve`), it speaks MCP over stdio for Claude Desktop (`breadbox mcp`), and it acts as a CLI client driving a local or remote Breadbox over HTTP (`breadbox transactions list`, `breadbox connections link --wait`, and so on).
+
+The CLI is a thin shell over the [REST API](/api/overview). Every data command — anything that lists, gets, creates, updates, or deletes a resource — calls the same `/api/v1/*` endpoint a curl one-liner would. A handful of commands (`serve`, `mcp`, `init`, `migrate`, `backup`, `reveal-key`, `doctor` in local mode) talk to the service layer or filesystem directly because there is no server to talk to.
+
+## Why a CLI when there's an API and a dashboard?
+
+- **Headless deployments.** SSH into a NAS, run `breadbox sync trigger`, walk away.
+- **Agents.** AI agents reading and writing data through one stable, scriptable surface — same shape on every host, JSON on every pipe.
+- **Scripting.** Cron jobs, GitHub Actions, shell pipelines. The CLI auto-emits JSON when stdout is not a TTY, so `breadbox transactions list | jq` just works.
+- **Operations.** `breadbox doctor`, `breadbox sync logs --follow`, `breadbox backup create` are the operator surface; no dashboard needed.
+
+## Three builds, one source tree
+
+| Build | Command | What ships | When to use |
+| --- | --- | --- | --- |
+| **Full** (default) | `go build -o breadbox ./cmd/breadbox` | Server + CLI + admin dashboard | The everyday self-hosted deployment. |
+| **Headless** | `go build -tags=headless -o breadbox ./cmd/breadbox` | Server + CLI, no dashboard assets | Servers where you don't want the dashboard compiled in at all. Same REST/MCP/webhook surface. |
+| **Lite** | `go build -tags=lite -o breadbox-cli ./cmd/breadbox` | CLI only — no server packages, no DB drivers, no provider SDKs | Agent hosts and ops boxes that only drive a remote Breadbox over HTTP. |
+
+The full and headless builds also accept `--no-dashboard` at runtime — useful when you want the same binary in dev and prod but want to suppress the dashboard in prod without recompiling.
+
+See [Installation](/cli/installation) for how to get each flavor onto your machine.
+
+## How the CLI is organized
+
+Every command follows the same `breadbox <noun> <verb> [args] [flags]` shape:
+
+```bash
+breadbox accounts list
+breadbox transactions update <id> --category groceries
+breadbox connections link --provider plaid --wait
+```
+
+The `<noun>` matches a REST resource (`transactions`, `accounts`, `rules`, …) or a CLI-only concept (`auth`, `keys`, `config`, `backup`, `agent`). The `<verb>` is typically `list`, `get`, `create`, `update`, `delete`, plus resource-specific verbs like `categorize`, `merge`, `apply`, `tail`, `relink`.
+
+See [Commands](/cli/commands) for the full catalog organized by noun.
+
+## Authentication, in one paragraph
+
+Per-host credentials live in `~/.config/breadbox/hosts.toml`. Add a host with `breadbox auth login` (interactive device-code) or `breadbox auth login --host=URL --token=bb_…` (paste mode for headless). Switch with `--host <name>` or `BREADBOX_HOST=<name>`. On a local machine you've never logged into, `breadbox auth bootstrap` mints a `full_access` key via the service layer and saves it as host `local`. Full flow at [Authentication](/cli/authentication).
+
+## Output and exit codes
+
+The CLI prints a human table on a TTY and emits JSON automatically when stdout is piped. Add `--json` to force JSON anywhere, `--ndjson` for streaming large lists, or `--fields=…` to pass through API field selection. Exit codes are a contract: `0` success, `1` runtime, `2` usage, `3` auth, `4` upstream (server 5xx), `5` validation (server 4xx). Agents and scripts can branch on these. See [Output and exit codes](/cli/output).
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Install the CLI" icon="download" href="/cli/installation">
+    Pick a build flavor and get it on your machine.
+  </Card>
+
+  <Card title="Authenticate" icon="key" href="/cli/authentication">
+    Device-code login, paste-mode, and `auth bootstrap`.
+  </Card>
+
+  <Card title="Command reference" icon="list" href="/cli/commands">
+    Every noun and verb, with scope and behavior notes.
+  </Card>
+
+  <Card title="Headless deployment" icon="rocket" href="/cli/headless">
+    Patterns for running agents against a remote Breadbox.
+  </Card>
+</Columns>

@@ -81,7 +81,8 @@
             "pages": [
               "mcp/overview",
               "mcp/setup",
-              "mcp/tools"
+              "mcp/tools",
+              "guides/scheduled-agents"
             ]
           },
           {
@@ -89,10 +90,24 @@
             "icon": "settings",
             "pages": [
               "configuration/environment",
+              "configuration/app-config",
               "configuration/api-keys",
               "configuration/backup"
             ]
           }
+        ]
+      },
+      {
+        "tab": "CLI",
+        "icon": "terminal",
+        "pages": [
+          "cli/overview",
+          "cli/installation",
+          "cli/authentication",
+          "cli/output",
+          "cli/commands",
+          "cli/headless",
+          "cli/agents"
         ]
       },
       {
@@ -111,16 +126,7 @@
           {
             "group": "Endpoints",
             "icon": "zap",
-            "pages": [
-              "api/accounts",
-              "api/transactions",
-              "api/categories",
-              "api/tags",
-              "api/rules",
-              "api/connections",
-              "api/users",
-              "api/reports"
-            ]
+            "openapi": "https://raw.githubusercontent.com/canalesb93/breadbox/main/openapi.yaml"
           }
         ]
       },
@@ -223,6 +229,38 @@
     {
       "source": "/index",
       "destination": "/introduction"
+    },
+    {
+      "source": "/api/accounts",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/transactions",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/categories",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/tags",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/rules",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/connections",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/users",
+      "destination": "/api/overview"
+    },
+    {
+      "source": "/api/reports",
+      "destination": "/api/overview"
     }
   ],
   "search": {

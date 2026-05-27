@@ -1,0 +1,139 @@
+---
+title: "Scheduled agents"
+description: "Configure a scheduled Claude Agent SDK run inside Breadbox — define the prompt, set the schedule, attach prompt blocks, and inspect runs and transcripts."
+---
+
+Breadbox has built-in support for running Claude Agent SDK sessions on a schedule. You define an agent (slug, prompt, model, cron schedule, cost ceiling), enable it, and Breadbox spawns the agent at the configured cadence — minting and revoking a scoped API key per run, persisting the full transcript, and surfacing the result on the dashboard. The same machinery powers the [multi-agent reviewer pattern](/guides/multi-agent-reviewer).
+
+This page is the concept guide. For the CLI surface, see [Agent automation](/cli/agents); for the worked patterns, see the [Common workflows](/guides/overview) tab.
+
+## What a scheduled agent is
+
+An entry in the `agent_definitions` table that wires together:
+
+- A **slug** — used in the admin URL and the per-run audit trail.
+- A **prompt** — system message + user prompt scaffolding. Can include shared **prompt blocks** that other agents reuse.
+- A **model** — `claude-sonnet-4-6`, `claude-opus-4-7`, etc.
+- A **cron schedule** — when to fire. Optional; agents can be disabled or manual-only.
+- A **max-cost ceiling** in USD — runs above this cost are killed.
+- An **enabled flag**.
+
+When the schedule fires, the orchestrator:
+
+1. Mints a scoped `actor_type='agent'` API key named `agent:<slug>:<runShortID>`.
+2. Spawns the sidecar binary (Node, Claude Agent SDK).
+3. Streams every tool call and assistant turn into an NDJSON transcript file.
+4. Persists an `agent_runs` row with the final status, token usage, and total cost.
+5. Revokes the API key in a deferred cleanup — even if the run crashed or timed out.
+
+## Configure your first agent
+
+<Steps>
+  <Step title="Open the dashboard">
+    Sign in and visit **Settings → Agents**. Click **Create agent**.
+  </Step>
+  <Step title="Set identity and schedule">
+    Pick a slug (used in URLs and audit), display name, model, and a cron expression. Cron is standard 5-field syntax — `0 6 * * *` runs at 6am daily, `0 6 * * 1` runs Mondays at 6am.
+  </Step>
+  <Step title="Write the prompt">
+    Use the wizard's prompt editor. You can reference reusable **prompt blocks** (shared instructions across agents — household composition, rule conventions, output format) by name. Blocks let you avoid duplicating "here's how this household is structured" across every agent.
+  </Step>
+  <Step title="Set guardrails">
+    The max-cost-per-run field caps spend per individual run. The orchestrator's semaphore caps concurrency to one in-flight run per agent.
+  </Step>
+  <Step title="Enable and test">
+    Flip the toggle to enable the schedule, then click **Run now** to trigger an immediate test. The run appears in the runs list with a live transcript link.
+  </Step>
+</Steps>
+
+## Watch runs
+
+Every run gets:
+
+- **Status** — `running`, `success`, `error`, `skipped`, `cancelled`.
+- **Tokens** — input + output + cached, per assistant turn.
+- **Cost** — USD, computed from token counts and model pricing.
+- **Transcript** — the full NDJSON timeline of tool calls and assistant turns, rendered on the dashboard as a chronological feed.
+
+Drill into any run from **Settings → Agents → \<slug\>**.
+
+## From the CLI
+
+```bash
+# What's configured and when does it fire next?
+breadbox agent list
+
+# Trigger a one-off run
+breadbox agent run reviewer
+
+# Add an operator note that lives in this run's prompt only
+breadbox agent run reviewer --prefix "Skip transactions over \$500 — handle those manually."
+
+# End-to-end smoke test (credential + sidecar + tiny prompt)
+breadbox agent test
+```
+
+See [Agent automation](/cli/agents) for output formats, exit codes, and concurrency semantics.
+
+## Prompt blocks
+
+Prompt blocks are reusable snippets you maintain in one place and reference from many agents. Typical contents:
+
+- Household composition — who lives here, what their accounts look like.
+- Categorization conventions — how this household uses categories that are ambiguous in your rule library.
+- Output contract — what fields the agent's summary should always contain.
+
+Update a block once; every agent that references it picks up the change on the next run.
+
+The REST surface is `GET/POST/PATCH/DELETE /api/v1/agents/prompt-blocks` — see the [API Reference](/api/overview).
+
+## Concurrency
+
+A per-agent semaphore guarantees at most one in-flight run per definition:
+
+- **Cron firing while a run is still going** — the new run is recorded with `status='skipped'`. The history shows what was missed.
+- **Manual trigger (CLI or dashboard) while a run is in flight** — the request returns `503 SyncInProgress` (CLI exit `4`) without writing a new `agent_runs` row, so retries don't pollute the history.
+
+If you want two agents to work in parallel, give them separate slugs and run them concurrently — the semaphore is per-definition, not global.
+
+## Credentials
+
+The sidecar reads its Anthropic credential from one of:
+
+- `ANTHROPIC_API_KEY` (env)
+- `CLAUDE_CODE_OAUTH_TOKEN` (env)
+- The saved subscription token under **Settings → Agents → SDK settings**
+
+If both an API key and a subscription token are present, the API key wins. The unused variable is scrubbed from the sidecar's environment before invoking the SDK so the precedence is explicit.
+
+## Transcripts on disk
+
+Each run writes one `<runID>.ndjson` file in the transcript directory. Default location depends on deployment:
+
+- **Docker** — `/app/transcripts/agents` (mounted as a named volume in the compose file).
+- **Local** — `BREADBOX_AGENT_TRANSCRIPT_DIR` if set, otherwise the cwd-relative `transcripts/agents`.
+- **Worktrees** — set `BREADBOX_AGENT_TRANSCRIPT_DIR=~/.local/share/breadbox/transcripts/agents` once so every worktree's server writes to a shared location.
+
+Override via the `agent.transcript_dir` key in [App config](/configuration/app-config) for a persistent value that survives restarts.
+
+## When to use scheduled agents vs MCP
+
+| You want… | Use |
+| --- | --- |
+| An autonomous agent that runs on its own cadence and surfaces results to the household | Scheduled agents (this page). |
+| An interactive agent inside Claude.ai or Claude Desktop that you chat with | [MCP](/mcp/overview) — stdio or Streamable HTTP. |
+| A one-off script driven by a human at the terminal | The [CLI](/cli/overview) directly. |
+
+A scheduled agent can call into Breadbox MCP too — that's exactly what the sidecar does. The schedule is the difference; everything else is the same agent stack.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Multi-agent reviewer" icon="users" href="/guides/multi-agent-reviewer">
+    Chain multiple scheduled agents into a review pipeline.
+  </Card>
+
+  <Card title="CLI agent commands" icon="terminal" href="/cli/agents">
+    Trigger runs and smoke-test from the command line.
+  </Card>
+</Columns>

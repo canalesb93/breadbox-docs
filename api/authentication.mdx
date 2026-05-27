@@ -81,6 +81,39 @@ All authentication errors use the standard error envelope:
 
 A `401` response means the key itself is invalid or absent. A `403` response means the key is valid but does not have the required scope — for example, a `read_only` key attempting a write operation.
 
+## Device-code flow (CLI and headless agents)
+
+The Breadbox CLI uses a device-code grant so an operator on one machine can mint an API key for a client on another — without ever copying a long-lived secret onto the second machine through an unverified channel. The browser approval lives on the trusted device; the remote machine only ever sees the issued `bb_` key.
+
+The flow is exposed at two unauthenticated REST endpoints:
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `POST` | `/api/v1/auth/device-code` | Initiates a session. Returns a `device_code`, a `user_code` to display to the operator, a `verification_url` to open in a browser, and a poll `interval`. |
+| `POST` | `/api/v1/auth/device-code/poll` | Polls with the `device_code`. Returns `authorization_pending` until the operator approves in their browser; returns the issued `bb_` API key on success; returns `expired` after the TTL. |
+
+The standard CLI invocation:
+
+```bash
+# On the remote machine (no key yet)
+breadbox auth login --host https://breadbox.example.com
+# CLI prints: "Open https://breadbox.example.com/auth/device on the host you trust,
+#              enter code: ABCD-1234"
+# Operator approves in their browser; the CLI saves the key to ~/.config/breadbox/hosts.toml
+```
+
+Pass `--token bb_…` to skip the device flow entirely (paste-mode) when an operator has already minted a key on the server side. See the [CLI authentication guide](/cli/authentication) for the full flow including `auth bootstrap` (local-only key mint) and `BREADBOX_TOKEN` env override.
+
+## Headless bootstrap
+
+A single unauthenticated endpoint helps remote agents confirm they're talking to a live Breadbox before they have a key:
+
+| Method | Path | Description |
+| --- | --- | --- |
+| `GET` | `/api/v1/headless/bootstrap` | Returns the server version, public configuration (which providers are configured, whether the dashboard is enabled), and the device-code endpoints to use next. No `X-API-Key` required. |
+
+Use it as a smoke test from a `breadbox-cli` build (`breadbox doctor` calls it automatically).
+
 ## Key management best practices
 
 - **One key per client.** Assign a separate key to each application or script that calls the API. This lets you revoke a single key without disrupting other clients.

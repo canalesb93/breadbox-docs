@@ -1,0 +1,132 @@
+---
+title: "Output and exit codes"
+sidebarTitle: "Output"
+description: "How the breadbox CLI formats its output — human tables, JSON, NDJSON, field selection — and the exit codes scripts and agents can branch on."
+---
+
+The CLI is designed to be both readable on a TTY and scriptable from a pipe. When you run a list command in a terminal you get a compact table; when stdout is piped, the same command emits JSON automatically. Exit codes are a stable contract — agents and CI can branch on them.
+
+## Output modes
+
+| Flag | Output | When to use |
+| --- | --- | --- |
+| _(default on TTY)_ | Human-readable table | Interactive use. |
+| _(default on non-TTY)_ | Compact JSON array | Piping into `jq`, scripts, agents. |
+| `--json` | Compact JSON array, forced | Force JSON inside a TTY (e.g., when copying into a snippet). |
+| `--ndjson` | One JSON object per line | Streaming large lists; lets consumers process records as they arrive without buffering the whole array. |
+| `--quiet` | Suppress human output; emit only IDs (for write commands) or nothing | Cron jobs that should fail silently on success. |
+| `--debug` | Verbose stderr logging (request URLs, headers, retries) | Diagnosing why a command isn't behaving as expected. |
+
+### Default auto-detection
+
+`breadbox transactions list` in a terminal prints a table. The same command piped to `jq` emits JSON without `--json`. Agents calling the CLI never need to pass `--json` — they just read JSON off stdout.
+
+```bash
+# Interactive
+breadbox transactions list
+# ┌────────┬────────────┬───────────┬────────────┐
+# │ id     │ date       │ amount    │ name       │
+# ├────────┼────────────┼───────────┼────────────┤
+# │ ...    │ 2026-05-26 │   12.50   │ Trader Joe │
+# └────────┴────────────┴───────────┴────────────┘
+
+# Piped — JSON kicks in automatically
+breadbox transactions list | jq '.[].name'
+```
+
+## Field selection
+
+Most list endpoints support `?fields=<presets>` server-side; the CLI exposes this as `--fields`:
+
+```bash
+breadbox transactions list --fields=core,timestamps
+breadbox accounts list --fields=balances
+```
+
+Field presets are documented per resource in the [API Reference](/api/overview). Passing `--fields` keeps responses small over slow links and reduces the JSON your agent has to parse.
+
+## Cursor pagination
+
+Cursor-paginated commands (`transactions list`, `rules list`) accept `--limit` (default 25, max 500) and walk one page at a time. Pass `--all` to fetch every page sequentially and stream the combined result:
+
+```bash
+# One page (25 rows)
+breadbox transactions list
+
+# Custom page size
+breadbox transactions list --limit 200
+
+# Walk every page (best paired with --ndjson)
+breadbox transactions list --all --ndjson > all-transactions.ndjson
+```
+
+See [API pagination](/api/pagination) for the underlying cursor contract.
+
+## Exit codes
+
+| Code | Meaning | Typical cause |
+| --- | --- | --- |
+| `0` | Success | Command completed and any side effects landed. |
+| `1` | Runtime error | Local I/O, parsing, panic, unexpected condition. |
+| `2` | Usage error | Wrong flag, missing required argument, mutually exclusive flags. |
+| `3` | Auth error | Missing host, revoked key, denied device-code, scope insufficient. |
+| `4` | Upstream error | Server returned `5xx` (HTTP 500, 502, 503). Worth retrying. |
+| `5` | Validation error | Server returned `4xx` other than 401/403 — bad request body, conflict, validation failure. Not worth retrying without changing the input. |
+
+Branching on exit codes lets agents distinguish "the server is down, retry later" (`4`) from "my request is wrong, don't retry" (`5`) from "my key is broken, surface this to the operator" (`3`):
+
+```bash
+breadbox sync trigger --connection conn_abc123
+status=$?
+case $status in
+  0) echo "synced" ;;
+  3) echo "auth broken — alert operator" ;;
+  4) echo "server down — retry in 5 min" ;;
+  5) echo "validation failed — check parameters" ;;
+  *) echo "unknown failure" ;;
+esac
+```
+
+## Errors
+
+Errors print to stderr in the same JSON envelope the API uses:
+
+```json
+{
+  "error": {
+    "code": "INVALID_API_KEY",
+    "message": "X-API-Key header is required."
+  }
+}
+```
+
+The `error.code` field is stable (`UPPER_SNAKE_CASE`) and safe to grep. The `error.message` is for humans and may change between releases.
+
+## Combining flags
+
+The standard flags are orthogonal — `--host`, `--json`, `--fields`, `--limit`, `--all`, `--quiet`, `--debug` apply to every command and can be combined freely:
+
+```bash
+breadbox transactions list \
+  --host production \
+  --all \
+  --ndjson \
+  --fields=core,merchant \
+  --limit 500 \
+  --quiet \
+  > transactions.ndjson 2> debug.log
+```
+
+Per-command flags (like `--wait` on `connections link`, `--prefix` on `agent run`, `--scope` on `keys create`) layer on top.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Command reference" icon="list" href="/cli/commands">
+    Every command grouped by noun.
+  </Card>
+
+  <Card title="Headless deployment" icon="rocket" href="/cli/headless">
+    Agent patterns and CI examples.
+  </Card>
+</Columns>
