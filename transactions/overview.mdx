@@ -35,7 +35,7 @@ Every transaction record includes the following fields:
 | --- | --- | --- |
 | `id` | UUID | Internal Breadbox identifier. Stable for the lifetime of the record. |
 | `short_id` | string | 8-character base62 alias for the same record. Accepted anywhere `id` is accepted. |
-| `account_id` | UUID | The account this transaction belongs to. Set to `null` if the parent account is later removed (the transaction is preserved). See the [Accounts API](/api/accounts) for account-level fields. |
+| `account_id` | UUID | The account this transaction belongs to. Set to `null` if the parent account is later removed (the transaction is preserved). See the [Accounts API](/api/overview) for account-level fields. |
 | `amount` | decimal | Transaction amount. Positive = money out, negative = money in. |
 | `iso_currency_code` | string | ISO 4217 currency code (e.g., `USD`). Never aggregate across different values. |
 | `date` | date | Settlement date for posted transactions; occurrence date for pending ones. Format: `YYYY-MM-DD`. |
@@ -70,7 +70,7 @@ Navigate to **Transactions** in the admin dashboard sidebar to browse, search, a
 
 For programmatic access, Breadbox offers two interfaces:
 
-- **REST API** — Use `GET /api/v1/transactions` with query parameters to filter (date, account, user, category, amount, search), sort, paginate, and filter by tags (`tags=` / `any_tag=`). See [Transactions API](/api/transactions) for the full parameter list and [Tags API](/api/tags) for attaching and detaching tags.
+- **REST API** — Use `GET /api/v1/transactions` with query parameters to filter (date, account, user, category, amount, search), sort, paginate, and filter by tags (`tags=` / `any_tag=`). See [Transactions API](/api/overview) for the full parameter list and [Tags API](/api/overview) for attaching and detaching tags.
 - **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions`, `count_transactions`, and `update_transactions` to query, categorize, tag, and summarize in natural-language workflows. See [MCP overview](/mcp/overview) for setup and [MCP Reference](/mcp/reference/overview) for the full tool list.
 
 ## Soft deletes

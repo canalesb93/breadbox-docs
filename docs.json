@@ -232,35 +232,35 @@
     },
     {
       "source": "/api/accounts",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/transactions",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/categories",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/tags",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/rules",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/connections",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/users",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     },
     {
       "source": "/api/reports",
-      "destination": "/api-reference"
+      "destination": "/api/overview"
     }
   ],
   "search": {
