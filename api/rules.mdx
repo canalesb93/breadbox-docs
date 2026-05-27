@@ -42,6 +42,10 @@ Returns transaction rules with cursor pagination, ordered by creation time desce
 
 ### Response
 
+Returns a `rules` array with cursor pagination metadata. The `category_*` fields are derived from the rule's first `set_category` action and are omitted when no such action exists. Pipeline `stage` is not surfaced on response — use the numeric `priority` (baseline=0, standard=10, refinement=50, override=100).
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 {
   "rules": [
@@ -78,7 +82,7 @@ Returns transaction rules with cursor pagination, ordered by creation time desce
 }
 ```
 
-The `category_*` fields are derived from the rule's first `set_category` action and are omitted when no such action exists. Pipeline `stage` is not surfaced on response — use the numeric `priority` (baseline=0, standard=10, refinement=50, override=100).
+</Accordion>
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
