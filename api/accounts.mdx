@@ -26,6 +26,10 @@ Returns all bank accounts known to Breadbox, ordered alphabetically by instituti
 
 ### Response
 
+Returns an array of account objects with full balance information. The example below shows both a depository account (positive `balance_current`, available balance present) and a credit account (positive `balance_current` representing amount owed, `balance_limit` set). See the [Response fields](#response-fields) reference at the bottom of this page.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 [
   {
@@ -70,6 +74,8 @@ Returns all bank accounts known to Breadbox, ordered alphabetically by instituti
   }
 ]
 ```
+
+</Accordion>
 
 ### Example
 
