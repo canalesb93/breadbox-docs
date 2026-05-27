@@ -32,6 +32,17 @@ The typical workflow is round-trip: call [`export_categories`](/mcp/reference/ca
 
 ### Example input
 
+Author the TSV first — the table below shows what each row looks like before encoding (tabs are real tab characters):
+
+```text
+slug	display_name	parent_slug	icon	color	sort_order	hidden	merge_into
+food_and_drink	Food and Drink		utensils	#C8482E	10	false	
+food_and_drink_groceries	Groceries	food_and_drink	shopping-basket	#C8482E	0	false	
+food_and_drink_bulk_buys							food_and_drink_groceries
+```
+
+Then encode the TSV into the `content` field on the tool call. Tab characters become `\t` and newlines become `\n`:
+
 ```json
 {
   "session_id": "s9Xm2pQk",
