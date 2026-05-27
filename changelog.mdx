@@ -7,6 +7,15 @@ description: "What's new in Breadbox — user-facing changes since the V1 docs l
 {/* Scope: user-visible changes from the V1 docs rollout onward. */}
 {/* Do not backfill pre-V1 history. */}
 
+<Update label="May 27, 2026" description="Docs readability pass for the 0.1.0 pre-release" tags={["Docs"]}>
+  A docs-only polish pass ahead of the 0.1.0 pre-release. No product changes.
+
+  - **Cleaner site chrome.** The site banner now reads "Breadbox is in early access pending the 0.1.0 release" with a direct link to this changelog, replacing the older "may be in-progress or inaccurate" hedge.
+  - **Collapsible response examples.** Long JSON response samples on `api/transactions`, `api/rules`, and `mcp/reference/transactions` now sit behind `<Accordion>` blocks so each endpoint reads as a clean parameter list by default. Expand the accordion when you need the full shape.
+  - **Removed broken screenshots.** The `mcp/setup` page no longer references screenshot files that hadn't been added to the repo. Sections were rendering broken image icons on every visit; the step-by-step instructions stay.
+  - **Filled-in repo metadata.** `README.md`, `CONTRIBUTING.md`, and `AGENTS.md` were still the Mintlify starter-kit templates. All three now describe the actual project, contribution workflow, terminology rules, and component preferences used across the site.
+</Update>
+
 <Update label="April 25, 2026" description="MCP annotations: kinds filter and generic event shape" tags={["MCP", "API"]}>
   - `list_annotations` now accepts an optional `kinds` filter using generic, agent-friendly names: `comment`, `rule`, `tag`, `category`. Empty (default) preserves the full-timeline behavior.
   - Each response row now carries the generic `kind` plus a separate `action` field (`added` / `removed` for `tag`, `set` for `category`, `applied` for `rule`) so agents can branch on the specific event without parsing the kind string. `kinds=['tag']` returns both add and remove events in one call.
