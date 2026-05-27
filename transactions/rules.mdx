@@ -122,14 +122,16 @@ Here is a complete example that categorizes Amazon purchases:
 ```json
 {
   "name": "Amazon purchases",
-  "condition": {
-    "type": "and",
-    "conditions": [
-      { "field": "name", "operator": "contains", "value": "AMAZON" },
-      { "field": "amount", "operator": "gt", "value": 0 }
+  "conditions": {
+    "and": [
+      { "field": "name", "op": "contains", "value": "AMAZON" },
+      { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
-  "category_id": "cat_shopping",
+  "actions": [
+    { "type": "set_category", "category_slug": "shopping" }
+  ],
+  "trigger": "on_create",
   "stage": "standard"
 }
 ```
