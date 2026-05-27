@@ -84,7 +84,7 @@ Breadbox lets you create your own categories, update existing ones, merge duplic
     curl -X POST \
       -H "X-API-Key: bb_your_key" \
       -H "Content-Type: application/json" \
-      -d '{"name": "Side Projects", "parent_slug": "income"}' \
+      -d '{"slug": "income-side-projects", "name": "Side Projects", "primary_slug": "income"}' \
       http://localhost:8080/api/v1/categories
     ```
   </Accordion>
@@ -120,15 +120,17 @@ Breadbox lets you create your own categories, update existing ones, merge duplic
   </Accordion>
 
   <Accordion title="Batch-categorize multiple transactions" icon="layers">
-    You can set the category on up to 500 transactions in a single request.
+    Set the category on up to 500 transactions in a single request. Each item pairs a transaction with its target category, so you can assign different categories in one call.
 
     ```bash
     curl -X POST \
       -H "X-API-Key: bb_your_key" \
       -H "Content-Type: application/json" \
       -d '{
-        "transaction_ids": ["txn_aaa", "txn_bbb", "txn_ccc"],
-        "category_id": "cat_abc123"
+        "items": [
+          { "transaction_id": "txn_aaa", "category_slug": "food-and-drink-groceries" },
+          { "transaction_id": "txn_bbb", "category_slug": "transportation-gas" }
+        ]
       }' \
       http://localhost:8080/api/v1/transactions/batch-categorize
     ```
