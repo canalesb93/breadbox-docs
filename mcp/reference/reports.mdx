@@ -48,6 +48,27 @@ Read `breadbox://report-format` for the full style guide and report templates (r
 
 ### Example input
 
+Author the markdown body first — this is what the household sees rendered in the dashboard feed:
+
+```markdown
+## Summary
+- Reviewed: 47 transactions (approved: 44, recategorized: 3)
+- New rules created: 1 (Starbucks → coffee)
+
+## Rules Created
+- name: Starbucks → food_and_drink_coffee (matched 12 transactions retroactively)
+
+## Recategorized
+- [STARBUCKS #4591](/transactions/k7Xm9pQ2) — was misfiled under general; now coffee
+- [UBER TRIP](/transactions/k8Yn0qR3) — moved from travel to ride_share
+- [APPLE.COM/BILL](/transactions/k9Zo1rS4) — moved to subscriptions
+
+## Observations
+No unusual charges. Monthly dining is tracking $340 below February.
+```
+
+Then encode the markdown into the `body` field on the tool call. Newlines become `\n`:
+
 ```json
 {
   "session_id": "s9Xm2pQk",
