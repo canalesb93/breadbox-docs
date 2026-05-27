@@ -222,43 +222,54 @@ Applies rules retroactively to existing transactions. Pass `rule_id` to run one 
 
 <ParamField path="reason" type="string" required />
 
-### Example input (single rule)
+### Examples
 
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "backfilling new Starbucks rule to existing transactions",
-  "rule_id": "r9Xm2pQr"
-}
-```
+<Tabs>
+  <Tab title="Single rule">
+    Apply one specific rule retroactively. Pass its `rule_id`.
 
-### Example output (single rule)
+    Input:
 
-```json
-{
-  "rule_id": "r9Xm2pQr",
-  "affected_count": 47
-}
-```
+    ```json
+    {
+      "session_id": "s9Xm2pQk",
+      "reason": "backfilling new Starbucks rule to existing transactions",
+      "rule_id": "r9Xm2pQr"
+    }
+    ```
 
-### Example input (all rules)
+    Output:
 
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "initial setup — apply every rule to historical data"
-}
-```
+    ```json
+    {
+      "rule_id": "r9Xm2pQr",
+      "affected_count": 47
+    }
+    ```
+  </Tab>
+  <Tab title="All rules">
+    Apply every active rule in priority-ASC order. Omit `rule_id`.
 
-### Example output (all rules)
+    Input:
 
-```json
-{
-  "rules_applied": {
-    "r9Xm2pQr": 47,
-    "rAYn0qR3": 128,
-    "rBZo1rS4": 12
-  },
-  "total_affected": 187
-}
-```
+    ```json
+    {
+      "session_id": "s9Xm2pQk",
+      "reason": "initial setup — apply every rule to historical data"
+    }
+    ```
+
+    Output:
+
+    ```json
+    {
+      "rules_applied": {
+        "r9Xm2pQr": 47,
+        "rAYn0qR3": 128,
+        "rBZo1rS4": 12
+      },
+      "total_affected": 187
+    }
+    ```
+  </Tab>
+</Tabs>
