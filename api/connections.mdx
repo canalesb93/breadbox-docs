@@ -26,6 +26,10 @@ Returns all bank connections in the order they were created.
 
 ### Response
 
+Returns an array of connection objects. The example below contrasts a healthy `active` connection with one in the `error` state (carrying provider `error_code` and `error_message`). See the [Connection response fields](#connection-response-fields) reference at the bottom of this page.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 [
   {
@@ -61,6 +65,8 @@ Returns all bank connections in the order they were created.
 ]
 ```
 
+</Accordion>
+
 ### Connection status values
 
 | Value | Description |
@@ -95,6 +101,10 @@ Returns detailed health and sync information for a single connection, including 
 
 ### Response
 
+Returns the connection object plus a nested `last_sync_log` with counts and timing from the most recent sync attempt. The `last_sync_log` object is `null` if no sync has ever been run for this connection.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 {
   "id": "c9d8e7f6-a5b4-3210-fedc-ba0987654321",
@@ -128,7 +138,7 @@ Returns detailed health and sync information for a single connection, including 
 }
 ```
 
-The `last_sync_log` object is `null` if no sync has ever been run for this connection.
+</Accordion>
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
