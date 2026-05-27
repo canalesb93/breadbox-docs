@@ -23,16 +23,18 @@ Back up both. A database backup without the matching encryption key leaves your 
 
 `pg_dump` is the most reliable way to back up a running PostgreSQL database. The custom format (`-Fc`) produces a compressed archive you can restore selectively.
 
-```bash
+<CodeGroup>
+
+```bash With host and user flags
 pg_dump -Fc -h localhost -U breadbox -d breadbox \
   > breadbox_backup_$(date +%Y%m%d).dump
 ```
 
-If your connection is in `DATABASE_URL`, you can use it directly:
-
-```bash
+```bash With DATABASE_URL
 pg_dump -Fc "$DATABASE_URL" > breadbox_backup_$(date +%Y%m%d).dump
 ```
+
+</CodeGroup>
 
 Store the resulting `.dump` file offsite — a different machine, a cloud bucket, or an encrypted external drive.
 
