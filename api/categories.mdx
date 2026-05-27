@@ -37,6 +37,10 @@ Returns all categories in the two-level hierarchy.
 
 ### Response
 
+Returns an array of category objects. Primary categories have `primary_slug: null`; detailed subcategories carry the parent's slug. See the [Category response fields](#category-response-fields) reference at the bottom of this page.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 [
   {
@@ -61,6 +65,8 @@ Returns all categories in the two-level hierarchy.
   }
 ]
 ```
+
+</Accordion>
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
