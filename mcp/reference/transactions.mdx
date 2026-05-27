@@ -110,7 +110,7 @@ Returns a paginated list of transactions matching the supplied filters. This is 
 }
 ```
 
-### Example output
+<Accordion title="Example output" icon="braces">
 
 ```json
 {
@@ -136,6 +136,8 @@ Returns a paginated list of transactions matching the supplied filters. This is 
   "limit": 100
 }
 ```
+
+</Accordion>
 
 ---
 
@@ -217,7 +219,7 @@ Returns aggregated transaction totals grouped by category, month, week, day, or 
 }
 ```
 
-### Example output
+<Accordion title="Example output" icon="braces">
 
 ```json
 {
@@ -246,6 +248,8 @@ Returns aggregated transaction totals grouped by category, month, week, day, or 
   }
 }
 ```
+
+</Accordion>
 
 ---
 
@@ -318,7 +322,7 @@ Lists distinct merchants with aggregated stats — count, total, average, and da
 }
 ```
 
-### Example output
+<Accordion title="Example output" icon="braces">
 
 ```json
 {
@@ -354,6 +358,8 @@ Lists distinct merchants with aggregated stats — count, total, average, and da
   }
 }
 ```
+
+</Accordion>
 
 ---
 
@@ -485,7 +491,7 @@ All tag events (added and removed):
 { "transaction_id": "k7Xm9pQ2", "kinds": ["tag"] }
 ```
 
-### Example output
+<Accordion title="Example output" icon="braces">
 
 ```json
 [
@@ -528,6 +534,8 @@ All tag events (added and removed):
   }
 ]
 ```
+
+</Accordion>
 
 <Note>
   `kind` carries the generic event family (`comment`, `rule`, `tag`, `category`) and `action` carries the specific event (`added`, `removed`, `set`, `applied`). Comment rows omit `action` because there is only one event. Actor identity is split across `actor_type` (`user` / `agent` / `system`), `actor_name`, and optional `actor_id`. When a write tool passed a `session_id`, it's echoed here so you can group events by session. Rule applications set `rule_id`; tag events set `tag_id`.
