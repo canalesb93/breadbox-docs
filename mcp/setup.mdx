@@ -32,17 +32,9 @@ Claude (Desktop, web at claude.ai, and mobile) adds remote MCP servers through i
 
 Custom connectors using remote MCP are available on **Free** (limited to one), **Pro**, **Max**, **Team**, and **Enterprise** plans.
 
-<Note>
-  Image placeholders below — replace with real screenshots before publishing.
-</Note>
-
 <Steps>
   <Step title="Open Connectors">
     Go to **Customize → Connectors** in settings. From a chat you can also click the **+** in the lower-left (or type `/`), hover over **Connectors**, and pick **Manage connectors**.
-
-    <Frame>
-      <img src="/images/mcp/claude-connectors-list.png" alt="Claude: Customize → Connectors" />
-    </Frame>
   </Step>
   <Step title="Add a custom connector">
     Click the **+** next to **Connectors** and choose **Add custom connector**. Fill in:
@@ -50,10 +42,6 @@ Custom connectors using remote MCP are available on **Free** (limited to one), *
     - **Name**: `Breadbox`
     - **URL**: `https://your-breadbox-host/mcp`
     - **Advanced settings** (optional): OAuth Client ID and secret, only if you've put an OAuth proxy in front of Breadbox.
-
-    <Frame>
-      <img src="/images/mcp/claude-add-custom-connector.png" alt="Claude: Add custom connector dialog" />
-    </Frame>
   </Step>
   <Step title="Approve and use">
     Save. Start a new conversation, click the **+** in the composer, and attach the Breadbox connector. Claude prompts you to approve tool calls the first time each one runs. Team/Enterprise owners can restrict which Breadbox tools are allowed via **Tool permissions** (Always allow / Needs approval / Blocked) — Breadbox's read tools carry the `readOnlyHint` annotation so they can be distinguished from writes.
@@ -194,14 +182,6 @@ OpenAI exposes MCP in two places: the **ChatGPT** web app (as "Custom apps" unde
 
 Custom MCP apps are available in ChatGPT on **Plus**, **Pro**, **Business**, **Enterprise**, and **Education** accounts on the web. Reference: [Developer mode and MCP apps in ChatGPT (Help Center)](https://help.openai.com/en/articles/12584461-developer-mode-and-mcp-apps-in-chatgpt-beta) and the [Developer mode guide](https://developers.openai.com/api/docs/guides/developer-mode).
 
-<Note>
-  Image placeholder below — replace with a real screenshot of the Apps → Developer mode → Create app dialog before publishing.
-</Note>
-
-<Frame>
-  <img src="/images/mcp/chatgpt-developer-mode-create-app.png" alt="ChatGPT: Settings → Apps → Advanced settings → Developer mode → Create app" />
-</Frame>
-
 <Warning>
   **Auth compatibility caveat.** ChatGPT's custom apps accept **OAuth**, **No Authentication**, or **Mixed Authentication** — the dialog does not accept static headers like `X-API-Key`. Breadbox today only authenticates via `X-API-Key`, so the ChatGPT path currently requires either (a) fronting Breadbox with an OAuth proxy, or (b) exposing `/mcp` with No Authentication behind network-level access control you trust. For a header-based flow, use **Codex CLI** below instead.
 </Warning>
@@ -268,14 +248,6 @@ args = ["mcp-stdio"]
 ## Openclaw
 
 [Openclaw](https://openclaw.ai) is a persistent, VM-hosted autonomous agent platform. It runs continuously, routes conversations across messaging channels (Slack, Telegram, WhatsApp, Discord, and others), spawns sub-agents for parallelised work, and maintains session state across runs — a natural fit for recurring household financial workflows. By connecting Breadbox as an MCP server inside Openclaw, you get a permanent agent that can query your transactions, review the backlog, and notify you out-of-band without any per-session setup. See [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows) for scheduled review patterns.
-
-<Note>
-  Image placeholder below — replace with a real screenshot of the Openclaw MCP config before publishing.
-</Note>
-
-<Frame>
-  <img src="/images/mcp/openclaw-mcp-config.png" alt="Openclaw: mcp.servers config with Breadbox" />
-</Frame>
 
 Openclaw's MCP registry is managed with the `openclaw mcp` CLI. Run these commands on the machine where your Openclaw gateway is installed. Openclaw stores MCP server definitions as JSON under `mcp.servers` in its config; use `openclaw mcp set` to register Breadbox.
 
@@ -360,14 +332,6 @@ For recurring scheduled review patterns — having Openclaw wake up on a cron, q
 ## Manus
 
 [Manus](https://manus.im) connects to remote MCP servers through its Custom MCP Servers integration. You configure Breadbox's `/mcp` endpoint through Manus's UI — there's no JSON config file to edit. Full reference: [Manus — Connecting a Custom MCP Server](https://manus.im/docs/integrations/custom-mcp#connecting-a-custom-mcp-server).
-
-<Note>
-  Image placeholder below — replace with a real screenshot of the Custom MCP Servers panel before publishing.
-</Note>
-
-<Frame>
-  <img src="/images/mcp/manus-custom-mcp-servers.png" alt="Manus: Settings → Integrations → Custom MCP Servers" />
-</Frame>
 
 <Steps>
   <Step title="Expose Breadbox over HTTPS">
