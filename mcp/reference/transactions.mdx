@@ -366,7 +366,7 @@ Lists distinct merchants with aggregated stats — count, total, average, and da
 ## list_transaction_comments
 
 <Warning>
-  **Deprecated.** Use [`list_annotations`](#list-annotations) with `kinds=['comment']` instead. The new tool returns the same comment data using the canonical annotation shape — note the field renames: `actor_type` / `actor_id` / `actor_name` (was `author_*`) and `payload.content` (was top-level `content`). `list_transaction_comments` will be removed in a future release.
+  **Deprecated.** Use [`list_annotations`](#list_annotations) with `kinds=['comment']` instead. The new tool returns the same comment data using the canonical annotation shape — note the field renames: `actor_type` / `actor_id` / `actor_name` (was `author_*`) and `payload.content` (was top-level `content`). `list_transaction_comments` will be removed in a future release.
 </Warning>
 
 Returns all comments attached to a transaction, ordered chronologically. Agents should check comments before writing to understand prior context.
