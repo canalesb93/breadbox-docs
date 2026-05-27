@@ -53,10 +53,15 @@ These variables are not required. If omitted, Breadbox uses the value stored in 
 |---|---|---|
 | `SERVER_PORT` | `8080` | HTTP listen port |
 | `ENVIRONMENT` | `local` | Set to `local` for local development (text logs, debug level) or `docker` for production (JSON logs, info level) |
+| `DOMAIN` | (unset) | Public hostname for HTTPS (e.g. `breadbox.example.com`). Enables the `caddy` Docker Compose profile that requests Let's Encrypt certificates automatically. Leave unset for localhost-only installs. |
 | `PLAID_CLIENT_ID` | (from dashboard) | Plaid API client ID |
 | `PLAID_SECRET` | (from dashboard) | Plaid API secret |
 | `PLAID_ENV` | (from dashboard) | Plaid environment: `sandbox`, `development`, or `production` |
 | `TELLER_APP_ID` | (from dashboard) | Teller application ID |
+| `TELLER_CERT_PATH` | (env-only) | Absolute path to your Teller `cert.pem` file on the server filesystem. Cannot be set via dashboard. |
+| `TELLER_KEY_PATH` | (env-only) | Absolute path to your Teller `private-key.pem` file on the server filesystem. Cannot be set via dashboard. |
+| `TELLER_ENV` | (from dashboard) | Teller environment: `sandbox`, `development`, or `production` |
+| `TELLER_WEBHOOK_SECRET` | (from dashboard) | HMAC signing secret from the Teller Dashboard. Required when you configure a webhook URL. |
 
 ## Dashboard-managed settings
 
