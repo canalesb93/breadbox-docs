@@ -8,7 +8,7 @@ Large list endpoints in the Breadbox API (`GET /transactions` and `GET /rules`) 
 
 Cursor pagination is stable: if new transactions are synced while you are iterating through pages, you will not see duplicates or skip records. This makes it the right choice for transaction data, which can be modified by background syncs at any time.
 
-Smaller list endpoints (`GET /accounts`, `GET /categories`, `GET /connections`, `GET /users`, `GET /reports`) are **not** paginated — they return a top-level JSON array with every matching record.
+Smaller list endpoints (`GET /accounts`, `GET /categories`, `GET /connections`, `GET /tags`, `GET /users`, `GET /reports`) are **not** paginated — they return every matching record in a single response (either as a top-level array or wrapped in a resource-named envelope like `{"tags": [...]}`).
 
 ## Response envelope
 
