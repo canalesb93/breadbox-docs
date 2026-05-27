@@ -20,6 +20,10 @@ Returns the 50 most recently created reports, ordered by creation time descendin
 
 ### Response
 
+Returns an array of report objects. The example below shows both an unread report (`read: false`) and a previously-acknowledged one (`read: true`). See the [Report response fields](#report-response-fields) reference at the bottom of this page.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 [
   {
@@ -42,6 +46,8 @@ Returns the 50 most recently created reports, ordered by creation time descendin
   }
 ]
 ```
+
+</Accordion>
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
