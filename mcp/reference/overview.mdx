@@ -104,7 +104,7 @@ A complete list of every tool Breadbox exposes, grouped by domain.
 
 **Data access (read)**
 
-- Transactions: [`query_transactions`, `count_transactions`, `transaction_summary`, `merchant_summary`, `list_transaction_comments`, `list_transaction_matches`, `list_annotations`](/mcp/reference/transactions)
+- Transactions: [`query_transactions`, `count_transactions`, `transaction_summary`, `merchant_summary`, `list_transaction_matches`, `list_annotations`](/mcp/reference/transactions) — plus the deprecated [`list_transaction_comments`](/mcp/reference/transactions#list_transaction_comments) (use `list_annotations` with `kinds=['comment']` instead).
 - Accounts and users: [`list_accounts`, `list_users`](/mcp/reference/accounts)
 - Categories: [`list_categories`, `export_categories`](/mcp/reference/categories)
 - Tags: [`list_tags`](/mcp/reference/tags)
