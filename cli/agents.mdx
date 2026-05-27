@@ -1,0 +1,117 @@
+---
+title: "Agent automation"
+sidebarTitle: "Agent runs"
+description: "Drive the Claude Agent SDK subsystem from the CLI — list scheduled agents, trigger immediate runs, and smoke-test the sidecar binary."
+---
+
+Breadbox can run AI agents on a schedule via its built-in [Claude Agent SDK integration](/guides/scheduled-agents). The admin dashboard exposes these as "scheduled agents" you can configure and watch; the CLI gives you the same triggers from the command line, which is what you want for one-off operator runs, CI smoke tests, or chaining a Breadbox agent into a larger workflow.
+
+These commands are all `L` (local-only). They talk to the service layer directly — they don't go over HTTP — so they require running on the same machine as `breadbox serve`.
+
+## List configured agents
+
+```bash
+breadbox agent list
+```
+
+Prints every agent definition with status, schedule (cron expression), model, and next-fire time. Add `--json` for the full `AgentDefinitionResponse` array, piped into `jq` or another agent.
+
+```bash
+# Which agents are enabled and what do they cost per run?
+breadbox agent list --json | jq '.[] | {slug, enabled, model, max_cost_usd}'
+```
+
+## Trigger a one-off run
+
+```bash
+breadbox agent run reviewer
+```
+
+Same code path as the dashboard's "Run now" button:
+
+1. The orchestrator mints a scoped `actor_type='agent'` API key named `agent:<slug>:<runShortID>`.
+2. Spawns the sidecar binary, which spins up a Claude Agent SDK session using your configured credential (subscription token or API key).
+3. Streams tool calls and assistant turns into an NDJSON transcript at the configured transcript directory.
+4. Persists the `agent_runs` row with the final status, token usage, and cost.
+5. Revokes the API key in a deferred cleanup, even if the run errored out.
+
+### Operator notes on a single run
+
+`--prefix` prepends a per-run operator note to the agent's prompt — useful when you want a one-off run to do something slightly different from the scheduled prompt:
+
+```bash
+breadbox agent run reviewer --prefix "Focus only on transactions over \$100 today."
+```
+
+The prefix is appended to the run's transcript and the agent's prompt for that one fire — it does not modify the saved agent definition.
+
+### JSON output
+
+```bash
+breadbox agent run reviewer --json
+```
+
+Returns the full `AgentRunResponse` including the run's `short_id`, status, started/finished timestamps, token + cost totals, and the transcript URL on the dashboard.
+
+## Smoke-test the agent stack
+
+`breadbox agent test` is the cheapest end-to-end check that the agent subsystem is wired correctly:
+
+```bash
+breadbox agent test
+```
+
+The test verifies in order:
+
+1. **Credential is configured.** Either `ANTHROPIC_API_KEY` or `CLAUDE_CODE_OAUTH_TOKEN` is set, or the saved subscription token is present and not expired. Exit `3` if not.
+2. **Sidecar binary is discoverable.** Either `~/.breadbox/agent-bin/breadbox-agent` or a same-directory `breadbox-agent` next to the server binary. Exit `5` if missing — install with `make agent-sidecar-install-user`.
+3. **SDK round-trips a tiny prompt.** Spawns the sidecar with a "say OK" prompt; verifies the response. Cost is bounded to ~5¢.
+
+Exit codes are operator-actionable: `3` means fix your credentials, `5` means install the sidecar, anything else means look at the structured stderr output.
+
+## Anatomy of an agent run
+
+```
+admin or CLI trigger
+   │
+   ▼
+orchestrator.RunNow / RunOrSkip
+   │  mint scoped API key
+   ▼
+sidecar (Node, Claude Agent SDK)
+   │  MCP stdio → breadbox mcp
+   ▼
+agent_runs row + NDJSON transcript
+```
+
+The transcript directory defaults to `agent.transcript_dir` (`app_config`) — see [App config](/configuration/app-config). Each run writes one `<runID>.ndjson` file containing every tool call, every assistant turn, and the final status. The dashboard reads these to render the run timeline.
+
+## Concurrency
+
+Each agent has a per-definition semaphore. Two triggers for the same agent serialize:
+
+- **Cron trigger** while a previous run is still going: the new run is recorded as `status=skipped` so the history shows what was missed.
+- **Manual trigger** (CLI or dashboard) while a run is in flight: the call fails with `ErrConcurrencyLocked` (HTTP 503, exit `4`) **without** creating an `agent_runs` row — so retrying doesn't pollute the history.
+
+This split is intentional. Don't reach into the orchestrator or bypass the semaphore from a custom script.
+
+## Local dev gotchas
+
+A few worktree-specific pitfalls show up if you're running multiple Breadbox checkouts side by side:
+
+- **Sidecar binary.** Install once with `make agent-sidecar-install-user` (puts the binary at `~/.breadbox/agent-bin/breadbox-agent`). Per-worktree builds are not copied into the worktree to keep checkouts small.
+- **Transcript dir.** Set `BREADBOX_AGENT_TRANSCRIPT_DIR` to a fixed path (e.g. `~/.local/share/breadbox/transcripts/agents`) so every worktree's server writes to the same directory and dashboards see a consistent history.
+
+For prod / Docker deployments, the defaults work — the compose file already mounts `/app/transcripts/agents` as a named volume.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Scheduled agents guide" icon="bot" href="/guides/scheduled-agents">
+    Configure an agent, write its prompt, set the schedule.
+  </Card>
+
+  <Card title="Multi-agent reviewer" icon="users" href="/guides/multi-agent-reviewer">
+    End-to-end worked example chaining multiple agents.
+  </Card>
+</Columns>

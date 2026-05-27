@@ -1,0 +1,125 @@
+---
+title: "Install the CLI"
+sidebarTitle: "Installation"
+description: "Get the breadbox or breadbox-cli binary onto your machine — pre-built releases, building from source, and picking between the full, headless, and lite builds."
+---
+
+The CLI ships in the same binary as the server. Most users install the full build alongside the server itself, then use `breadbox auth login` to drive other Breadboxes from the same machine. Agent and ops hosts that should never run a server install the lite build (`breadbox-cli`) instead.
+
+## Pick a build
+
+<Tabs>
+  <Tab title="Full (server + CLI + dashboard)">
+    Default build. One binary that runs `breadbox serve` (full HTTP server), `breadbox mcp` (stdio MCP host), and every CLI command. This is what the [Quickstart](/quickstart) installs.
+
+    Use this when you want one machine that hosts Breadbox **and** can also drive a remote Breadbox via `breadbox auth login`.
+  </Tab>
+  <Tab title="Headless (server + CLI, no dashboard)">
+    Same as full, minus the admin dashboard assets. Useful when you want the dashboard physically absent from the binary on a production server — typically because the dashboard is exposed via a separate frontend or because the operator prefers CLI-only management.
+
+    `breadbox serve` still hosts REST, MCP-over-HTTP, hosted-link pages, and webhooks. The dashboard surface is just stripped at build time.
+  </Tab>
+  <Tab title="Lite (CLI only)">
+    CLI-only build, shipped as `breadbox-cli`. Cannot run a server: no DB drivers, no provider SDKs, no template assets. The binary is significantly smaller and has zero attack surface from the server side.
+
+    Use this on agent hosts, CI runners, scripting boxes, or anywhere you want to drive a remote Breadbox without the option of accidentally starting a server.
+  </Tab>
+</Tabs>
+
+## From a pre-built release
+
+<Steps>
+  <Step title="Download">
+    Grab the binary for your platform from the [GitHub releases page](https://github.com/canalesb93/breadbox/releases). Release artifacts include `breadbox` (full) and `breadbox-cli` (lite) for `linux-amd64`, `linux-arm64`, `darwin-amd64`, `darwin-arm64`.
+  </Step>
+  <Step title="Verify">
+    Each release ships a `SHA256SUMS` file. Verify the binary before installing:
+
+    ```bash
+    sha256sum -c SHA256SUMS --ignore-missing
+    ```
+  </Step>
+  <Step title="Install">
+    Move the binary onto your PATH and mark it executable:
+
+    ```bash
+    chmod +x breadbox-cli
+    sudo mv breadbox-cli /usr/local/bin/
+    breadbox-cli version
+    ```
+  </Step>
+</Steps>
+
+## From source
+
+You need Go 1.24 or later.
+
+<CodeGroup>
+```bash Full build
+git clone https://github.com/canalesb93/breadbox.git
+cd breadbox
+go build -o breadbox ./cmd/breadbox
+./breadbox version
+```
+
+```bash Headless build
+git clone https://github.com/canalesb93/breadbox.git
+cd breadbox
+go build -tags=headless -o breadbox ./cmd/breadbox
+./breadbox version
+```
+
+```bash Lite build (CLI only)
+git clone https://github.com/canalesb93/breadbox.git
+cd breadbox
+go build -tags=lite -o breadbox-cli ./cmd/breadbox
+./breadbox-cli version
+```
+</CodeGroup>
+
+The version metadata is set via `-ldflags "-X main.version=<tag>"`; without that flag the binary reports `dev`.
+
+## Shell completion
+
+The CLI ships completion scripts for bash, zsh, and fish.
+
+<CodeGroup>
+```bash bash
+breadbox completion bash | sudo tee /etc/bash_completion.d/breadbox > /dev/null
+```
+
+```bash zsh
+breadbox completion zsh > "${fpath[1]}/_breadbox"
+```
+
+```bash fish
+breadbox completion fish > ~/.config/fish/completions/breadbox.fish
+```
+</CodeGroup>
+
+After installing, restart your shell. Tab-complete nouns, verbs, and flag names the same way you would with `gh` or `kubectl`.
+
+## Verify the install
+
+```bash
+breadbox version
+# breadbox 0.1.0 (commit abc1234, built 2026-05-27)
+
+breadbox --help
+# Usage: breadbox <command> [flags]
+# ...
+```
+
+Lite builds report the same command tree minus `serve`, `mcp`, `init`, `migrate`, `reveal-key`, and `backup`. If a server-only command shows up under `breadbox-cli --help`, you've grabbed the full binary by accident.
+
+## Next steps
+
+<Columns cols={2}>
+  <Card title="Authenticate" icon="key" href="/cli/authentication">
+    Add a host and mint a key with device-code login or paste mode.
+  </Card>
+
+  <Card title="Headless deployment" icon="rocket" href="/cli/headless">
+    Drive a remote Breadbox from an agent host.
+  </Card>
+</Columns>

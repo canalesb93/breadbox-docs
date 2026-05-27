@@ -1,0 +1,76 @@
+---
+title: "App config and precedence"
+sidebarTitle: "App config"
+description: "How Breadbox resolves settings — environment variables override the app_config table, which overrides built-in defaults — and the CLI surface for managing DB-sourced values."
+---
+
+Breadbox layers configuration so you can set a value in code, change it from the dashboard or CLI without a redeploy, and still allow an environment variable to win when you need it to.
+
+## Precedence
+
+For every configurable setting, the server resolves the active value in this order:
+
+```text
+Environment variable → app_config (DB) → default
+```
+
+- **Environment variable** is read once at process start and is the highest-priority source. If `SYNC_INTERVAL_MINUTES=15` is set, no dashboard change or `breadbox config set` will override it — the dashboard input renders read-only with an "env-controlled" badge.
+- **`app_config` table** stores values written from the admin Settings tab or the CLI. Persisted across restarts, mutable at runtime, surfaced everywhere with a "db" source badge.
+- **Built-in default** is the code-baked fallback. The defaults are conservative and safe for a first-run install.
+
+The active source is exposed in the response of every config-related endpoint and command so you always know which layer is winning.
+
+## Inspect from the CLI
+
+```bash
+breadbox config list
+# key                            value        source
+# sync.interval_minutes          60           default
+# agent.transcript_dir           /app/...     env
+# dashboard.banner.text          "Maintenance" db
+```
+
+The `source` column shows what's currently authoritative. Set a value from the CLI:
+
+```bash
+breadbox config set dashboard.banner.text "Scheduled maintenance Sunday 2am"
+```
+
+Drop a DB-sourced value (the next request reads it from env or default):
+
+```bash
+breadbox config unset dashboard.banner.text
+```
+
+See [Commands → App config](/cli/commands#app-config) for the full surface.
+
+## Inspect from the API
+
+```http
+GET /api/v1/config
+GET /api/v1/config/{key}
+PUT /api/v1/config/{key}   { "value": "..." }
+DELETE /api/v1/config/{key}
+```
+
+Each response includes the resolved value, the source layer, and (if applicable) the env-var name that would override it. The interactive playground lives under the [API Reference](/api-reference).
+
+## What's configurable
+
+Settings that move between env and `app_config` include:
+
+- **Sync** — interval, retry behavior, what triggers a sync.
+- **Agents** — transcript directory, default model, max-cost ceiling.
+- **Dashboard** — banner text, default landing page, branding.
+- **Webhooks** — replay timeouts, retention.
+- **Hosted-link** — session TTL, allowed redirect hosts.
+
+Strictly-environment-only settings (`DATABASE_URL`, `ENCRYPTION_KEY`, `PORT`, `SERVER_PORT`) cannot be set from `app_config` — they're consumed before the DB pool exists. See [Environment variables](/configuration/environment) for those.
+
+## When to use which layer
+
+- **Env var** when the value should be controlled by infrastructure (compose file, Helm chart, secret manager). Examples: `ENCRYPTION_KEY`, `ANTHROPIC_API_KEY`, the database URL.
+- **`app_config`** when the value should be edited at runtime by an operator, agent, or the dashboard. Examples: a maintenance banner, the agent transcript dir, sync intervals you tune by hand.
+- **Default** for everything else. The default is intentional — don't override it without a reason.
+
+If you're unsure, leave the default in place and configure only when something actually needs to change.
