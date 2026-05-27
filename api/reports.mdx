@@ -101,11 +101,23 @@ Submits a new report. Reports are created in the unread state and appear immedia
 ```
 
 <ParamField body="title" type="string" required>
-  A concise, descriptive title for the report (e.g., `"Monthly spending summary — January 2025"`).
+  A concise, descriptive title for the report (e.g., `"Monthly spending summary — January 2025"`). This is the primary line the household sees in the dashboard feed — write it as a complete sentence with specific numbers and outcomes.
 </ParamField>
 
 <ParamField body="body" type="string" required>
   The report content in Markdown. There is no enforced length limit, but keep reports focused and actionable for human readers.
+</ParamField>
+
+<ParamField body="priority" type="string" default="info">
+  One of `info`, `warning`, or `critical`. Controls how prominently the report appears in the dashboard feed. Use `info` for routine updates and weekly summaries, `warning` for items needing attention (unusual charges, potential duplicates), and `critical` for urgent issues (suspected fraud, connection failures).
+</ParamField>
+
+<ParamField body="tags" type="array of strings">
+  Short labels for categorizing reports (e.g. `["weekly-review"]`, `["anomaly"]`). Maximum 10 tags per report.
+</ParamField>
+
+<ParamField body="author" type="string">
+  Custom author name displayed in the dashboard (e.g. `"Review Agent"`, `"Budget Monitor"`). Overrides the API key name for display purposes only.
 </ParamField>
 
 ### Response — 201 Created
