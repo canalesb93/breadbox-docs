@@ -329,7 +329,7 @@ None. Pass an empty object.
 
 Triggers a manual data sync to fetch the latest transactions and balances from the bank. Syncs all connections by default, or a specific connection if `connection_id` is provided. Returns immediately after enqueuing the sync — it does not wait for completion.
 
-**Scope:** Write (full access only)
+**Scope:** Write (full-access only)
 
 **Input parameters**
 
@@ -353,5 +353,5 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 ```
 
 <Info>
-  `trigger_sync` requires a **full access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
+  `trigger_sync` requires a **full-access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
 </Info>
