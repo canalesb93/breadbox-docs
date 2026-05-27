@@ -1,55 +1,55 @@
-# Mintlify Starter Kit
+# Breadbox documentation
 
-Use the starter kit to get your docs deployed and ready to customize.
+Source for [docs.breadbox.sh](https://docs.breadbox.sh) — the user-facing documentation for [Breadbox](https://github.com/canalesb93/breadbox), an open-source self-hosted financial data aggregator for households.
 
-Click the green **Use this template** button at the top of this repo to copy the Mintlify starter kit. The starter kit contains examples with
+Built on [Mintlify](https://mintlify.com). Pages are MDX with YAML frontmatter; site-wide configuration lives in `docs.json`.
 
-- Guide pages
-- Navigation
-- Customizations
-- API reference pages
-- Use of popular components
+## Repo layout
 
-**[Follow the full quickstart guide](https://starter.mintlify.com/quickstart)**
+| Path | What it is |
+| --- | --- |
+| `docs.json` | Site configuration: navigation, theme, colors, banner, redirects. |
+| `introduction.mdx`, `installation.mdx`, `quickstart.mdx` | Top-of-funnel pages — "what is Breadbox", install paths, onboarding walkthrough. |
+| `connections/` | Per-provider bank-connection guides (Plaid, Teller, CSV import). |
+| `transactions/` | Transaction-level concepts: categories, tags, rules, review workflow. |
+| `mcp/` | MCP integration guides and reference tool pages. |
+| `api/` | REST API reference. |
+| `guides/` | End-to-end agent workflows (multi-agent reviewer, Gmail cross-referencing, subscription tracking, etc.). |
+| `changelog.mdx` | User-visible changes since the V1 docs launch. |
+| `AGENTS.md` | Conventions for AI agents editing this repo — terminology, style, component preferences. |
+| `CONTRIBUTING.md` | How humans contribute. |
 
-## AI-assisted writing
+## Local preview
 
-Set up your AI coding tool to work with Mintlify:
+Install the [Mintlify CLI](https://www.npmjs.com/package/mint):
 
 ```bash
-npx skills add https://mintlify.com/docs
-```
-
-This command installs Mintlify's documentation skill for your configured AI tools like Claude Code, Cursor, Windsurf, and others. The skill includes component reference, writing standards, and workflow guidance.
-
-See the [AI tools guides](/ai-tools) for tool-specific setup.
-
-## Development
-
-Install the [Mintlify CLI](https://www.npmjs.com/package/mint) to preview your documentation changes locally. To install, use the following command:
-
-```
 npm i -g mint
 ```
 
-Run the following command at the root of your documentation, where your `docs.json` is located:
+Run the dev server from the repo root (where `docs.json` lives):
 
-```
+```bash
 mint dev
 ```
 
-View your local preview at `http://localhost:3000`.
+The preview opens at `http://localhost:3000` with live reload.
 
-## Publishing changes
+Before pushing, check internal links:
 
-Install our GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app) to propagate changes from your repo to your deployment. Changes are deployed to production automatically after pushing to the default branch.
+```bash
+mint broken-links
+```
 
-## Need help?
+## Deployment
 
-### Troubleshooting
+`main` is auto-deployed to [docs.breadbox.sh](https://docs.breadbox.sh) by Mintlify's GitHub app. Open a PR with your changes; the Mintlify Deployment check renders a preview URL on the PR. Merging to `main` ships to production.
 
-- If your dev environment isn't running: Run `mint update` to ensure you have the most recent version of the CLI.
-- If a page loads as a 404: Make sure you are running in a folder with a valid `docs.json`.
+## Contributing
 
-### Resources
-- [Mintlify documentation](https://mintlify.com/docs)
+See [CONTRIBUTING.md](./CONTRIBUTING.md) for the contribution workflow. AI agents (Claude Code, Cursor, Windsurf, etc.) should read [AGENTS.md](./AGENTS.md) before making changes — it captures the terminology, style, and component preferences used across the site.
+
+## Other Breadbox repos
+
+- **[canalesb93/breadbox](https://github.com/canalesb93/breadbox)** — the Breadbox application itself (Go binary, MCP server, REST API, admin dashboard).
+- **[breadbox.sh](https://breadbox.sh)** — the public marketing site, in a separate repo.
