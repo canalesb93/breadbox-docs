@@ -26,6 +26,8 @@ That pattern — orient, size, query — keeps token usage predictable and match
 
 Lists all connected bank accounts with their current balances. An agent typically calls this early in a session to learn what accounts exist and get their IDs.
 
+**Scope:** Read
+
 **Input parameters**
 
 | Parameter | Type | Required | Description |
@@ -84,6 +86,8 @@ Lists all connected bank accounts with their current balances. An agent typicall
 ## `query_transactions`
 
 Searches transactions using a combination of filters. Results are cursor-paginated with a default page size of 100 and a maximum of 500. This is the workhorse tool — almost every non-trivial agent session goes through it.
+
+**Scope:** Read
 
 **Input parameters**
 
@@ -164,6 +168,8 @@ When there are no more pages, the response includes `"has_more": false` and `"ne
 
 Counts matching transactions without returning any transaction data. Accepts the same filters as `query_transactions` (excluding `cursor`, `limit`, `sort_by`, and `sort_order`). It's the cheap pre-flight an agent uses to decide whether to narrow filters or brace for pagination.
 
+**Scope:** Read
+
 **Input parameters**
 
 | Parameter | Type | Required | Description |
@@ -200,6 +206,8 @@ Counts matching transactions without returning any transaction data. Accepts the
 
 Lists all distinct transaction category pairs — primary category and detailed subcategory — that exist in your database. Useful for discovering valid category values before filtering transactions.
 
+**Scope:** Read
+
 **Input parameters**
 
 None. Pass an empty object.
@@ -229,6 +237,8 @@ The returned `primary` values are valid for `query_transactions`'s `category` pa
 ## `list_users`
 
 Lists all family members tracked in Breadbox. Users are labels for account ownership — they are not login accounts. Returned IDs are what an agent uses to filter accounts and transactions by person.
+
+**Scope:** Read
 
 **Input parameters**
 
@@ -264,6 +274,8 @@ None. Pass an empty object.
 ## `get_sync_status`
 
 Returns the health status of all bank connections: whether they are syncing successfully, when they last synced, and whether any connection needs re-authentication. This is how an agent answers "why don't I see yesterday's transactions?" without guessing.
+
+**Scope:** Read
 
 **Input parameters**
 
@@ -316,6 +328,8 @@ None. Pass an empty object.
 ## `trigger_sync`
 
 Triggers a manual data sync to fetch the latest transactions and balances from the bank. Syncs all connections by default, or a specific connection if `connection_id` is provided. Returns immediately after enqueuing the sync — it does not wait for completion.
+
+**Scope:** Write (full access only)
 
 **Input parameters**
 
