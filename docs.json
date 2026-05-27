@@ -19,7 +19,7 @@
     }
   },
   "banner": {
-    "content": "🚧 Breadbox is available Early Access. Some features described here may still be in-progress or inaccurate.",
+    "content": "Breadbox is in early access pending the 0.1.0 release. [See the changelog →](/changelog)",
     "dismissible": true
   },
   "navbar": {
