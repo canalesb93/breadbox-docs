@@ -94,6 +94,10 @@ Returns a paginated list of transactions sorted by date descending by default. S
 
 ### Response
 
+Returns a `transactions` array plus cursor pagination metadata. See the [Transaction response fields](#transaction-response-fields) reference at the bottom of this page for every field. Field names and shapes are identical to the [Get a single transaction](#get-a-single-transaction) endpoint.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 {
   "transactions": [
@@ -139,6 +143,8 @@ Returns a paginated list of transactions sorted by date descending by default. S
   "limit": 100
 }
 ```
+
+</Accordion>
 
 ### Examples
 
@@ -202,6 +208,10 @@ Accepts the same filter parameters as the list endpoint. The `group_by` paramete
 
 ### Response
 
+Returns a `summary` array of grouped rows, plus aggregate `totals` and the echoed `filters`. Rows aggregated by `month`, `week`, or `day` include a `period` string (e.g., `"2026-02"`) instead of `category`. Rows aggregated by `category_month` include both fields.
+
+<Accordion title="Example response (group_by=category)" icon="braces">
+
 ```json
 {
   "summary": [
@@ -230,7 +240,7 @@ Accepts the same filter parameters as the list endpoint. The `group_by` paramete
 }
 ```
 
-Rows aggregated by `month`, `week`, or `day` include a `period` string (e.g., `"2026-02"`) instead of `category`. Rows aggregated by `category_month` include both fields.
+</Accordion>
 
 ---
 
@@ -245,6 +255,10 @@ Returns merchant-level statistics — total spent, transaction count, and averag
 **Auth:** Read
 
 ### Response
+
+Returns a `merchants` array sorted by total spent, plus aggregate `totals` and the echoed `filters`.
+
+<Accordion title="Example response" icon="braces">
 
 ```json
 {
@@ -281,6 +295,8 @@ Returns merchant-level statistics — total spent, transaction count, and averag
 }
 ```
 
+</Accordion>
+
 ```bash
 curl -H "X-API-Key: bb_your_key" \
   "http://localhost:8080/api/v1/transactions/merchants?start_date=2025-01-01&end_date=2026-01-01"
@@ -306,6 +322,10 @@ Returns a single transaction by its Breadbox UUID or short ID.
 
 ### Response
 
+Returns the full transaction object. See the [Transaction response fields](#transaction-response-fields) reference at the bottom of this page for every field.
+
+<Accordion title="Example response" icon="braces">
+
 ```json
 {
   "id": "t1a2b3c4-d5e6-f789-0abc-def123456789",
@@ -330,6 +350,8 @@ Returns a single transaction by its Breadbox UUID or short ID.
   "updated_at": "2026-02-27T08:15:00Z"
 }
 ```
+
+</Accordion>
 
 ```bash
 curl -H "X-API-Key: bb_your_key" \
