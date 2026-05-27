@@ -316,7 +316,7 @@ If you prefer to edit the config file directly instead of using the CLI, the sha
 ```
 
 <Warning>
-  Openclaw agents that hold a **full access** Breadbox API key can trigger syncs, create rules, update transactions, and submit reports — all autonomously. Unless you have observed several correct review cycles and are confident in your agent prompts, generate a **read-only** API key for Openclaw first. You can always swap it for a full-access key once you trust the agent's behavior.
+  Openclaw agents that hold a **full-access** Breadbox API key can trigger syncs, create rules, update transactions, and submit reports — all autonomously. Unless you have observed several correct review cycles and are confident in your agent prompts, generate a **read-only** API key for Openclaw first. You can always swap it for a full-access key once you trust the agent's behavior.
 </Warning>
 
 For recurring scheduled review patterns — having Openclaw wake up on a cron, query the <Tooltip headline="needs-review tag" tip="Seeded tag used as the default review queue. A system rule auto-tags every new transaction on sync; removing the tag takes the row out of the queue." cta="Review workflow" href="/transactions/review-workflow">`needs-review`</Tooltip> backlog, and notify you via Slack or another connected channel — see [Recurring workflows with Openclaw](/guides/openclaw-recurring-workflows).
@@ -396,10 +396,10 @@ API keys have a scope that controls what the connected agent can do.
 
 A **read-only** key gives the agent access to all query tools — listing accounts, searching transactions, checking sync status — but prevents it from triggering syncs or submitting reports.
 
-A **full access** key allows the agent to trigger manual syncs and submit reports in addition to reading data.
+A **full-access** key allows the agent to trigger manual syncs and submit reports in addition to reading data.
 
 <Note>
-  For most analysis and Q&A use cases, a read-only key is sufficient and limits what the agent can affect. Use a full access key only when you want the agent to trigger syncs or submit reports on your behalf.
+  For most analysis and Q&A use cases, a read-only key is sufficient and limits what the agent can affect. Use a full-access key only when you want the agent to trigger syncs or submit reports on your behalf.
 </Note>
 
 Stdio mode always has full access because it connects directly to the database.
