@@ -4,13 +4,13 @@
   "theme": "mint",
   "logo": {
     "light": "/logo/light.svg",
-    "dark": "/logo/dark.svg"
+    "dark": "/logo/light.svg"
   },
   "favicon": "/favicon.svg",
   "colors": {
-    "primary": "#C8482E",
-    "light": "#E26B4B",
-    "dark": "#A63A24"
+    "primary": "#16A34A",
+    "light": "#22C55E",
+    "dark": "#15803D"
   },
   "background": {
     "color": {
@@ -232,5 +232,8 @@
     "404": {
       "redirect": true
     }
+  },
+  "appearance": {
+    "default": "system"
   }
 }
