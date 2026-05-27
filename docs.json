@@ -137,7 +137,7 @@
             ]
           },
           {
-            "group": "Data access (read)",
+            "group": "Data Access (Read)",
             "icon": "search",
             "pages": [
               "mcp/reference/transactions",
@@ -149,7 +149,7 @@
             ]
           },
           {
-            "group": "Mutations (write)",
+            "group": "Mutations (Write)",
             "icon": "pencil",
             "pages": [
               "mcp/reference/sessions",
