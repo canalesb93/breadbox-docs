@@ -15,7 +15,7 @@
   },
   "favicon": {
     "light": "/images/fried-egg.svg",
-    "dark": "/favicon.svg"
+    "dark": "/images/fried-egg.svg"
   },
   "colors": {
     "primary": "#16A34A",
