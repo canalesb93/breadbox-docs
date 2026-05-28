@@ -9,10 +9,14 @@
   },
   "theme": "mint",
   "logo": {
-    "light": "/logo/light.svg",
-    "dark": "/logo/light.svg"
+    "light": "/images/fried-egg.svg",
+    "dark": "/images/fried-egg.svg",
+    "href": "https://breadbox.sh"
   },
-  "favicon": "/favicon.svg",
+  "favicon": {
+    "light": "/images/fried-egg.svg",
+    "dark": "/favicon.svg"
+  },
   "colors": {
     "primary": "#16A34A",
     "light": "#22C55E",
@@ -26,13 +30,15 @@
   },
   "banner": {
     "content": "Breadbox is in early access pending the 0.1.0 release. [See the changelog →](/changelog)",
-    "dismissible": true
+    "dismissible": true,
+    "type": "warning"
   },
   "navbar": {
     "primary": {
       "type": "github",
       "href": "https://github.com/canalesb93/breadbox"
-    }
+    },
+    "links": []
   },
   "icons": {
     "library": "lucide"
@@ -104,6 +110,73 @@
         ]
       },
       {
+        "tab": "Reference",
+        "icon": "code",
+        "anchors": [
+          {
+            "anchor": "API",
+            "icon": "network",
+            "groups": [
+              {
+                "group": "Overview",
+                "icon": "info",
+                "pages": [
+                  "api/overview",
+                  "api/authentication",
+                  "api/pagination"
+                ]
+              },
+              {
+                "group": "Endpoints",
+                "icon": "zap",
+                "openapi": "https://raw.githubusercontent.com/canalesb93/breadbox/main/openapi.yaml"
+              }
+            ]
+          },
+          {
+            "anchor": "Model Context Protocol (MCP)",
+            "icon": "bot-message-square",
+            "groups": [
+              {
+                "group": "Overview",
+                "icon": "info",
+                "pages": [
+                  "mcp/reference/overview",
+                  "mcp/reference/conventions"
+                ]
+              },
+              {
+                "group": "Data Access (Read)",
+                "icon": "search",
+                "pages": [
+                  "mcp/reference/transactions",
+                  "mcp/reference/accounts",
+                  "mcp/reference/categories",
+                  "mcp/reference/tags",
+                  "mcp/reference/rules",
+                  "mcp/reference/connections-sync"
+                ]
+              },
+              {
+                "group": "Mutations (Write)",
+                "icon": "pencil",
+                "pages": [
+                  "mcp/reference/sessions",
+                  "mcp/reference/categorization",
+                  "mcp/reference/transactions-write",
+                  "mcp/reference/tags-write",
+                  "mcp/reference/rules-write",
+                  "mcp/reference/categories-write",
+                  "mcp/reference/matches",
+                  "mcp/reference/connections-write",
+                  "mcp/reference/reports"
+                ]
+              }
+            ]
+          }
+        ]
+      },
+      {
         "tab": "CLI",
         "icon": "terminal",
         "pages": [
@@ -114,67 +187,6 @@
           "cli/commands",
           "cli/headless",
           "cli/agents"
-        ]
-      },
-      {
-        "tab": "API Reference",
-        "icon": "code",
-        "groups": [
-          {
-            "group": "Overview",
-            "icon": "info",
-            "pages": [
-              "api/overview",
-              "api/authentication",
-              "api/pagination"
-            ]
-          },
-          {
-            "group": "Endpoints",
-            "icon": "zap",
-            "openapi": "https://raw.githubusercontent.com/canalesb93/breadbox/main/openapi.yaml"
-          }
-        ]
-      },
-      {
-        "tab": "MCP Reference",
-        "icon": "plug-zap",
-        "groups": [
-          {
-            "group": "Overview",
-            "icon": "info",
-            "pages": [
-              "mcp/reference/overview",
-              "mcp/reference/conventions"
-            ]
-          },
-          {
-            "group": "Data Access (Read)",
-            "icon": "search",
-            "pages": [
-              "mcp/reference/transactions",
-              "mcp/reference/accounts",
-              "mcp/reference/categories",
-              "mcp/reference/tags",
-              "mcp/reference/rules",
-              "mcp/reference/connections-sync"
-            ]
-          },
-          {
-            "group": "Mutations (Write)",
-            "icon": "pencil",
-            "pages": [
-              "mcp/reference/sessions",
-              "mcp/reference/categorization",
-              "mcp/reference/transactions-write",
-              "mcp/reference/tags-write",
-              "mcp/reference/rules-write",
-              "mcp/reference/categories-write",
-              "mcp/reference/matches",
-              "mcp/reference/connections-write",
-              "mcp/reference/reports"
-            ]
-          }
         ]
       },
       {
@@ -279,5 +291,11 @@
   },
   "appearance": {
     "default": "system"
+  },
+  "styling": {
+    "eyebrows": "breadcrumbs"
+  },
+  "metadata": {
+    "timestamp": true
   }
 }
