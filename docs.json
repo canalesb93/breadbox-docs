@@ -1,6 +1,12 @@
 {
   "$schema": "https://mintlify.com/docs.json",
   "name": "Breadbox",
+  "description": "Self-hosted financial data aggregation for households. Sync bank transactions from Plaid, Teller, and CSV into a PostgreSQL database you control, then expose it to AI agents via MCP and REST. Includes a CLI, an admin dashboard, scheduled Claude Agent SDK runs, and a transaction-rule engine for autonomous categorization.",
+  "api": {
+    "playground": {
+      "display": "none"
+    }
+  },
   "theme": "mint",
   "logo": {
     "light": "/logo/light.svg",
