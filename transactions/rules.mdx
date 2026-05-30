@@ -226,9 +226,9 @@ The `assign_series` action links a matching transaction to a recurring [series](
 
 A transaction belongs to at most one series; if several rules try to assign one, the highest-priority rule wins. Minting honors a rejected series — a rule can't resurrect a subscription you've dismissed.
 
-<Warning>
-  `assign_series` runs **at sync time only** in v1 — retroactive [apply](#applying-a-rule-retroactively) does not materialize it yet. Existing transactions join the series when they next sync, or you can link them from the dashboard or the `assign_series` MCP tool.
-</Warning>
+<Note>
+  `assign_series` materializes at sync time and on **single-rule** [retroactive apply](#applying-a-rule-retroactively) (`POST /rules/{id}/apply`) — applying that one rule links matching existing transactions. The bulk *apply-all* path doesn't materialize `assign_series` yet, so apply the rule on its own to back-fill. You can also link a charge by hand or with the `assign_series` MCP tool.
+</Note>
 
 ## Related reading
 

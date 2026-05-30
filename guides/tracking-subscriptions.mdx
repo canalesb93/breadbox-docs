@@ -67,7 +67,7 @@ To make every future charge from a merchant join a series on sync, use the [`ass
 `create_if_missing` mints the series the first time a matching charge appears; after that, every future charge joins it. Provide `series_short_id` instead to target a series that already exists.
 
 <Note>
-  In v1 the `assign_series` action runs **at sync time only** — retroactive *apply* doesn't back-fill it yet. Existing charges join when they next sync, or you can link them from the dashboard or the `assign_series` MCP tool.
+  Applying the subscription rule **by itself** back-fills your existing charges into the series, not just future ones (see [applying a rule retroactively](/transactions/rules#applying-a-rule-retroactively)). The bulk "apply all rules" pass doesn't link series yet, so apply this rule on its own. You can also link a charge by hand or with the `assign_series` MCP tool.
 </Note>
 
 ## Working with series from an agent
