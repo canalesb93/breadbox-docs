@@ -355,3 +355,21 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 <Info>
   `trigger_sync` requires a **full-access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
 </Info>
+
+---
+
+## Series (subscriptions)
+
+Breadbox detects recurring charges and groups them into [series](/guides/tracking-subscriptions). These tools are the agent-facing side of the **Subscriptions** page — they let a scheduled reviewer adjudicate what the detector proposed and fill in anything it missed.
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `list_series` | Read | List detected series. Filter by `status` (`active`, `candidate`, `paused`, `cancelled`); `candidate` surfaces the ones awaiting a verdict. Each row carries cadence, expected amount + currency, next expected date, and the detection signals. |
+| `get_series` | Read | Fetch one series by ID, including the full evidence the detector used. |
+| `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
+| `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
+| `add_series_tag` / `remove_series_tag` | Write | Tag a series; every linked transaction inherits the tag automatically. Removing strips only the inherited copies. |
+
+<Note>
+  A typical reviewer agent calls `list_series(status="candidate")`, inspects each with `get_series`, and resolves it with `review_series` — the same confirm/reject loop a person runs on the Subscriptions page.
+</Note>

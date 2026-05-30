@@ -1,121 +1,100 @@
 ---
 title: "Tracking your subscriptions"
-description: "Detect recurring charges by combining `merchant_summary` queries with amount-and-cadence heuristics, tag them `subscription`, and layer a rule that auto-tags known subscriptions at sync time."
+description: "Breadbox detects recurring charges automatically and groups them into Series — confirm or reject the candidates, tag a whole subscription at once, and auto-join future charges with a rule."
 ---
 
-Subscriptions are the quiet budget-killer of every household. Streaming services nobody watches anymore, a forgotten cloud backup, a free-trial-turned-monthly-charge — they accumulate, and they're easy to miss because each one is small. Breadbox gives you two complementary tools for wrangling them: an agent that periodically reviews transaction history to spot recurring patterns, and a rule that tags known subscriptions automatically on sync.
+Subscriptions are the quiet budget-killer of every household. Streaming services nobody watches anymore, a forgotten cloud backup, a free-trial-turned-monthly-charge — they accumulate, and they're easy to miss because each one is small.
 
-This guide walks through both.
+Breadbox handles them with **Series** (also called Subscriptions): a series groups the repeating charges from one merchant so you can see the whole subscription as a single thing, track what it costs, and act on it in one place.
 
-## What counts as a subscription
+<Note>
+  Series is in **Beta**. It's available in the admin dashboard under **Subscriptions**, over the REST API, and over MCP. The shapes below are stable, but expect the surface to keep growing.
+</Note>
 
-For this workflow, a subscription is any charge that:
+## What a series is
 
-1. Repeats from the **same merchant** at roughly the **same amount**.
-2. Has a **monthly or annual cadence** (give or take a few days).
-3. Isn't a utility or bill with variable amounts (those belong in [the bill-cross-referencing workflow](/guides/gmail-cross-referencing)).
+A series is a recurring charge pattern. Each one carries:
 
-Spotify at $11.99/month, Notion at $10/month, the $99 annual Costco membership — all subscriptions. PG&E's $83 one month and $94 the next — not a subscription, it's a variable bill.
+- **Cadence** — `weekly`, `biweekly`, `monthly`, `quarterly`, `semiannual`, or `annual` (plus `irregular` / `unknown` for charges that don't snap cleanly).
+- **Expected amount** and its `iso_currency_code`, with an amount tolerance — so a $10.99 plan that ticks up to $11.99 stays the same series. Never sum expected amounts across currencies.
+- **Next expected date** — when the next charge is due.
+- **Status** — `candidate`, `active`, `paused`, or `cancelled`.
+- **Occurrence count** and the detection signals behind it.
 
-## The detection agent
+Every charge that belongs to the series is *linked* to it, so the series detail page shows the full history of that subscription at a glance.
 
-The detection agent runs less frequently than the reviewer — weekly or monthly is fine — because subscriptions don't change that often. Its job is to find _new_ recurring patterns, tag them, and surface them for the household to approve or cancel.
+## Automatic detection
 
-<CodeGroup>
+You don't have to hand-build your subscription list. On each sync, Breadbox's detector looks for charges that repeat from the same merchant at a regular cadence and proposes them as **candidate** series. It normalizes merchant names to a stable signature and ignores generic descriptors — transfers, ACH, Venmo/Zelle, bill-pay, refunds, and the like — so one-off payments don't masquerade as subscriptions.
 
-```text Subscription detector
-You are the subscription-detection agent for this household. You run
-once a week. Your job is to find recurring charges we haven't already
-tagged as subscriptions, and either tag them automatically or flag them
-for the household.
+Candidates wait for a verdict. From the **Subscriptions** page you can:
 
-Each run:
+- **Confirm** — yes, this is a subscription. The series becomes `active`.
+- **Reject** — not a subscription. The rejection is *sticky*: the detector won't re-propose it at the same amount band.
+- **Pause** or **Cancel** — for subscriptions you've stopped or are putting on hold.
 
-1. Use the merchant summary to pull top merchants by transaction count
-   over the last 180 days. Call `merchant_summary` with a date range
-   of the last 180 days, grouped by merchant, sorted by count.
+<Note>
+  A person's verdict outranks an agent's. If you confirm a series, a later agent run can't quietly reject it.
+</Note>
 
-2. For each merchant with 3 or more transactions:
-   - Call `query_transactions(search="<merchant>", limit=30)` over the
-     same window to get the individual rows.
-   - Compute: typical amount (median), amount variance (max - min), and
-     average days between consecutive charges.
-   - Classify:
-     a) MONTHLY SUBSCRIPTION — 3+ charges, amount variance under $2,
-        cadence 25-35 days → tag every matching transaction
-        `subscription` with a note "Monthly recurring at $X from
-        <merchant>."
-     b) ANNUAL SUBSCRIPTION — 2+ charges, amount variance under $5,
-        cadence 350-380 days → tag `subscription-annual` with a
-        similar note.
-     c) LIKELY VARIABLE BILL — 3+ charges but amount variance over $5
-        → skip (this is a utility or usage-based charge, not a
-        subscription).
-     d) IRREGULAR — charges not matching any cadence → skip.
+## Tag a whole subscription at once
 
-3. Before tagging a batch, check whether any of these transactions
-   already carry the `subscription` or `subscription-annual` tag — only
-   tag the ones that don't (avoid re-applying).
+A series can carry its own tags, and **every linked charge inherits them automatically** — including charges that join later. Tag a series `streaming` once and all of its past and future transactions pick up that tag, no per-row tagging required.
 
-4. At the end, submit a report listing:
-   - New subscriptions found this run (merchant, amount, cadence).
-   - Any merchant that looks like a subscription but was near a
-     threshold — the household may want to review borderline cases.
+Removing a tag from the series strips only the copies it added; a tag you put on an individual charge by hand survives.
 
-Amounts follow Plaid convention: positive = money out. Never treat a
-refund (negative amount) as a subscription charge.
-```
+## Auto-join future charges with a rule
 
-</CodeGroup>
-
-## A rule for known subscriptions
-
-Once you've identified subscriptions you want to keep, layer a rule that auto-tags them on every future sync. This saves the detection agent from re-finding them each week and keeps your `subscription` tag filter always current.
+To make every future charge from a merchant join a series on sync, use the [`assign_series` rule action](/transactions/rules#assign-a-series):
 
 ```json
 {
-  "name": "Auto-tag known subscriptions",
+  "name": "Spotify → subscription series",
   "conditions": {
     "and": [
-      { "field": "merchant_name", "op": "in", "value": [
-        "Netflix", "Spotify", "Hulu", "Disney+", "HBO Max",
-        "Apple", "Google", "Notion", "1Password", "Dropbox"
-      ] },
+      { "field": "merchant_name", "op": "contains", "value": "Spotify" },
       { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
   "actions": [
-    { "type": "add_tag", "tag_slug": "subscription" },
-    { "type": "set_category", "category_slug": "entertainment_subscriptions" }
+    { "type": "assign_series", "merchant_key": "spotify", "create_if_missing": true }
   ],
   "trigger": "on_create",
   "stage": "standard"
 }
 ```
 
-Tune the merchant list to match the services you actually subscribe to. Two nuances:
+`create_if_missing` mints the series the first time a matching charge appears; after that, every future charge joins it. Provide `series_short_id` instead to target a series that already exists.
 
-- **Apple and Google** often appear as generic merchants for App Store or Play Store charges. You may want a more specific match (e.g., `name contains "APPLE.COM/BILL"`) to avoid catching one-off purchases.
-- Some subscriptions bill under a different merchant name than the service you recognize. Use the subscription detector's output to discover the actual string that shows up in your data.
+<Note>
+  In v1 the `assign_series` action runs **at sync time only** — retroactive *apply* doesn't back-fill it yet. Existing charges join when they next sync, or you can link them from the dashboard or the `assign_series` MCP tool.
+</Note>
 
-## Using the data once it's there
+## Working with series from an agent
 
-With every subscription tagged, a few things get easy:
+The same surface is available over MCP, which is how a scheduled reviewer agent can keep your subscription list tidy:
 
-**Audit your subscriptions.** Filter the transactions list to `/transactions?tags=subscription` for the last year. The unique merchants are your subscription portfolio.
+- `list_series` (optionally `status=candidate`) to find series awaiting a verdict, then `review_series` to confirm, reject, pause, or cancel.
+- `get_series` to inspect one series and the evidence behind it.
+- `assign_series` to create a series detection missed, or back-link charges to an existing one.
+- `add_series_tag` / `remove_series_tag` to tag a subscription and its members.
 
-**Total monthly outflow.** An agent query:
+See the [MCP tools](/mcp/tools#series-subscriptions) page for the agent-facing summary.
 
-```text
-query_transactions(tags=["subscription"], start_date=<30 days ago>, end_date=<today>, fields="core")
-```
+## Auditing what you spend
 
-Sum the positive amounts. Anything with `iso_currency_code != USD` should be summed separately — don't mix currencies.
+Once your subscriptions are series:
 
-**Spot a subscription that's creeping up.** Ask Claude "which subscriptions went up in price this year?" and point it at the tag. The agent can compare `merchant_summary` results from the current window against the prior year.
+- **See the portfolio.** The **Subscriptions** page lists every active series with its cadence and expected amount.
+- **Total the outflow.** Sum the expected amounts of your active monthly series (keep each `iso_currency_code` separate — don't mix currencies).
+- **Spot creep.** A series tracks its last amount against the expected one, so a plan that quietly raised its price stands out.
+
+## Deleting a series
+
+Removing a series is non-destructive — its transactions stay exactly where they are and simply lose the series link. Your history is never deleted.
 
 ## Related reading
 
-- [Understanding rules](/guides/understanding-rules) — rule DSL for the auto-tag rule.
-- [On-demand analysis](/guides/on-demand-analysis) — ask Claude questions like "which of my subscriptions are underused?" once they're tagged.
-- [MCP tools](/mcp/tools) — `merchant_summary`, `query_transactions`, `update_transactions`.
+- [Rules](/transactions/rules) — the `assign_series` action and the full rule DSL.
+- [MCP tools](/mcp/tools#series-subscriptions) — the series tools an agent can call.
+- [On-demand analysis](/guides/on-demand-analysis) — ask Claude "which of my subscriptions are underused?" once they're tracked.

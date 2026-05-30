@@ -12,7 +12,7 @@ If you haven't yet, skim [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell
 A rule is a JSON document with three important pieces:
 
 1. **A condition** — a recursive tree of leaves (`field`/`op`/`value`) and combinators (`and` / `or` / `not`).
-2. **One or more actions** — `set_category`, `add_tag`, `remove_tag`, or `add_comment`.
+2. **One or more actions** — `set_category`, `add_tag`, `remove_tag`, `add_comment`, or `assign_series` (link the charge to a recurring [series](/guides/tracking-subscriptions)).
 3. **A trigger and stage** — when the rule runs (<Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>, `always`, `on_change`) and where in the pipeline (`baseline`, `standard`, `refinement`, `override`).
 
 Amounts use Plaid convention: **positive = money out** (purchases, payments), **negative = money in** (refunds, paychecks). Every example below respects that.

@@ -16,6 +16,7 @@ A single rule can:
 - Add a tag to the transaction (`add_tag`)
 - Remove a tag from the transaction (`remove_tag`)
 - Leave an automated comment explaining the categorization (`add_comment`)
+- Link the transaction to a recurring [series](/guides/tracking-subscriptions) (`assign_series`)
 
 ## Condition structure
 
@@ -211,6 +212,23 @@ Retroactive apply respects the same pipeline stage ordering as sync. It also res
 ## Respecting manual overrides
 
 If a transaction has been manually categorized (its `category_override` flag is `true`), a rule's `set_category` action is skipped for that transaction. The rule still runs — `add_tag` and `add_comment` actions fire normally — but the category is not changed. This means you can safely apply rules in bulk without worrying about undoing deliberate manual work.
+
+## Assign a series
+
+The `assign_series` action links a matching transaction to a recurring [series](/guides/tracking-subscriptions) — a subscription or other repeating charge. It's the series counterpart to `set_category`: author the rule once and every future matching charge joins the series automatically. Provide **exactly one** of:
+
+- `series_short_id` — link to an existing series by its short ID.
+- `merchant_key` + `create_if_missing: true` — mint a household series for that merchant the first time a charge matches, then link every future match to it.
+
+```json
+{ "type": "assign_series", "merchant_key": "spotify", "create_if_missing": true }
+```
+
+A transaction belongs to at most one series; if several rules try to assign one, the highest-priority rule wins. Minting honors a rejected series — a rule can't resurrect a subscription you've dismissed.
+
+<Warning>
+  `assign_series` runs **at sync time only** in v1 — retroactive [apply](#applying-a-rule-retroactively) does not materialize it yet. Existing transactions join the series when they next sync, or you can link them from the dashboard or the `assign_series` MCP tool.
+</Warning>
 
 ## Related reading
 
