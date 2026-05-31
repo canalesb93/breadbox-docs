@@ -360,7 +360,7 @@ Triggers a manual data sync to fetch the latest transactions and balances from t
 
 ## Series (subscriptions)
 
-Breadbox detects recurring charges and groups them into [series](/guides/tracking-subscriptions). These tools are the agent-facing side of the **Subscriptions** page — they let a scheduled reviewer adjudicate what the detector proposed and fill in anything it missed.
+Breadbox detects recurring charges and groups them into [series](/guides/tracking-subscriptions). These tools are the agent-facing side of the **Recurring** page — they let a scheduled reviewer adjudicate what the detector proposed and fill in anything it missed. (The tool *names* stay `*_series` for API stability even though the surface is now called Recurring.)
 
 | Tool | Scope | What it does |
 | --- | --- | --- |
@@ -368,8 +368,11 @@ Breadbox detects recurring charges and groups them into [series](/guides/trackin
 | `get_series` | Read | Fetch one series by ID, including the full evidence the detector used. |
 | `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
 | `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
+| `explain_series_candidates` | Read | Answer "why isn't *X* recurring?" — lists recurring-looking merchants the precision-first detector skipped, with the reason (too few occurrences, irregular cadence, unstable amount, …). |
+| `rekey_series` | Write | Fix a series grouped under a wrong or fallback merchant key (e.g. `payment` → `spotify`), repointing it and its charges. |
+| `split_series` | Write | Break an over-grouped series in two — move stray charges into a new series (e.g. a $4.99 add-on swept into a $139/yr renewal). |
 | `add_series_tag` / `remove_series_tag` | Write | Tag a series; every linked transaction inherits the tag automatically. Removing strips only the inherited copies. |
 
 <Note>
-  A typical reviewer agent calls `list_series(status="candidate")`, inspects each with `get_series`, and resolves it with `review_series` — the same confirm/reject loop a person runs on the Subscriptions page.
+  A typical reviewer agent calls `list_series(status="candidate")`, inspects each with `get_series`, and resolves it with `review_series` — the same confirm/reject loop a person runs on the Recurring page.
 </Note>

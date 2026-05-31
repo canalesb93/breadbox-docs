@@ -5,10 +5,10 @@ description: "Breadbox detects recurring charges automatically and groups them i
 
 Subscriptions are the quiet budget-killer of every household. Streaming services nobody watches anymore, a forgotten cloud backup, a free-trial-turned-monthly-charge — they accumulate, and they're easy to miss because each one is small.
 
-Breadbox handles them with **Series** (also called Subscriptions): a series groups the repeating charges from one merchant so you can see the whole subscription as a single thing, track what it costs, and act on it in one place.
+Breadbox tracks them under **Recurring** — the umbrella for *any* repeating charge, not just subscriptions: mortgage, rent, insurance, utilities, and loans land here too. A *series* groups the charges from one merchant so you can see the whole thing as one, track what it costs, and act on it in one place. A subscription is just the most familiar kind.
 
 <Note>
-  Series is in **Beta**. It's available in the admin dashboard under **Subscriptions**, over the REST API, and over MCP. The shapes below are stable, but expect the surface to keep growing.
+  Recurring is in **Beta**. Find it in the admin dashboard under **Recurring** (the old `/subscriptions` URL redirects there), plus the REST API and MCP. The shapes below are stable, but expect the surface to keep growing.
 </Note>
 
 ## What a series is
@@ -27,10 +27,10 @@ Every charge that belongs to the series is *linked* to it, so the series detail 
 
 You don't have to hand-build your subscription list. On each sync, Breadbox's detector looks for charges that repeat from the same merchant at a regular cadence and proposes them as **candidate** series. It normalizes merchant names to a stable signature and ignores generic descriptors — transfers, ACH, Venmo/Zelle, bill-pay, refunds, and the like — so one-off payments don't masquerade as subscriptions.
 
-Candidates wait for a verdict. From the **Subscriptions** page you can:
+Candidates wait for a verdict. From the **Recurring** page you can:
 
 - **Confirm** — yes, this is a subscription. The series becomes `active`.
-- **Reject** — not a subscription. The rejection is *sticky*: the detector won't re-propose it at the same amount band.
+- **Reject** (shown as *Not recurring*) — the rejection is *sticky*: the detector won't re-propose it at the same amount band.
 - **Pause** or **Cancel** — for subscriptions you've stopped or are putting on hold.
 
 <Note>
@@ -85,7 +85,7 @@ See the [MCP tools](/mcp/tools#series-subscriptions) page for the agent-facing s
 
 Once your subscriptions are series:
 
-- **See the portfolio.** The **Subscriptions** page lists every active series with its cadence and expected amount.
+- **See the portfolio.** The **Recurring** page lists every active series with its cadence and expected amount.
 - **Total the outflow.** Sum the expected amounts of your active monthly series (keep each `iso_currency_code` separate — don't mix currencies).
 - **Spot creep.** A series tracks its last amount against the expected one, so a plan that quietly raised its price stands out.
 
