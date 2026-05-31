@@ -85,7 +85,11 @@ Prompt blocks are reusable snippets you maintain in one place and reference from
 
 Update a block once; every agent that references it picks up the change on the next run.
 
-The REST surface is `GET/POST/PATCH/DELETE /api/v1/agents/prompt-blocks` — see the [API Reference](/api/overview).
+The REST surface is `GET/POST/PATCH/DELETE /api/v1/workflows/prompt-blocks` — see the [API Reference](/api/overview).
+
+<Note>
+  The agent REST endpoints now live under `/api/v1/workflows/*` (formerly `/api/v1/agents/*`). Update any saved scripts — the old paths no longer resolve.
+</Note>
 
 ## Concurrency
 
