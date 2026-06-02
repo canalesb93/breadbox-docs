@@ -15,6 +15,37 @@ description: "What's new in Breadbox — user-facing changes since the V1 docs l
 {/*   - UI      admin dashboard / browser UI changes */}
 {/* Don't introduce new tags without a real, recurring category — single-use tags fragment the list. */}
 
+<Update label="June 2, 2026" description="Getting Started redesigned as a guided onboarding journey" tags={["UI"]}>
+  - **Getting Started is now a step-by-step onboarding surface.** The flat 5-card checklist is replaced by a circular progress ring that warms up as you advance, hierarchical step rows (the next actionable step is elevated, completed steps collapse to quiet confirmations, pending steps are muted), and a live spinner during the first sync.
+  - **Per-step inline stats** appear once a step produces data — connection count, transaction count, member count, and API-key count — so the dashboard's state is visible without navigating away.
+  - **"What's next" destination grid** appears once every step is complete, surfacing suggested follow-up actions (review transactions, create a rule, set up a workflow, invite a household member). The stats strip is now always visible, even before the first transaction syncs.
+  {/* closes #1691, #1692 */}
+</Update>
+
+<Update label="June 2, 2026" description="Curated workflow gallery, per-workflow names, and one-off run polish" tags={["UI"]}>
+  - **Gallery curated.** Three presets removed (Subscription Auditor, New-Merchant Watch, Duplicate Charge Detector). A new **Setup & Bulk** section at the top adds two on-demand one-off workflows: **Rule Foundation** (analyzes your last 1000+ transactions and drafts auto-categorization rules with a dry-run preview before applying) and **Bulk Catch-Up** (categorizes your entire pending backlog in one pass, leaving only ambiguous charges flagged for manual review).
+  - **On-demand workflows run from a button.** One-off workflow cards show a **Run** button in place of a schedule toggle. The button displays a live spinner while the run is in progress and shows a toast with a direct link to the run once it completes or fails.
+  - **Rename and re-avatar any workflow.** Open the configure drawer to edit a workflow's display name and shuffle its DiceBear avatar.
+  - The provider connections directory now separates **Connections** (Plaid, Teller) from **Manual import** (CSV); the Test connection button moves to the drawer footer.
+  - The Grouped/List view toggle on `/transactions` now renders as a proper connected segmented control.
+  {/* closes #1684, #1689, #1690, #1693, #1694 */}
+</Update>
+
+<Update label="June 2, 2026" description="Dedicated notifications settings page and ntfy-native delivery" tags={["UI", "Install"]}>
+  - **Notifications has its own settings page.** Configure the webhook URL, delivery format, and public base URL under **Settings → Notifications**, decoupled from the Workflows tab.
+  - **Native ntfy delivery.** When the webhook URL resolves to an ntfy server, Breadbox sends in ntfy's native format: a title, priority level (info → 3 / warning → 4 / critical → 5), Markdown body, a per-priority emoji tag, and an `X-Click` deep-link back to the relevant page.
+  - **Two new config keys:** `notify.format` (`auto` | `ntfy` | `json`; `auto` sniffs the URL) and `notify.public_base_url` (absolute origin used to make deep-links and relative body links work on an external ntfy server). The generic JSON delivery path is unchanged for Slack-compatible relays and Discord bridges.
+  {/* closes #1687 */}
+</Update>
+
+<Update label="June 1, 2026" description="Topbar breadcrumb, provider drawers, and schedule timezone fix" tags={["UI"]}>
+  - **Topbar is now the single navigable breadcrumb.** The full `Section / Parent / Current` trail is clickable in the top bar; per-page in-page breadcrumbs are removed. On mobile, a slim strip below the navigation bar carries the same trail.
+  - **Provider settings reorganized as a Connections directory.** The Providers tab is now a row-per-provider directory. Clicking a row opens a slide-over drawer with that provider's credentials, configuration, and test-connection details.
+  - **Workflow schedule shortcuts use your local timezone.** The "Daily", "Every Monday", and similar shortcuts in the configure drawer now schedule for 9 AM in your browser's timezone rather than the server's local time.
+  - Overflow menus (rules, accounts, workflows, and more) now widen to fit their longest label instead of wrapping to a second line.
+  {/* closes #1682, #1683, #1685, #1686 */}
+</Update>
+
 <Update label="June 1, 2026" description="Dismissible update banner and nav polish" tags={["UI"]}>
   - **Update notifications are now dismissible.** The "new version available" banner moved from a fixed top bar into a sidebar card — dismiss it once and it clears until the next update ships.
   - Active nav and rail items now use the hover fill instead of an outline, keeping focus indicators consistent across the dashboard.
