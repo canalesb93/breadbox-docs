@@ -323,38 +323,9 @@ None. Pass an empty object.
 | `pending_reauth` | Connection requires user re-authentication (e.g., bank login changed). |
 | `disconnected` | Connection has been disconnected or removed. |
 
----
-
-## `trigger_sync`
-
-Triggers a manual data sync to fetch the latest transactions and balances from the bank. Syncs all connections by default, or a specific connection if `connection_id` is provided. Returns immediately after enqueuing the sync — it does not wait for completion.
-
-**Scope:** Write (full-access only)
-
-**Input parameters**
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `connection_id` | string | No | Sync only this connection. Omit to sync all active connections. |
-
-**Example input**
-
-```json
-{ "connection_id": "conn_aaa111" }
-```
-
-**Example output**
-
-```json
-{
-  "connection_id": "conn_aaa111",
-  "message": "Sync triggered for connection conn_aaa111 (Chase)."
-}
-```
-
-<Info>
-  `trigger_sync` requires a **full-access** API key. It is not available to read-only keys. If you don't want a connected agent to be able to kick off syncs, issue a read-only key — see [Set up MCP](/mcp/setup#read-only-vs-read-write).
-</Info>
+<Tip>
+  To trigger a manual sync from outside an agent session, use `POST /api/v1/sync` (REST) or `breadbox sync trigger` (CLI). Breadbox does not expose a `trigger_sync` MCP tool — syncs run on the configured cron, and agents are expected to call `get_sync_status` to check freshness rather than kick off their own syncs.
+</Tip>
 
 ---
 
