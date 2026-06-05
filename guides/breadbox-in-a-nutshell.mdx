@@ -13,10 +13,10 @@ Categories come from one of three sources, in increasing precedence:
 
 1. **Provider-assigned** — Plaid or Teller guess the category during sync.
 2. **Rule-assigned** — a Breadbox rule overrides the provider value at sync time.
-3. **Manually overridden** — you (or an agent) set the category by hand. Manual overrides set <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>, which _protects the transaction from rules_ going forward.
+3. **Manually overridden** — you set the category by hand. This sets <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override = 'user'`</Tooltip>, which _protects the transaction from both rules and agents_ going forward.
 
 <Tip>
-  Manual overrides are sacred. Rules that would otherwise change the category are skipped for any transaction with `category_override = true`. Tag and comment actions still fire — only `set_category` is suppressed.
+  Manual overrides are sacred. Rules that would otherwise change the category are skipped for any transaction with `category_override = 'user'`. Tag and comment actions still fire — only `set_category` is suppressed.
 </Tip>
 
 Full reference: [Category System](/transactions/categories).
@@ -61,7 +61,7 @@ You can nest combinators up to 10 levels deep. An empty condition `{}` matches e
 
 A single rule can do any combination of:
 
-- `set_category` — assign a Breadbox category (skipped when `category_override = true`)
+- `set_category` — assign a Breadbox category (skipped when `category_override` is not `'none'`)
 - `add_tag` / `remove_tag` — manage tag state
 - `add_comment` — leave an automated note on the transaction
 

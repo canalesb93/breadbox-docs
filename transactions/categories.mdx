@@ -25,10 +25,10 @@ A transaction's category can be set by three sources, in increasing order of pre
 
 ## The `category_override` flag
 
-When you manually set a transaction's category, Breadbox marks it with <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>. This flag signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
+When you manually set a transaction's category, Breadbox marks it with <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override = 'user'`</Tooltip>. This signals to the rules engine that the transaction has a deliberate human assignment and should not be touched.
 
 <Note>
-  Rules that would otherwise reassign the category are skipped for any transaction where `category_override = true`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
+  Rules that would otherwise reassign the category are skipped for any transaction where `category_override` is not `'none'`. Tags and comments from rules still apply — only `set_category` actions are suppressed.
 </Note>
 
 To clear a manual override and return to the provider default, call `DELETE /api/v1/transactions/{id}/category`. This removes the override and re-enables rule-based categorization on the next sync.
@@ -43,7 +43,7 @@ To clear a manual override and return to the provider default, call `DELETE /api
     Click the category field or the edit icon next to it. A dropdown appears showing all available categories.
   </Step>
   <Step title="Select a category">
-    Choose the category you want. The change is saved immediately and `category_override` is set to `true`.
+    Choose the category you want. The change is saved immediately and `category_override` is set to `'user'`.
   </Step>
 </Steps>
 

@@ -138,7 +138,7 @@ Sometimes the cleanest way to express a rule is "match this _except_ for these c
 You can freely nest `and`, `or`, and `not` up to 10 levels deep. For most workflows you'll keep it under three.
 
 <Tip>
-  If a transaction gets the wrong category anyway, set it manually from the dashboard. That flips <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip>, which the rule engine honors forever — your deliberate choice won't be undone by a later rule.
+  If a transaction gets the wrong category anyway, set it manually from the dashboard. That sets <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override = 'user'`</Tooltip>, which the rule engine honors forever — your deliberate choice won't be undone by a later rule.
 </Tip>
 
 ## Applying rules retroactively

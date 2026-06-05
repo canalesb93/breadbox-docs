@@ -4,7 +4,7 @@ sidebarTitle: "Categorization"
 description: "MCP write tools for setting, batching, bulk-applying, resetting, and retroactively re-running categorization."
 ---
 
-Tools for overriding a transaction's category or applying categorization rules after the fact. All of these tools set `category_override=true` on affected transactions, which protects them from being changed by future rule runs or syncs. To restore a transaction to automatic categorization, use [`reset_transaction_category`](#reset_transaction_category).
+Tools for overriding a transaction's category or applying categorization rules after the fact. These tools set `category_override = 'agent'` on affected transactions, which prevents rules from reassigning the category on future syncs. A transaction whose `category_override` is `'user'` (set by a human in the dashboard) is skipped — the write is a no-op and the human's choice is preserved. To restore a transaction to automatic categorization, use [`reset_transaction_category`](#reset_transaction_category).
 
 <Note>
   **Prefer compound ops for review-driven categorization.** When you're closing a review (set category + remove `needs-review` + leave a note) reach for [`update_transactions`](/mcp/reference/transactions-write#update_transactions) instead. It writes one linked annotation per transaction covering the whole edit, where `categorize_transaction` only writes the category set.
@@ -63,7 +63,7 @@ Manually overrides one transaction's category. Pass `transaction_id` plus either
 
 ## batch_categorize_transactions
 
-Categorize multiple transactions at once. Each item is a `{transaction_id, category_slug}` pair. Max 500 items per request. Sets `category_override=true` on every affected transaction.
+Categorize multiple transactions at once. Each item is a `{transaction_id, category_slug}` pair. Max 500 items per request. Sets `category_override = 'agent'` on every affected transaction (skips any transaction already at `'user'`).
 
 **Mirrors:** [`POST /api/v1/transactions/batch-categorize`](/api/overview)
 
@@ -105,7 +105,7 @@ Categorize multiple transactions at once. Each item is a `{transaction_id, categ
 
 ## bulk_recategorize
 
-Moves every transaction matching `from_category` (plus any other filters) to `to_category`. Requires `to_category` and at least one filter as a safety requirement. Sets `category_override=true` because this is an explicit action. Typical use: "move everything currently in `general_merchandise` for March to `groceries`".
+Moves every transaction matching `from_category` (plus any other filters) to `to_category`. Requires `to_category` and at least one filter as a safety requirement. Sets `category_override = 'agent'` on affected rows (skips any at `'user'`). Typical use: "move everything currently in `general_merchandise` for March to `groceries`".
 
 **Mirrors:** [`POST /api/v1/transactions/bulk-recategorize`](/api/overview)
 

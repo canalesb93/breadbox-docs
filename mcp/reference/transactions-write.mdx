@@ -52,7 +52,7 @@ Every change lands as a single linked annotation per operation. Prefer this over
 </ParamField>
 
 <ParamField path="category_slug" type="string">
-  Category slug to set. Sets `category_override=true`. Omit to leave the category unchanged.
+  Category slug to set. Sets `category_override = 'agent'` (skips the row if a user has already set it to `'user'`). Omit to leave the category unchanged.
 </ParamField>
 
 <ParamField path="tags_to_add" type="array">

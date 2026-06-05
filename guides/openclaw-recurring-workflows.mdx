@@ -76,7 +76,7 @@ On each run:
 
 Amount convention: positive amounts are money out, negative are money in.
 Never sum across different iso_currency_code values.
-Never modify transactions with category_override = true.
+Never modify transactions with category_override = 'user'.
 ```
 
 ### Sub-agent prompt (paste-ready)
@@ -107,7 +107,7 @@ On each run:
      a charge over $500 with an opaque description, or anything
      you are uncertain about: leave `needs-review` and add a
      `needs-human` tag with a note explaining your uncertainty.
-   - Never modify a transaction that has category_override = true.
+   - Never modify a transaction that has category_override = 'user'.
 
 4. After each page, call the next page until the queue is empty
    or page_limit is reached.
@@ -260,7 +260,7 @@ Even after a promotion to full-access, a few defaults limit blast radius per cyc
 
 - Keep `limit=30` per page on `query_transactions`. Smaller batches = smaller blast radius per cycle.
 - Review `submit_report` output for the first few weeks. If the deferred count is unexpectedly high or low, inspect the annotations before giving the agent more autonomy.
-- Breadbox's `update_transactions` respects `category_override = true` — rows a human has manually categorized are skipped automatically. Do not override this behavior.
+- Breadbox's `update_transactions` respects `category_override = 'user'` — rows a human has manually categorized are never overwritten. Do not work around this behavior.
 
 ### Observe before automating
 

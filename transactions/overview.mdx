@@ -44,7 +44,7 @@ Every transaction record includes the following fields:
 | `category_primary` | string | High-level provider category (e.g., `FOOD_AND_DRINK`, `TRANSPORTATION`). |
 | `category_detailed` | string | Granular subcategory (e.g., `FOOD_AND_DRINK_RESTAURANTS`). |
 | `category_slug` | string | Breadbox category slug when rules or a human/agent has assigned one (e.g., `food_and_drink_groceries`). Takes precedence over the provider fields for display and filtering. |
-| `category_override` | boolean | `true` when a human has manually set the category. Agents and rules skip rows where this is `true`. |
+| `category_override` | string | Who last set the category: `none` (rule-applied or unset), `agent` (AI-set), or `user` (manually set — protected from automatic changes). Rules only update `none` rows; agents skip `user` rows. |
 | `pending` | boolean | `true` if the transaction has not yet settled. `false` means posted. |
 
 The <Tooltip headline="Short ID" tip="8-character base62 alias accepted interchangeably with the full UUID `id` in any API or MCP tool input.">`short_id`</Tooltip> is what AI agents and MCP tools use when referring to transactions. You can pass either `id` or `short_id` to any API endpoint or MCP tool that accepts a transaction identifier.

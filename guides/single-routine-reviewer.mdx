@@ -90,7 +90,7 @@ Step-by-step, every run:
      amount larger than $500, leave the `needs-review` tag and add a
      `needs-human` tag with a note describing what you're uncertain about.
    - Never overwrite an existing category if the transaction already has
-     `category_override = true` — that means a human set it deliberately.
+     `category_override = 'user'` — that means a human set it deliberately.
 5. Apply resolutions as compound `update_transactions` calls with up to
    50 operations each.
 6. At the end, submit a report via `POST /api/v1/reports` with:
@@ -110,7 +110,7 @@ than to miscategorize.
 
 ## What the agent should _not_ do
 
-- **Never touch <Tooltip headline="category_override" tip="Boolean flag that marks a transaction's category as human-set. Rules and agents skip rows with `category_override = true`.">`category_override = true`</Tooltip> rows** for category changes. The `update_transactions` op will report the skip; trust that signal.
+- **Never touch <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override = 'user'`</Tooltip> rows** for category changes. The `update_transactions` op will report the skip; trust that signal.
 - **Never batch more than 50 ops** into one `update_transactions` call. Split batches.
 - **Never resync** on its own schedule. Sync runs on its own cron; `trigger_sync` is reserved for when a human asks for the latest data.
 - **Never close a review it's not confident about.** Leaving the tag in place is a first-class action.
