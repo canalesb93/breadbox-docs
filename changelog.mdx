@@ -164,7 +164,7 @@ description: "What's new in Breadbox — user-facing changes since the V1 docs l
   - Breadbox can now be installed with a single command: `curl -fsSL https://breadbox.sh/install.sh | bash`. The installer auto-detects your OS, arch, package manager, and init system.
   - On Linux, the installer offers to register a systemd unit so Breadbox starts on boot. On macOS, it registers a launchd agent. Pass `--register-daemon` to accept without prompting.
   - Caddy (HTTPS reverse proxy) is now opt-in behind a Docker Compose profile. Localhost-only installs no longer bind ports 80/443. The installer prompts for an optional public domain and wires Caddy automatically when one is provided.
-  - `update.sh` now preserves your installed version pin and only upgrades when you explicitly pass `--bump=vX.Y.Z` or `--bump=latest`.
+  - Updating is pull-and-restart: run `docker compose -f docker-compose.prod.yml pull` then `up -d` from your install directory. Pin a version by editing the `image:` tag. See [Updating Breadbox](/installation/updating).
   {/* closes #695, #694, #693 */}
 </Update>
 
