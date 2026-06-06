@@ -1,0 +1,157 @@
+---
+title: "Updating Breadbox"
+description: "Breadbox tells you when a new release ships and lets you update on your schedule. Updating is two commands, your data and secrets are untouched, and database migrations run automatically on the next start."
+sidebarTitle: "Updating"
+---
+
+Breadbox never updates itself. When a newer release is published on GitHub, the admin dashboard shows a **"new release available"** notice in the sidebar and an update badge under **Settings → System** — you decide when to apply it. This keeps you in control of update timing, which matters for a self-hosted financial app.
+
+Updating is safe and non-destructive:
+
+- Your **`.env`** (including `ENCRYPTION_KEY`) is never touched.
+- Your **PostgreSQL data** is preserved — the database lives in its own volume.
+- **Database migrations run automatically** the next time Breadbox starts.
+
+<Tip>
+  Want to know what changed before you update? Every release is summarized in the [changelog](/changelog), and full release notes live on the [GitHub releases page](https://github.com/canalesb93/breadbox/releases).
+</Tip>
+
+## Before you update
+
+Updating won't delete anything, but a backup is cheap insurance — especially across a major version:
+
+- **Back up your `.env`** if you haven't already. Losing `ENCRYPTION_KEY` makes stored bank credentials unrecoverable. See [Install → Back up your `.env`](/installation#back-up-your-env-file).
+- **Snapshot the database** from **Settings → Backups** in the dashboard, or with `pg_dump` if you manage Postgres yourself. See [Backup & restore](/configuration/backup).
+
+## Update by install method
+
+Pick the tab that matches how you installed Breadbox.
+
+<Tabs>
+  <Tab title="One-liner install (default)">
+    The `curl … | bash` installer writes a `docker-compose.prod.yml` into your install directory and drives Compose with `-f`. Run these from that directory:
+
+    ```bash
+    cd ~/.breadbox        # or /opt/breadbox for a root install
+    docker compose -f docker-compose.prod.yml pull
+    docker compose -f docker-compose.prod.yml up -d
+    ```
+
+    If you installed with a public domain (Caddy HTTPS enabled), include the profile in both commands:
+
+    ```bash
+    docker compose --profile caddy -f docker-compose.prod.yml pull
+    docker compose --profile caddy -f docker-compose.prod.yml up -d
+    ```
+
+    `pull` fetches the new image; `up -d` recreates the container on it. Migrations run on boot. Existing containers that don't change are left running.
+
+    <Note>
+      Not sure where you installed? Root installs land in `/opt/breadbox`; regular-user installs in `$HOME/.breadbox`. The directory holds your `docker-compose.prod.yml` and `.env`.
+    </Note>
+  </Tab>
+
+  <Tab title="Manual Docker Compose">
+    If you added Breadbox to your own Compose stack (the file is typically named `docker-compose.yml`), the bare commands work:
+
+    ```bash
+    cd /path/to/your/stack
+    docker compose pull
+    docker compose up -d
+    ```
+
+    With the Caddy reverse proxy:
+
+    ```bash
+    docker compose --profile caddy pull
+    docker compose --profile caddy up -d
+    ```
+  </Tab>
+
+  <Tab title="Binary">
+    Download the new binary for your platform, replace the old one, and restart the process. Migrations run on the next start.
+
+    ```bash
+    # Linux amd64 example — swap for your platform
+    curl -fsSL https://github.com/canalesb93/breadbox/releases/latest/download/breadbox-linux-amd64 -o breadbox.new
+    chmod +x breadbox.new
+    mv breadbox.new breadbox        # replace the running binary
+
+    # restart however you run it — e.g. systemd:
+    sudo systemctl restart breadbox
+    ```
+
+    Your `DATABASE_URL` and `ENCRYPTION_KEY` environment variables stay the same — point the new binary at the same database and it picks up where it left off.
+  </Tab>
+
+  <Tab title="From source">
+    Pull the latest code, reinstall, and restart:
+
+    ```bash
+    cd breadbox
+    git pull
+    go install ./cmd/breadbox
+
+    # restart your running process (systemd, a terminal, etc.)
+    ```
+
+    The module path is `breadbox` (not `github.com/...`), so update by pulling the repo as shown — `go install …@latest` against the GitHub path is not supported.
+  </Tab>
+</Tabs>
+
+## Pin a specific version
+
+By default `docker-compose.prod.yml` tracks a pinned release tag. To move to (or hold) a specific version, edit the `image:` line:
+
+```yaml
+image: ghcr.io/canalesb93/breadbox:v0.1.0
+```
+
+Then run the `pull` / `up -d` pair for your install method above. To track the latest release on every pull instead (not recommended for production), use `:latest`.
+
+## Verify the update
+
+After `up -d` (or a restart) completes:
+
+1. **Reload the dashboard** — the "new release available" notice should be gone.
+2. **Check Settings → System** — the version badge should show the new version and read **Up to date**.
+3. Optionally confirm from the shell:
+
+   ```bash
+   # Docker install:
+   docker compose -f docker-compose.prod.yml exec breadbox breadbox version
+   docker compose -f docker-compose.prod.yml exec breadbox breadbox doctor
+
+   # Binary / source install:
+   breadbox version
+   breadbox doctor
+   ```
+
+   `breadbox doctor` is read-only and re-validates your config, database, migrations, and encryption key.
+
+## Rolling back
+
+If a release misbehaves, pin the previous tag and re-pull:
+
+```yaml
+image: ghcr.io/canalesb93/breadbox:v0.0.9   # previous version
+```
+
+```bash
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
+```
+
+<Warning>
+  Rolling back the application does **not** roll back database migrations. Breadbox migrations are additive and forward-compatible within a minor series, so a one-step rollback is normally fine — but if you need to revert across a major version, restore the database snapshot you took [before updating](#before-you-update).
+</Warning>
+
+## Unattended updates
+
+Breadbox deliberately ships **no** auto-update logic. If you want hands-off updates anyway, run a separate updater alongside it — [Watchtower](https://containrrr.dev/watchtower/) or [Diun](https://crazymax.dev/diun/) — or a simple cron job:
+
+```bash
+0 3 * * * cd /opt/breadbox && docker compose -f docker-compose.prod.yml pull && docker compose -f docker-compose.prod.yml up -d >> /var/log/breadbox-update.log 2>&1
+```
+
+For a financial app, most operators prefer to update manually after glancing at the [changelog](/changelog) — but the choice is yours.

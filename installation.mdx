@@ -67,14 +67,15 @@ curl -fsSL https://breadbox.sh/install.sh | bash -s -- --yes --domain=breadbox.e
 
 ### Updates
 
-`./update.sh` inside the install directory pulls the pinned version on every run. For a regular-user install, that looks like:
+When a newer release ships, the dashboard surfaces a notice and you update with two commands from the install directory:
 
 ```bash
-cd ~/.breadbox
-./update.sh                   # pull the pinned version
-./update.sh --bump=v0.4.0     # pin to a specific tag
-./update.sh --bump=latest     # track latest (not recommended for production)
+cd ~/.breadbox        # or /opt/breadbox for a root install
+docker compose -f docker-compose.prod.yml pull
+docker compose -f docker-compose.prod.yml up -d
 ```
+
+Your data and `.env` are preserved and database migrations run on the next start. See [Updating Breadbox](/installation/updating) for every install method, version pinning, verification, and rollback.
 
 ### Back up your `.env` file
 
