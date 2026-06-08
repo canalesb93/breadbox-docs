@@ -1,61 +1,43 @@
 ---
-title: "Session MCP reference"
+title: "Sessions"
 sidebarTitle: "Sessions"
-description: "Start an audit session before performing write operations."
+description: "How Breadbox binds MCP tool calls to auditable sessions, and how to attach per-call labels."
 ---
 
-Every write tool (except `create_session` itself) requires a `session_id` and a `reason`. Sessions group a related set of tool calls into a single unit in the activity log — "weekly review", "dining rule cleanup", etc. — so households can see what an agent did and why. Sessions are the only concept that sits between the API key and the individual tool call; the MCP admin dashboard shows tool calls grouped by session.
+Sessions group an agent's tool calls into a single unit visible in the admin dashboard. The household can see what each connected agent did, which tools it called, and when.
 
----
+## Sessions are transport-bound
 
-## create_session
+Breadbox creates a session automatically for every MCP connection — no setup required.
 
-Starts an audit session and returns a `session_id` for use on subsequent write tool calls. One session per logical task.
+- **Streamable HTTP** — the session is keyed to the `MCP-Session-Id` value from the client's `initialize` request. Every tool call over that connection is attributed to the same session.
+- **stdio** (`breadbox mcp-stdio`) — the session is keyed to a per-process ID generated when the server starts. All tool calls in the process share one session.
 
-**Scope:** Write
+The session row is created on the first tool call and stamped with the client's `clientInfo` (name and version) from the `initialize` handshake.
 
 <Note>
-  **Exception to the session rule.** `create_session` is the one write tool that doesn't require a `session_id` — it's how you obtain one. `reason` is also not required on this call; pass `purpose` instead to describe the session as a whole.
+  There is no `create_session` tool. Write tool input schemas do **not** have `session_id` or `reason` fields. If you have agent code written against an older version of Breadbox that passes these fields, they are silently ignored.
 </Note>
 
-### Parameters
+## Attaching a label to a call
 
-<ParamField path="purpose" type="string" required>
-  Brief label for this session. Examples: `"weekly transaction review"`, `"rule creation for dining merchants"`, `"monthly spending report"`.
-</ParamField>
-
-### Example input
-
-```json
-{ "purpose": "weekly transaction review" }
-```
-
-### Example output
+To record why a specific write happened, pass an optional `reason` string in the `_meta` block alongside the tool arguments:
 
 ```json
 {
-  "id": "s9Xm2pQk",
-  "purpose": "weekly transaction review",
-  "api_key_name": "review-agent",
-  "created_at": "2026-04-23T14:32:00Z"
+  "operations": [
+    {
+      "transaction_id": "k7Xm9pQ2",
+      "category_slug": "food_and_drink_groceries",
+      "tags_to_remove": [{"slug": "needs-review"}]
+    }
+  ],
+  "_meta": { "reason": "closing weekly review batch" }
 }
 ```
 
-<Note>
-  The response identifies the session's owner via `api_key_name` (the API key that created it) — there is no separate `actor` field. Sessions do not track a `completed_at` timestamp; they stay live and accumulate tool calls, with `tool_call_count` and `last_call_at` surfacing in subsequent reads.
-</Note>
+The server reads `_meta.reason` and stamps it on the activity log entry for that call. It is optional — the server never rejects a call for omitting it. Read calls accept `_meta.reason` too; use it when you want to annotate a read in the audit log.
 
-### Using the returned session_id
+## Viewing session history
 
-Every subsequent write call in the session passes the returned `id` as `session_id`:
-
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "categorizing clearly valid grocery charge",
-  "transaction_id": "k7Xm9pQ2",
-  "category_slug": "food_and_drink_groceries"
-}
-```
-
-Read calls accept `session_id` as optional — include it to associate the read with the session in the audit log, or omit it if you don't care.
+Open **Settings → MCP** in the admin dashboard to see session history grouped by connection, with the tool calls each session made, their timestamps, and any `reason` labels attached.

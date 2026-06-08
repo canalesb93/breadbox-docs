@@ -41,7 +41,7 @@ Write tools enforce scope and mode before the handler runs: the server verifies 
 Each tool in this reference is tagged **Read** or **Write**. The distinction drives:
 
 1. Scope filtering — `read_only` keys never see write tools.
-2. Session enforcement — write tools require `session_id` + `reason`; reads don't.
+2. Session enforcement — write calls are bound to the connection's audit session automatically; pass `_meta.reason` on a call to attach a per-call label.
 3. Activity logging — every call is logged asynchronously with the classification.
 
 Write tools also run an in-handler `checkWritePermission` check as a belt-and-suspenders guard against TOCTOU races between config changes and server construction.
@@ -88,7 +88,7 @@ The 30-day spending summary, the per-connection list, and the `accounts_by_type`
 Tool errors return a standard MCP call result with `isError: true` and a single text content block containing JSON:
 
 ```json
-{ "error": "session_id is required for write operations; call create_session first" }
+{ "code": "NOT_FOUND", "error": "transaction k7Xm9pQ2 not found" }
 ```
 
 Transport-level errors (bad authentication, malformed JSON-RPC) come back as JSON-RPC error responses and never reach the tool handler.
