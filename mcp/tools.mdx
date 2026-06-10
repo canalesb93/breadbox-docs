@@ -44,7 +44,7 @@ Lists all connected bank accounts with their current balances. An agent typicall
 
 ```json
 {
-  "data": [
+  "accounts": [
     {
       "id": "acc_xyz789",
       "name": "Chase Checking",
@@ -56,8 +56,7 @@ Lists all connected bank accounts with their current balances. An agent typicall
       "balance_limit": null,
       "iso_currency_code": "USD",
       "institution_name": "Chase",
-      "user_id": "usr_abc123",
-      "user_name": "Alice"
+      "user_id": "usr_abc123"
     },
     {
       "id": "acc_def456",
@@ -70,8 +69,7 @@ Lists all connected bank accounts with their current balances. An agent typicall
       "balance_limit": 10000.00,
       "iso_currency_code": "USD",
       "institution_name": "American Express",
-      "user_id": "usr_abc123",
-      "user_name": "Alice"
+      "user_id": "usr_abc123"
     }
   ]
 }
@@ -122,12 +120,11 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 
 ```json
 {
-  "data": [
+  "transactions": [
     {
       "id": "txn_111222333",
       "account_id": "acc_xyz789",
       "account_name": "Chase Checking",
-      "user_id": "usr_abc123",
       "user_name": "Alice",
       "amount": 14.50,
       "iso_currency_code": "USD",
@@ -142,7 +139,8 @@ Searches transactions using a combination of filters. Results are cursor-paginat
     }
   ],
   "next_cursor": "dHhuXzExMTIyMzM0",
-  "has_more": true
+  "has_more": true,
+  "limit": 50
 }
 ```
 
@@ -202,7 +200,7 @@ Counts matching transactions without returning any transaction data. Accepts the
 
 ## `list_categories`
 
-Lists all distinct transaction category pairs — primary category and detailed subcategory — that exist in your database. Useful for discovering valid category values before filtering transactions.
+Returns the Breadbox category taxonomy as a flat list. Each category has a stable `slug` — the handle agents pass to `query_transactions` and `count_transactions` to filter by category, and to rule actions to set a category.
 
 **Scope:** Read
 
@@ -220,15 +218,31 @@ None. Pass an empty object.
 
 ```json
 {
-  "data": [
-    { "primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_GROCERIES" },
-    { "primary": "FOOD_AND_DRINK", "detailed": "FOOD_AND_DRINK_RESTAURANTS" },
-    { "primary": "TRANSPORTATION", "detailed": "TRANSPORTATION_GAS" }
+  "categories": [
+    {
+      "id": "cat_abc123",
+      "slug": "food_and_drink",
+      "display_name": "Food & Drink",
+      "parent_id": null,
+      "icon": "utensils",
+      "color": "#f97316",
+      "is_system": true
+    },
+    {
+      "id": "cat_def456",
+      "slug": "food_and_drink_groceries",
+      "display_name": "Groceries",
+      "parent_id": "cat_abc123",
+      "parent_slug": "food_and_drink",
+      "icon": "shopping-cart",
+      "color": "#f97316",
+      "is_system": true
+    }
   ]
 }
 ```
 
-The returned `primary` values are valid for `query_transactions`'s `category` parameter; `detailed` values are valid for `category_detailed`.
+Pass a category `slug` as the `category_slug` parameter in `query_transactions` and `count_transactions` to filter by category. Parent slugs (e.g., `food_and_drink`) include all child categories automatically.
 
 ---
 
@@ -252,7 +266,7 @@ None. Pass an empty object.
 
 ```json
 {
-  "data": [
+  "users": [
     {
       "id": "usr_abc123",
       "name": "Alice",
@@ -289,7 +303,7 @@ None. Pass an empty object.
 
 ```json
 {
-  "data": [
+  "connections": [
     {
       "id": "conn_aaa111",
       "institution_name": "Chase",
