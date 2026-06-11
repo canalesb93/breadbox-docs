@@ -1,275 +1,85 @@
 ---
 title: "Categorization MCP reference"
 sidebarTitle: "Categorization"
-description: "MCP write tools for setting, batching, bulk-applying, resetting, and retroactively re-running categorization."
+description: "How to set, reset, and batch-apply transaction categories from MCP using update_transactions and apply_rules."
 ---
-
-Tools for overriding a transaction's category or applying categorization rules after the fact. These tools set `category_override = 'agent'` on affected transactions, which prevents rules from reassigning the category on future syncs. A transaction whose `category_override` is `'user'` (set by a human in the dashboard) is skipped — the write is a no-op and the human's choice is preserved. To restore a transaction to automatic categorization, use [`reset_transaction_category`](#reset_transaction_category).
 
 <Note>
-  **Prefer compound ops for review-driven categorization.** When you're closing a review (set category + remove `needs-review` + leave a note) reach for [`update_transactions`](/mcp/reference/transactions-write#update_transactions) instead. It writes one linked annotation per transaction covering the whole edit, where `categorize_transaction` only writes the category set.
+  The individual categorization tools (`categorize_transaction`, `batch_categorize_transactions`, `bulk_recategorize`, `reset_transaction_category`) were merged into [`update_transactions`](/mcp/reference/transactions-write#update_transactions) during the MCP overhaul. Use `update_transactions` for all per-row and batch category writes. For retroactive rule application, see [`apply_rules`](/mcp/reference/rules-write#apply_rules).
 </Note>
 
-All tools on this page are **Write** scope and require `session_id` + `reason`.
+## Setting a category
 
----
-
-## categorize_transaction
-
-Manually overrides one transaction's category. Pass `transaction_id` plus either `category_id` or `category_slug` — slug is resolved automatically.
-
-**Mirrors:** [`PATCH /api/v1/transactions/{id}/category`](/api/overview)
-
-### Parameters
-
-<ParamField path="transaction_id" type="string" required>
-  Transaction UUID or short ID.
-</ParamField>
-
-<ParamField path="category_slug" type="string">
-  Category slug (e.g. `food_and_drink_groceries`). Alternative to `category_id`.
-</ParamField>
-
-<ParamField path="category_id" type="string">
-  Category UUID or short ID. Takes precedence if both are supplied.
-</ParamField>
-
-<ParamField path="session_id" type="string" required>
-  From `create_session`.
-</ParamField>
-
-<ParamField path="reason" type="string" required>
-  Brief rationale.
-</ParamField>
-
-### Example input
-
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "correcting miscategorized grocery run",
-  "transaction_id": "k7Xm9pQ2",
-  "category_slug": "food_and_drink_groceries"
-}
-```
-
-### Example output
-
-```json
-{ "text": "Transaction k7Xm9pQ2 categorized successfully." }
-```
-
----
-
-## batch_categorize_transactions
-
-Categorize multiple transactions at once. Each item is a `{transaction_id, category_slug}` pair. Max 500 items per request. Sets `category_override = 'agent'` on every affected transaction (skips any transaction already at `'user'`).
-
-**Mirrors:** [`POST /api/v1/transactions/batch-categorize`](/api/overview)
-
-### Parameters
-
-<ParamField path="items" type="array of objects" required>
-  Array of `{transaction_id, category_slug}` pairs. Max 500.
-</ParamField>
-
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
-### Example input
-
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "assigning coffee runs flagged during review",
-  "items": [
-    { "transaction_id": "k7Xm9pQ2", "category_slug": "food_and_drink_coffee" },
-    { "transaction_id": "k8Yn0qR3", "category_slug": "food_and_drink_coffee" },
-    { "transaction_id": "k9Zo1rS4", "category_slug": "food_and_drink_coffee" }
-  ]
-}
-```
-
-### Example output
-
-```json
-{
-  "succeeded": 3,
-  "failed": 0,
-  "errors": []
-}
-```
-
----
-
-## bulk_recategorize
-
-Moves every transaction matching `from_category` (plus any other filters) to `to_category`. Requires `to_category` and at least one filter as a safety requirement. Sets `category_override = 'agent'` on affected rows (skips any at `'user'`). Typical use: "move everything currently in `general_merchandise` for March to `groceries`".
-
-**Mirrors:** [`POST /api/v1/transactions/bulk-recategorize`](/api/overview)
-
-### Parameters
-
-<ParamField path="to_category" type="string" required>
-  Destination category slug.
-</ParamField>
-
-<ParamField path="from_category" type="string">
-  Only transactions currently in this category are matched.
-</ParamField>
-
-<ParamField path="start_date" type="string (YYYY-MM-DD)" />
-
-<ParamField path="end_date" type="string (YYYY-MM-DD)" />
-
-<ParamField path="account_id" type="string" />
-
-<ParamField path="user_id" type="string" />
-
-<ParamField path="min_amount" type="number" />
-
-<ParamField path="max_amount" type="number" />
-
-<ParamField path="pending" type="boolean" />
-
-<ParamField path="search" type="string" />
-
-<ParamField path="name_contains" type="string">
-  Filter transactions whose `name` contains this string.
-</ParamField>
-
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
-<Note>
-  The legacy parameter names `target_category_slug` (for `to_category`) and `category_slug` (for `from_category`) are still accepted but deprecated. Prefer the new names.
-</Note>
-
-### Example input
-
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "NETFLIX charges were misfiled under general",
-  "from_category": "general_merchandise",
-  "to_category": "entertainment_streaming_services",
-  "search": "NETFLIX",
-  "start_date": "2026-01-01",
-  "end_date": "2026-04-01"
-}
-```
-
-### Example output
-
-```json
-{
-  "matched_count": 14,
-  "updated_count": 14
-}
-```
-
----
-
-## reset_transaction_category
-
-Removes a manual category override from one transaction and re-resolves its category from the automatic mapping + rule pipeline. Use this to undo a `categorize_transaction` action.
-
-**Mirrors:** [`DELETE /api/v1/transactions/{id}/category`](/api/overview)
-
-### Parameters
-
-<ParamField path="transaction_id" type="string" required />
-
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
-### Example input
-
-```json
-{
-  "session_id": "s9Xm2pQk",
-  "reason": "undoing accidental override",
-  "transaction_id": "k7Xm9pQ2"
-}
-```
-
-### Example output
-
-```json
-{ "text": "Transaction k7Xm9pQ2 category reset to automatic." }
-```
-
----
-
-## apply_rules
-
-Applies rules retroactively to existing transactions. Pass `rule_id` to run one rule in isolation, or omit to run the full active-rule pipeline in priority-ASC order. Materializes `set_category`, `add_tag`, and `remove_tag` actions; `add_comment` is sync-only and does not fire here. Hit counts increment per condition match, matching sync-time semantics.
-
-<Note>
-  **Use sparingly.** This is for initial setup and explicit back-fills — not routine reviews. During normal work, create the rule and let it match future syncs naturally. Running the full pipeline across thousands of historical transactions can take time.
-</Note>
-
-### Parameters
-
-<ParamField path="rule_id" type="string">
-  UUID or short ID of a specific rule to apply. Omit to apply every active rule.
-</ParamField>
-
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
-### Examples
+[`update_transactions`](/mcp/reference/transactions-write#update_transactions) handles all category writes — single rows, batches of up to 50, resets, and compound review closures (category + tag removal + comment in one atomic call).
 
 <Tabs>
-  <Tab title="Single rule">
-    Apply one specific rule retroactively. Pass its `rule_id`.
-
-    Input:
+  <Tab title="Single transaction">
+    Pass `category_slug` in one operation:
 
     ```json
     {
-      "session_id": "s9Xm2pQk",
-      "reason": "backfilling new Starbucks rule to existing transactions",
-      "rule_id": "r9Xm2pQr"
-    }
-    ```
-
-    Output:
-
-    ```json
-    {
-      "rule_id": "r9Xm2pQr",
-      "affected_count": 47
+      "operations": [
+        {
+          "transaction_id": "k7Xm9pQ2",
+          "category_slug": "food_and_drink_groceries"
+        }
+      ]
     }
     ```
   </Tab>
-  <Tab title="All rules">
-    Apply every active rule in priority-ASC order. Omit `rule_id`.
-
-    Input:
+  <Tab title="Close a review (compound)">
+    Set category, remove `needs-review`, and attach a comment in one call:
 
     ```json
     {
-      "session_id": "s9Xm2pQk",
-      "reason": "initial setup — apply every rule to historical data"
+      "operations": [
+        {
+          "transaction_id": "k7Xm9pQ2",
+          "category_slug": "food_and_drink_groceries",
+          "tags_to_remove": [{ "slug": "needs-review" }],
+          "comment": "Costco run — clearly groceries."
+        }
+      ]
     }
     ```
-
-    Output:
+  </Tab>
+  <Tab title="Reset to automatic">
+    Pass `reset_category: true` to remove a manual override and return to automatic categorization:
 
     ```json
     {
-      "rules_applied": {
-        "r9Xm2pQr": 47,
-        "rAYn0qR3": 128,
-        "rBZo1rS4": 12
-      },
-      "total_affected": 187
+      "operations": [
+        {
+          "transaction_id": "k7Xm9pQ2",
+          "reset_category": true
+        }
+      ]
     }
     ```
+  </Tab>
+  <Tab title="Batch (up to 50)">
+    Include multiple operations in one call:
+
+    ```json
+    {
+      "operations": [
+        { "transaction_id": "k7Xm9pQ2", "category_slug": "food_and_drink_coffee" },
+        { "transaction_id": "k8Yn0qR3", "category_slug": "food_and_drink_coffee" },
+        { "transaction_id": "k9Zo1rS4", "category_slug": "food_and_drink_coffee" }
+      ]
+    }
+    ```
+
+    The response `summary` carries `succeeded`, `skipped`, and `failed` counts.
   </Tab>
 </Tabs>
+
+## Category-override precedence
+
+Category writes follow the precedence **user > agent > rule**. If a transaction's `category_override` is `'user'` (set manually in the dashboard), the agent's write is silently skipped — the human's choice is preserved. The `summary.skipped` count in the response surfaces these no-ops so you can account for them.
+
+## Applying rules retroactively
+
+To categorize in bulk by applying a stored rule to existing transactions, use [`apply_rules`](/mcp/reference/rules-write#apply_rules). Pass a `rule_id` to run one rule in isolation, or omit it to run the full active-rule pipeline in priority order.
+
+See [Rules (write)](/mcp/reference/rules-write) for the full reference.
