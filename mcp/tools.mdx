@@ -349,9 +349,12 @@ Breadbox detects recurring charges and groups them into [series](/guides/trackin
 | --- | --- | --- |
 | `list_series` | Read | List detected series. Filter by `status` (`active`, `candidate`, `paused`, `cancelled`); `candidate` surfaces the ones awaiting a verdict. Each row carries cadence, expected amount + currency, next expected date, and the detection signals. |
 | `get_series` | Read | Fetch one series by ID, including the full evidence the detector used. |
-| `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
-| `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
 | `explain_series_candidates` | Read | Answer "why isn't *X* recurring?" — lists recurring-looking merchants the precision-first detector skipped, with the reason (too few occurrences, irregular cadence, unstable amount, …). |
+| `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
+| `update_series` | Write | Edit a series' user-owned attributes: name, expected amount, cadence, expected day, category, or owner. Every field is optional; omit to leave unchanged. Edits survive future detection runs (the detector won't revert them). |
+| `set_series_type` | Write | Set the series type: `subscription`, `bill`, `loan`, or `other`. Overrides the type the detector inferred from the charges' category; the override is sticky. |
+| `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
+| `unlink_series_transactions` | Write | Detach transactions from a series (inverse of `assign_series`). Clears the series link and strips inherited tags from the affected charges only. |
 | `rekey_series` | Write | Fix a series grouped under a wrong or fallback merchant key (e.g. `payment` → `spotify`), repointing it and its charges. |
 | `split_series` | Write | Break an over-grouped series in two — move stray charges into a new series (e.g. a $4.99 add-on swept into a $139/yr renewal). |
 | `add_series_tag` / `remove_series_tag` | Write | Tag a series; every linked transaction inherits the tag automatically. Removing strips only the inherited copies. |
