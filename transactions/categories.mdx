@@ -128,8 +128,8 @@ Breadbox lets you create your own categories, update existing ones, merge duplic
       -H "Content-Type: application/json" \
       -d '{
         "items": [
-          { "transaction_id": "txn_aaa", "category_slug": "food-and-drink-groceries" },
-          { "transaction_id": "txn_bbb", "category_slug": "transportation-gas" }
+          { "transaction_id": "txn_aaa", "category_slug": "food_and_drink_groceries" },
+          { "transaction_id": "txn_bbb", "category_slug": "transportation_gas" }
         ]
       }' \
       http://localhost:8080/api/v1/transactions/batch-categorize
