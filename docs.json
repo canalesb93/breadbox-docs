@@ -29,7 +29,7 @@
     }
   },
   "banner": {
-    "content": "Breadbox is in early access pending the 0.1.0 release. [See the changelog →](/changelog)",
+    "content": "Breadbox is in early access pending the v1.0 release. [See the changelog →](/changelog)",
     "dismissible": true,
     "type": "warning"
   },
