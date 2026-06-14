@@ -100,7 +100,7 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 | `max_amount` | number | No | Maximum transaction amount in USD. Zero is a valid value. |
 | `pending` | boolean | No | `true` returns only pending transactions; `false` returns only posted. Omit for both. |
 | `search` | string | No | Full-text search over merchant name and description. |
-| `sort_by` | string | No | Sort field: `date` (default), `amount`, or `name`. Cursor pagination requires `date`. |
+| `sort_by` | string | No | Sort field: `date` (default), `amount`, or `provider_name`. Cursor pagination requires `date`. |
 | `sort_order` | string | No | Sort direction: `desc` (default) or `asc`. |
 | `limit` | integer | No | Results per page. Default: 50. Maximum: 500. |
 | `cursor` | string | No | Pagination cursor from the previous response. Omit for the first page. |
