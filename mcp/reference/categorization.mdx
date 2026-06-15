@@ -5,7 +5,7 @@ description: "How to set, reset, and batch-apply transaction categories from MCP
 ---
 
 <Note>
-  The individual categorization tools (`categorize_transaction`, `batch_categorize_transactions`, `bulk_recategorize`, `reset_transaction_category`) were merged into [`update_transactions`](/mcp/reference/transactions-write#update_transactions) during the MCP overhaul. Use `update_transactions` for all per-row and batch category writes. For retroactive rule application, see [`apply_rules`](/mcp/reference/rules-write#apply_rules).
+  The individual categorization tools (`categorize_transaction`, `batch_categorize_transactions`, `bulk_recategorize`, `reset_transaction_category`) were merged into [`update_transactions`](/mcp/reference/transactions-write#update_transactions) during the MCP overhaul. Use `update_transactions` for all per-row and batch category writes. For retroactive rule application, see [`apply_rules`](#apply_rules).
 </Note>
 
 ## Setting a category
@@ -78,8 +78,8 @@ description: "How to set, reset, and batch-apply transaction categories from MCP
 
 Category writes follow the precedence **user > agent > rule**. If a transaction's `category_override` is `'user'` (set manually in the dashboard), the agent's write is silently skipped — the human's choice is preserved. The `summary.skipped` count in the response surfaces these no-ops so you can account for them.
 
-## Applying rules retroactively
+## apply_rules
 
-To categorize in bulk by applying a stored rule to existing transactions, use [`apply_rules`](/mcp/reference/rules-write#apply_rules). Pass a `rule_id` to run one rule in isolation, or omit it to run the full active-rule pipeline in priority order.
+To categorize in bulk by applying a stored rule to existing transactions, use `apply_rules`. Pass a `rule_id` to run one rule in isolation, or omit it to run the full active-rule pipeline in priority order.
 
-See [Rules (write)](/mcp/reference/rules-write) for the full reference.
+See [Rules (write)](/mcp/reference/rules-write) for the other rules write tools (`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `batch_create_rules`).
