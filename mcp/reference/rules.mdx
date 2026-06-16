@@ -1,7 +1,7 @@
 ---
 title: "Rule read MCP reference"
 sidebarTitle: "Rules"
-description: "MCP read tools for listing transaction rules and previewing condition matches. Rule writes live on a separate page."
+description: "MCP read tools for listing, querying, previewing, and finding coverage for transaction rules. Rule writes live on a separate page."
 ---
 
 Transaction rules are condition trees that fire during sync to auto-categorize, tag, or annotate transactions. These read tools let agents inspect the existing rule set and dry-run conditions before creating new rules.
@@ -190,3 +190,74 @@ Full DSL is in the Breadbox repo's `docs/rule-dsl.md`. Short form:
 - **Combinators** — `and`, `or`, `not` (nest freely, max depth 10).
 
 Pass `{}` (or omit conditions entirely on rule creation) to match every transaction.
+
+---
+
+## find_matching_rules
+
+Reports which existing active rules already match a given transaction or merchant — the inverse of `preview_rule`. Call this before creating a rule to answer "is this merchant already covered?" without loading the entire rule set into context.
+
+**Scope:** Read
+
+### Parameters
+
+<ParamField path="transaction_id" type="string">
+  A transaction ID or short ID to evaluate the full active rule set against. Every condition field (amount, category, tags, provider, account, …) is checked against the row's real values. Provide exactly one of `transaction_id` or `merchant`.
+</ParamField>
+
+<ParamField path="merchant" type="string">
+  Free-text merchant name to check name-based rule coverage for. Builds a synthetic context with only the name fields set — rules that condition on amount, category, or tags won't match and that is the correct, conservative behavior. Provide exactly one of `transaction_id` or `merchant`.
+</ParamField>
+
+### Example input
+
+```json
+{ "merchant": "Starbucks" }
+```
+
+<Accordion title="Example output" icon="braces">
+
+```json
+{
+  "matched_count": 1,
+  "rules": [
+    {
+      "short_id": "r9Xm2pQr",
+      "name": "name: Starbucks → food_and_drink_coffee",
+      "sets_category": "food_and_drink_coffee",
+      "trigger": "on_create",
+      "priority": 10,
+      "enabled": true,
+      "hit_count": 47,
+      "match_all": false
+    }
+  ]
+}
+```
+
+</Accordion>
+
+### Response fields
+
+<ResponseField name="matched_count" type="integer">
+  Number of matching rules. Zero means no existing rule covers this transaction or merchant — safe to create a new one.
+</ResponseField>
+
+<ResponseField name="rules" type="array">
+  Matching rules ordered by priority ascending — the same order the sync pipeline would apply them.
+
+  <Expandable title="Rule fields">
+    <ResponseField name="short_id" type="string">Rule short ID.</ResponseField>
+    <ResponseField name="name" type="string">Rule name.</ResponseField>
+    <ResponseField name="sets_category" type="string">Category slug the rule's first `set_category` action assigns, or omitted when the rule sets no category (e.g. a tag-only rule).</ResponseField>
+    <ResponseField name="trigger" type="string">`on_create`, `on_change`, or `always`.</ResponseField>
+    <ResponseField name="priority" type="integer">Pipeline priority — lower runs first.</ResponseField>
+    <ResponseField name="enabled" type="boolean">Whether the rule is active.</ResponseField>
+    <ResponseField name="hit_count" type="integer">Lifetime number of transactions the rule has matched at sync time.</ResponseField>
+    <ResponseField name="match_all" type="boolean">`true` for conditionless rules (e.g. the seeded `needs-review` tagger) that match every transaction. These are not merchant coverage — distinguish them from rules with specific conditions.</ResponseField>
+  </Expandable>
+</ResponseField>
+
+<Note>
+  Trigger is not filtered — a rule is reported if its condition matches, regardless of `on_create`/`on_change`. This answers coverage questions, not sync-time simulation. A rule with `match_all: true` covers every transaction but is not a meaningful merchant match.
+</Note>
