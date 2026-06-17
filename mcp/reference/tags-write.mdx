@@ -6,7 +6,7 @@ description: "Create, update, and delete tags. Attaching tags to transactions li
 
 Tag CRUD. In most cases agents don't need these — adding a tag to a transaction auto-registers it. Use these when you need to set a custom display name, color, icon, or description up front, or to rename/retire a tag.
 
-All tools on this page are **Write** scope and require `session_id` + `reason`.
+All tools on this page are **Write** scope.
 
 <Note>
   Tag-record CRUD is MCP-only today. The REST equivalents for `POST/PUT/DELETE /api/v1/tags` are not yet exposed. The REST [Tags API](/api/overview) covers listing tags and attaching/detaching them from transactions; tag-record management stays on the admin dashboard and these MCP tools.
@@ -40,16 +40,10 @@ Register a new tag in the system. Use when you need to set `display_name`, `colo
   Lucide icon name (e.g. `inbox`).
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "setting up recurring-charges tracking",
   "slug": "subscription:monthly",
   "display_name": "Monthly Subscription",
   "description": "Recurring monthly charge.",
@@ -102,16 +96,10 @@ Identify the tag by UUID, short ID, or slug.
   New icon. Pass empty string to clear.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "updating color to match household convention",
   "id": "subscription:monthly",
   "color": "#4f46e5"
 }
@@ -142,16 +130,10 @@ Delete a tag. Cascades to `transaction_tags` — the tag is removed from every t
   Tag UUID, short ID, or slug.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "retiring deprecated workflow tag",
   "id": "old-workflow-tag"
 }
 ```

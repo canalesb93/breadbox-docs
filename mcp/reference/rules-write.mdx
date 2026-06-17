@@ -8,7 +8,7 @@ Transaction rules are condition trees that fire during sync to auto-categorize, 
 
 The full DSL lives in the Breadbox repo at `docs/rule-dsl.md`. Key concepts recapped below under [Pipeline stages](#pipeline-stages-and-priority).
 
-All tools on this page are **Write** scope and require `session_id` + `reason`.
+All tools on this page are **Write** scope.
 
 ---
 
@@ -61,16 +61,10 @@ Create a transaction rule. Rules match condition trees against transactions duri
   If `true`, immediately apply this rule to existing transactions after creation. Materializes `set_category`, `add_tag`, `remove_tag`; skips `add_comment` (sync-only).
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "tagging Starbucks charges for coffee tracking",
   "name": "name: Starbucks → food_and_drink_coffee",
   "conditions": {
     "field": "merchant_name",
@@ -156,16 +150,10 @@ Update one rule. Every field is optional — omit to leave unchanged. `condition
   RFC3339 timestamp, or empty string to clear expiry.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "disabling noisy rule",
   "id": "r9Xm2pQr",
   "enabled": false
 }
@@ -196,16 +184,10 @@ Delete a rule by ID. System-seeded rules (the `needs-review` auto-tagger) cannot
   Rule UUID or short ID.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "retiring obsolete rule",
   "id": "r9Xm2pQr"
 }
 ```
@@ -233,16 +215,10 @@ Each item follows the same shape as `create_transaction_rule`. Returns created r
   Array of rule definitions. Max 100. Each item has `name` (required), `conditions`, `actions` or `category_slug` (one required), `trigger`, `stage`, `priority`, `expires_in`.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "setting up composable coffee pipeline",
   "rules": [
     {
       "name": "Tag coffee shops",
