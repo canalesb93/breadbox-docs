@@ -6,7 +6,7 @@ description: "Import category definitions from TSV. Category reads live on the C
 
 The only category write surface exposed to MCP agents. Category writes are TSV-based, round-tripped with [`export_categories`](/mcp/reference/categories#export_categories) — the UI and REST API support finer-grained edits, but MCP intentionally keeps the surface narrow.
 
-This tool is **Write** scope and requires `session_id` + `reason`.
+This tool is **Write** scope.
 
 ---
 
@@ -26,10 +26,6 @@ The typical workflow is round-trip: call [`export_categories`](/mcp/reference/ca
   TSV content. Columns: `slug`, `display_name`, `parent_slug`, `icon`, `color`, `sort_order`, `hidden`, `merge_into`.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 Author the TSV first — the table below shows what each row looks like before encoding (tabs are real tab characters):
@@ -45,8 +41,6 @@ Then encode the TSV into the `content` field on the tool call. Tab characters be
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "consolidating groceries and bulk_buys into one category",
   "content": "slug\tdisplay_name\tparent_slug\ticon\tcolor\tsort_order\thidden\tmerge_into\nfood_and_drink\tFood and Drink\t\tutensils\t#C8482E\t10\tfalse\t\nfood_and_drink_groceries\tGroceries\tfood_and_drink\tshopping-basket\t#C8482E\t0\tfalse\t\nfood_and_drink_bulk_buys\t\t\t\t\t\t\tfood_and_drink_groceries\n"
 }
 ```

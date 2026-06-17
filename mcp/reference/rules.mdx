@@ -44,14 +44,6 @@ Lists transaction rules with optional filters. Agents should always call this be
   Pagination cursor.
 </ParamField>
 
-<ParamField path="session_id" type="string">
-  Optional session ID.
-</ParamField>
-
-<ParamField path="reason" type="string">
-  Optional rationale.
-</ParamField>
-
 ### Example input
 
 ```json
@@ -116,14 +108,6 @@ Dry-run a condition tree against existing transactions — no writes, no hit-cou
 
 <ParamField path="sample_size" type="integer" default="10">
   Number of sample matching transactions to return. Max 50. The `match_count` reflects the full match set regardless of sample size.
-</ParamField>
-
-<ParamField path="session_id" type="string">
-  Optional session ID.
-</ParamField>
-
-<ParamField path="reason" type="string">
-  Optional rationale.
 </ParamField>
 
 ### Example input

@@ -8,7 +8,7 @@ When two family members connect the same credit card (primary cardholder + autho
 
 Auto-matches start with `confidence="auto"`. Use `confirm_match` to promote a correct pairing to `confirmed`, or `reject_match` to remove a false pairing. List auto-matches with [`list_transaction_matches`](/mcp/reference/transactions#list_transaction_matches).
 
-All tools on this page are **Write** scope and require `session_id` + `reason`.
+All tools on this page are **Write** scope.
 
 ---
 
@@ -22,16 +22,10 @@ Confirm an auto-matched transaction pair as correct. Changes match confidence fr
   The transaction match ID (UUID or short ID).
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "validated against statement — matches",
   "match_id": "M4Xp9mQr"
 }
 ```
@@ -54,16 +48,10 @@ Reject a false auto-match between two transactions. Removes the match record and
   The transaction match ID.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "same amount/date coincidence — different merchants",
   "match_id": "M4Xp9mQr"
 }
 ```

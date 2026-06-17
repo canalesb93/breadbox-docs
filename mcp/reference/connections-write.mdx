@@ -6,7 +6,7 @@ description: "Trigger syncs and manage account links. Connection read tools live
 
 Write tools for bank connections and account-link management. Read tools (`get_sync_status`, `list_account_links`) live on [Connections & sync](/mcp/reference/connections-sync).
 
-All tools on this page are **Write** scope and require `session_id` + `reason`.
+All tools on this page are **Write** scope.
 
 <Warning>
   `trigger_sync` requires a **full-access** API key. It is not available to `read_only` keys — in fact, write tools are filtered out of the server entirely for read-only scopes, so a read-only agent never sees it. See [Set up MCP](/mcp/setup#read-only-vs-read-write).
@@ -26,16 +26,10 @@ Trigger a manual sync of bank data from the provider (Plaid or Teller). Optional
   Sync a specific connection by ID (UUID or short ID). If omitted, syncs all active connections.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "checking for charges since last sync",
   "connection_id": "c1Xm9pQ2"
 }
 ```
@@ -74,16 +68,10 @@ Automatically runs initial reconciliation after creation — the response includ
   Date tolerance in days. `0` = same day.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "linking Amex authorized user account to primary for dedup",
   "primary_account_id": "a7Xm9pQ2",
   "dependent_account_id": "a8Yn0qR3"
 }
@@ -121,16 +109,10 @@ Remove an account link and clear all transaction attribution set by it. Transact
   The account link ID.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "primary cardholder closed card — unlinking",
   "link_id": "L9Xm2pQr"
 }
 ```
@@ -155,16 +137,10 @@ Use after `create_account_link` has already run (it reconciles on create) if you
   The account link ID to reconcile.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "after sync — checking for new matches",
   "link_id": "L9Xm2pQr"
 }
 ```

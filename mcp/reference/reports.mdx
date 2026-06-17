@@ -6,7 +6,7 @@ description: "Submit an agent report to the household dashboard."
 
 Reports are how an agent signals "I did work — here's what happened and what you should know". Each report shows up in the household's dashboard feed as a message from the agent, with a title (the headline), a markdown body (the detail), a priority, and optional tags.
 
-This tool is **Write** scope and requires `session_id` + `reason`. The same resource is also exposed via REST at [`POST /api/v1/reports`](/api/overview).
+This tool is **Write** scope. The same resource is also exposed via REST at [`POST /api/v1/reports`](/api/overview).
 
 ---
 
@@ -42,10 +42,6 @@ Read `breadbox://report-format` for the full style guide and report templates (r
   Custom author name (e.g. `Review Agent`, `Budget Monitor`). Overrides the API key name for display.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 Author the markdown body first — this is what the household sees rendered in the dashboard feed:
@@ -71,8 +67,6 @@ Then encode the markdown into the `body` field on the tool call. Newlines become
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "closing weekly review session",
   "title": "Reviewed 47 transactions this week — 3 recategorized, no suspicious activity.",
   "body": "## Summary\n- Reviewed: 47 transactions (approved: 44, recategorized: 3)\n- New rules created: 1 (Starbucks → coffee)\n\n## Rules Created\n- name: Starbucks → food_and_drink_coffee (matched 12 transactions retroactively)\n\n## Recategorized\n- [STARBUCKS #4591](/transactions/k7Xm9pQ2) — was misfiled under general; now coffee\n- [UBER TRIP](/transactions/k8Yn0qR3) — moved from travel to ride_share\n- [APPLE.COM/BILL](/transactions/k9Zo1rS4) — moved to subscriptions\n\n## Observations\nNo unusual charges. Monthly dining is tracking $340 below February.",
   "priority": "info",

@@ -6,7 +6,7 @@ description: "Compound writes, comments, and tag add/remove on transactions. Cat
 
 Write tools for editing transactions. The headline primitive is [`update_transactions`](#update_transactions) — a compound write that covers category, tags, and a comment in one atomic op per row. Single-action tools exist for simpler cases.
 
-All tools on this page are **Write** scope and require `session_id` + `reason`. See [Categorization](/mcp/reference/categorization) for category-only writes.
+All tools on this page are **Write** scope. See [Categorization](/mcp/reference/categorization) for category-only writes.
 
 ---
 
@@ -41,10 +41,6 @@ Every change lands as a single linked annotation per operation. Prefer this over
   `continue` or `abort`.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Operation shape
 
 <ParamField path="transaction_id" type="string" required>
@@ -71,8 +67,6 @@ Every change lands as a single linked annotation per operation. Prefer this over
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "closing weekly review batch",
   "on_error": "continue",
   "operations": [
     {
@@ -127,16 +121,10 @@ Adds a free-standing comment to a transaction — narrative that isn't tied to a
   Comment text. Markdown supported. Max 10000 chars.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "flagging unusual charge for household review",
   "transaction_id": "k7Xm9pQ2",
   "content": "Possible fraud — no one recognizes this merchant. Recommend disputing."
 }
@@ -175,16 +163,10 @@ Attach one tag to one transaction. Auto-creates the tag as persistent if the slu
   Optional rationale recorded on the `tag_added` annotation.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "flagging this as recurring for subscription tracker",
   "transaction_id": "k7Xm9pQ2",
   "tag_slug": "subscription:monthly",
   "note": "Netflix monthly charge."
@@ -218,16 +200,10 @@ Remove one tag from one transaction. A `note` is recommended (it lands on the `t
   Optional rationale recorded on the annotation.
 </ParamField>
 
-<ParamField path="session_id" type="string" required />
-
-<ParamField path="reason" type="string" required />
-
 ### Example input
 
 ```json
 {
-  "session_id": "s9Xm2pQk",
-  "reason": "closing review after categorizing",
   "transaction_id": "k7Xm9pQ2",
   "tag_slug": "needs-review",
   "note": "clearly groceries — categorized as food_and_drink_groceries"
