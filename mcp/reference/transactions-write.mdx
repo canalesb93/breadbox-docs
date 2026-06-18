@@ -1,10 +1,10 @@
 ---
 title: "Transaction write MCP reference"
 sidebarTitle: "Transaction writes"
-description: "Compound writes, comments, and tag add/remove on transactions. Categorization lives on its own page."
+description: "Compound writes for category, tags, and comments on transactions. Categorization lives on its own page."
 ---
 
-Write tools for editing transactions. The headline primitive is [`update_transactions`](#update_transactions) — a compound write that covers category, tags, and a comment in one atomic op per row. Single-action tools exist for simpler cases.
+Write tools for editing transactions. `update_transactions` is the single primitive — it covers category, tags, and a comment in one atomic op per row, for up to 50 transactions per call.
 
 All tools on this page are **Write** scope. See [Categorization](/mcp/reference/categorization) for category-only writes.
 
@@ -12,9 +12,9 @@ All tools on this page are **Write** scope. See [Categorization](/mcp/reference/
 
 ## update_transactions
 
-Compound write for up to 50 transactions at once. Each operation can set a category (`category_slug`), add tags (`tags_to_add`), remove tags (`tags_to_remove`), and attach a comment — all atomically per transaction. This is the preferred tool for closing review work (set category + remove `needs-review` + explain) in one call.
+Compound write for up to 50 transactions at once. Each operation can set a category (`category_slug`), add tags (`tags_to_add`), remove tags (`tags_to_remove`), and attach a comment — all atomically per transaction. This is the tool for closing review work (set category + remove `needs-review` + explain) in one call.
 
-Every change lands as a single linked annotation per operation. Prefer this over composing `categorize_transaction` + `add_transaction_tag` + `remove_transaction_tag` + `add_transaction_comment`, which would write four separate annotations.
+Every change lands as a single linked annotation per operation, so the activity timeline reads as one event per transaction rather than a separate entry for each change.
 
 ### Compound op semantics
 
@@ -60,7 +60,7 @@ Every change lands as a single linked annotation per operation. Prefer this over
 </ParamField>
 
 <ParamField path="comment" type="string">
-  Free-form comment written as an annotation. Max 10000 chars. Prefer inline over a separate `add_transaction_comment` call.
+  Free-form comment written as an annotation. Max 10000 chars. Markdown supported.
 </ParamField>
 
 ### Example input
@@ -101,122 +101,3 @@ Every change lands as a single linked annotation per operation. Prefer this over
 }
 ```
 
----
-
-## add_transaction_comment
-
-Adds a free-standing comment to a transaction — narrative that isn't tied to a specific category or tag change. Flagging unusual charges, noting shared expenses, cross-references.
-
-<Note>
-  **When the comment is rationale for an edit, use `update_transactions` instead.** Passing the rationale inline (`comment`, or `note` on a tag op) writes one linked annotation; `add_transaction_comment` writes a separate, free-standing one — so the timeline would duplicate the context.
-</Note>
-
-### Parameters
-
-<ParamField path="transaction_id" type="string" required>
-  UUID or short ID.
-</ParamField>
-
-<ParamField path="content" type="string" required>
-  Comment text. Markdown supported. Max 10000 chars.
-</ParamField>
-
-### Example input
-
-```json
-{
-  "transaction_id": "k7Xm9pQ2",
-  "content": "Possible fraud — no one recognizes this merchant. Recommend disputing."
-}
-```
-
-### Example output
-
-```json
-{
-  "id": "c4Xp2mQr",
-  "transaction_id": "k7Xm9pQ2",
-  "content": "Possible fraud — no one recognizes this merchant. Recommend disputing.",
-  "author_type": "agent",
-  "author_id": "ak_01HT...",
-  "author_name": "Review Agent",
-  "created_at": "2026-04-23T14:35:00Z",
-  "updated_at": "2026-04-23T14:35:00Z"
-}
-```
-
----
-
-## add_transaction_tag
-
-Attach one tag to one transaction. Auto-creates the tag as persistent if the slug isn't registered yet. Idempotent: returns `already_present: true` if the tag was already attached.
-
-### Parameters
-
-<ParamField path="transaction_id" type="string" required />
-
-<ParamField path="tag_slug" type="string" required>
-  Slug to add. Regex: `^[a-z0-9][a-z0-9\-:]*[a-z0-9]$`.
-</ParamField>
-
-<ParamField path="note" type="string">
-  Optional rationale recorded on the `tag_added` annotation.
-</ParamField>
-
-### Example input
-
-```json
-{
-  "transaction_id": "k7Xm9pQ2",
-  "tag_slug": "subscription:monthly",
-  "note": "Netflix monthly charge."
-}
-```
-
-### Example output
-
-```json
-{
-  "added": true,
-  "already_present": false,
-  "tag_slug": "subscription:monthly",
-  "transaction_id": "k7Xm9pQ2"
-}
-```
-
----
-
-## remove_transaction_tag
-
-Remove one tag from one transaction. A `note` is recommended (it lands on the `tag_removed` annotation) but not required. Idempotent: returns `already_absent: true` if the tag wasn't attached.
-
-### Parameters
-
-<ParamField path="transaction_id" type="string" required />
-
-<ParamField path="tag_slug" type="string" required />
-
-<ParamField path="note" type="string">
-  Optional rationale recorded on the annotation.
-</ParamField>
-
-### Example input
-
-```json
-{
-  "transaction_id": "k7Xm9pQ2",
-  "tag_slug": "needs-review",
-  "note": "clearly groceries — categorized as food_and_drink_groceries"
-}
-```
-
-### Example output
-
-```json
-{
-  "removed": true,
-  "already_absent": false,
-  "tag_slug": "needs-review",
-  "transaction_id": "k7Xm9pQ2"
-}
-```
