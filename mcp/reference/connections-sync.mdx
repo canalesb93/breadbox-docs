@@ -1,11 +1,7 @@
 ---
 title: "Connections and sync read MCP reference"
 sidebarTitle: "Connections & sync"
-description: "MCP read tools for inspecting connection health and account links."
----
-
-These are the read-only visibility tools for bank connections. Write tools for triggering syncs and managing account links are on [Connections writes](/mcp/reference/connections-write).
-
+description: "MCP read tool for inspecting connection health and sync status."
 ---
 
 ## get_sync_status
@@ -72,43 +68,3 @@ None.
 | `pending_reauth` | Bank requires re-authentication in the admin UI. |
 | `disconnected` | Connection was removed; accounts and transactions are preserved with FKs set to `NULL`. |
 
----
-
-## list_account_links
-
-Lists account links between primary and dependent/authorized-user accounts. Account links deduplicate transactions that appear in both feeds when two family members connect the same credit card. Each link entry returns match counts and unmatched counts so you can see reconciliation progress.
-
-**Scope:** Read
-
-### Parameters
-
-None.
-
-### Example input
-
-```json
-{}
-```
-
-### Example output
-
-```json
-[
-  {
-    "id": "L9Xm2pQr",
-    "primary_account_id": "a7Xm9pQ2",
-    "primary_account_name": "Amex Gold (Alice)",
-    "primary_user_name": "Alice",
-    "dependent_account_id": "a8Yn0qR3",
-    "dependent_account_name": "Amex Gold (Bob)",
-    "dependent_user_name": "Bob",
-    "match_strategy": "date_amount_name",
-    "match_tolerance_days": 0,
-    "enabled": true,
-    "match_count": 142,
-    "unmatched_dependent_count": 7,
-    "created_at": "2026-01-20T16:45:00Z",
-    "updated_at": "2026-04-23T12:00:00Z"
-  }
-]
-```
