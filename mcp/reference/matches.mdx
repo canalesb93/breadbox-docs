@@ -6,7 +6,7 @@ description: "Confirm or reject auto-matched transaction pairs produced by accou
 
 When two family members connect the same credit card (primary cardholder + authorized user), transactions appear in both feeds. An [account link](/mcp/reference/connections-write#create_account_link) pairs matching transactions by date and amount, excludes the dependent's copies from totals, and attributes matched primary-side transactions to the dependent user.
 
-Auto-matches start with `confidence="auto"`. Use `confirm_match` to promote a correct pairing to `confirmed`, or `reject_match` to remove a false pairing. List auto-matches with [`list_transaction_matches`](/mcp/reference/transactions#list_transaction_matches).
+Auto-matches start with `confidence="auto"`. Use `confirm_match` to promote a correct pairing to `confirmed`, or `reject_match` to remove a false pairing.
 
 All tools on this page are **Write** scope.
 
