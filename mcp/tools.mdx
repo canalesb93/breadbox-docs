@@ -91,8 +91,8 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `start_date` | string (YYYY-MM-DD) | No | Include transactions on or after this date. |
-| `end_date` | string (YYYY-MM-DD) | No | Include transactions on or before this date. |
+| `start_date` | string (YYYY-MM-DD) | No | Include transactions on or after this date (inclusive). |
+| `end_date` | string (YYYY-MM-DD) | No | Include transactions before this date (exclusive). To cover all of January, pass `2025-02-01`. |
 | `account_id` | string | No | Filter to a specific account. |
 | `user_id` | string | No | Filter to accounts owned by this family member. |
 | `category_slug` | string | No | Filter by category slug (e.g., `food_and_drink`). Parent slugs include all children. See [MCP: categories](/mcp/reference/categories) for the full list. |
@@ -110,7 +110,7 @@ Searches transactions using a combination of filters. Results are cursor-paginat
 ```json
 {
   "start_date": "2025-01-01",
-  "end_date": "2025-01-31",
+  "end_date": "2025-02-01",
   "category_slug": "food_and_drink",
   "limit": 50
 }
@@ -171,8 +171,8 @@ Counts matching transactions without returning any transaction data. Accepts the
 
 | Parameter | Type | Required | Description |
 | --- | --- | --- | --- |
-| `start_date` | string (YYYY-MM-DD) | No | Count transactions on or after this date. |
-| `end_date` | string (YYYY-MM-DD) | No | Count transactions on or before this date. |
+| `start_date` | string (YYYY-MM-DD) | No | Count transactions on or after this date (inclusive). |
+| `end_date` | string (YYYY-MM-DD) | No | Count transactions before this date (exclusive). To cover all of January, pass `2025-02-01`. |
 | `account_id` | string | No | Filter to a specific account. |
 | `user_id` | string | No | Filter to accounts owned by this family member. |
 | `category_slug` | string | No | Filter by category slug. Parent slugs include all children. |
@@ -186,7 +186,7 @@ Counts matching transactions without returning any transaction data. Accepts the
 ```json
 {
   "start_date": "2025-01-01",
-  "end_date": "2025-01-31"
+  "end_date": "2025-02-01"
 }
 ```
 
