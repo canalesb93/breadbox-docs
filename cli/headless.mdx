@@ -8,7 +8,7 @@ The same CLI surface that's pleasant to type at a prompt is also the primary way
 
 If you're new to the build flavors, start with [Installation](/cli/installation).
 
-## Pattern 1 — Same-host agent
+## Pattern 1 — same-host agent
 
 An AI agent or script running on the same machine as `breadbox serve`. The CLI talks to `http://localhost:8080` over loopback; no exposed network surface.
 
@@ -49,7 +49,7 @@ An AI agent or script running on the same machine as `breadbox serve`. The CLI t
   </Step>
 </Steps>
 
-## Pattern 2 — Remote agent (lite CLI)
+## Pattern 2 — remote agent (lite CLI)
 
 An agent running on a different machine — a VPS, a phone, a corporate workstation, a cloud function. Use the lite build (`breadbox-cli`) so there's no server code on the agent host at all.
 
@@ -94,7 +94,7 @@ An agent running on a different machine — a VPS, a phone, a corporate workstat
   </Step>
 </Steps>
 
-## Pattern 3 — Scheduled jobs and CI
+## Pattern 3 — scheduled jobs and CI
 
 The CLI shines in cron, systemd timers, GitHub Actions, and any other "fire a command on a schedule" surface.
 

@@ -18,7 +18,7 @@ This guide shows three self-contained workflow patterns you can drop into Opencl
 
 ---
 
-## Workflow 1 — The 12-hour triage loop
+## Workflow 1 — the 12-hour triage loop
 
 **Pattern:** Every 12 hours, the main agent checks how large the `needs-review` backlog is. If it's small enough to handle in one pass, it delegates a sub-agent to work the batch. If the queue is large, the sub-agent works in 30-transaction pages until it drains to zero.
 
@@ -119,7 +119,7 @@ On each run:
 
 ---
 
-## Workflow 2 — Attention-needed alerts
+## Workflow 2 — attention-needed alerts
 
 **Pattern:** After each review pass, the agent scans the deferred (`needs-human`) transactions. If any match certain criteria — large charge, unknown merchant, a charge that deviates from a known subscription amount — it sends a notification through Openclaw's connected messaging channel.
 
@@ -202,7 +202,7 @@ Amount convention: positive = money out, negative = money in.
 
 ---
 
-## Workflow 3 — Session hygiene
+## Workflow 3 — session hygiene
 
 **Pattern:** Every write cycle starts with `create_session` and ends with `submit_report`. This is not optional overhead — it's how Breadbox attributes agent work to specific cycles in the audit log. Without it, all agent writes are anonymous and the household has no clear record of what any given run did.
 
