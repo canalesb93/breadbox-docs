@@ -171,7 +171,7 @@ rss: true
 
 - **MCP tool `list_annotations`** now wraps its response in a `{ "annotations": [...] }` envelope. The previous bare-array shape failed client-side schema validation on clients that strictly enforce the MCP spec — `structuredContent` is required to be a JSON record, not an array. The new envelope matches every other list tool (`list_accounts`, `list_categories`, `list_tags`, …) and the REST `/transactions/{id}/annotations` endpoint.
 
-### Breaking changes (pre-1.0)
+### Breaking Changes (Pre-1.0)
 
 - **Renamed provider-data fields on transactions table.** Raw data fields from bank providers are now prefixed with `provider_` to clarify they are unmodified provider data, not Breadbox assignments. This affects:
   - Database columns: `external_transaction_id` → `provider_transaction_id`, `pending_transaction_id` → `provider_pending_transaction_id`, `name` → `provider_name`, `merchant_name` → `provider_merchant_name`, `category_primary` → `provider_category_primary`, `category_detailed` → `provider_category_detailed`, `category_confidence` → `provider_category_confidence`, `payment_channel` → `provider_payment_channel`
