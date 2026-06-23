@@ -1,7 +1,7 @@
 ---
 title: "Rule read MCP reference"
 sidebarTitle: "Rules"
-description: "MCP read tools for listing, querying, previewing, and finding coverage for transaction rules. Rule writes live on a separate page."
+description: "MCP read tools for listing, filtering, previewing, and finding coverage for transaction rules: list_transaction_rules, query_transaction_rules, preview_rule, find_matching_rules. Rule writes live on a separate page."
 ---
 
 Transaction rules are condition trees that fire during sync to auto-categorize, tag, or annotate transactions. These read tools let agents inspect the existing rule set and dry-run conditions before creating new rules.
@@ -87,6 +87,82 @@ Lists transaction rules with optional filters. Agents should always call this be
 ```
 
 </Accordion>
+
+---
+
+## query_transaction_rules
+
+Richer, filterable query over the rule set — the rules analogue of `query_transactions`. Adds trigger, creator type, hit-count, and unused filters that `list_transaction_rules` doesn't expose, plus sorting by impact. Use this to audit coverage ("which agent-created rules have never fired?") or prune dead rules (`only_unused: true`) without loading the full roster.
+
+**Scope:** Read
+
+**Mirrors:** [`GET /api/v1/rules`](/api/overview)
+
+### Parameters
+
+<ParamField path="category_slug" type="string">
+  Filter to rules whose `set_category` action targets this category slug.
+</ParamField>
+
+<ParamField path="enabled" type="boolean">
+  `true` for only enabled, `false` for only disabled, omit for both.
+</ParamField>
+
+<ParamField path="trigger" type="string">
+  Filter by firing trigger: `on_create`, `on_change` (alias `on_update`), or `always`.
+</ParamField>
+
+<ParamField path="creator_type" type="string">
+  Filter by who created the rule: `user`, `agent`, or `system`.
+</ParamField>
+
+<ParamField path="search" type="string">
+  Search by rule name. Comma-separated values are ORed.
+</ParamField>
+
+<ParamField path="search_mode" type="string" default="contains">
+  `contains`, `words`, or `fuzzy`.
+</ParamField>
+
+<ParamField path="min_hit_count" type="integer">
+  Return only rules whose `hit_count` is at least this value. Surfaces high-impact rules. Ignored when `only_unused` is `true`.
+</ParamField>
+
+<ParamField path="only_unused" type="boolean">
+  When `true`, return only rules that have never fired (`hit_count = 0`) — dead or over-specific rules worth reviewing for deletion.
+</ParamField>
+
+<ParamField path="sort_by" type="string" default="priority">
+  Sort column: `priority` (pipeline execution order), `hit_count`, `last_hit_at`, `created_at`, or `name`.
+</ParamField>
+
+<ParamField path="sort_order" type="string">
+  `asc` or `desc`. Default per column: `desc` for `hit_count`, `last_hit_at`, `created_at`; `asc` for `priority` and `name`.
+</ParamField>
+
+<ParamField path="limit" type="integer" default="50">
+  Max 500.
+</ParamField>
+
+<ParamField path="cursor" type="string">
+  Pagination cursor. Only applies to the default `priority` sort — an explicit `sort_by` returns a single top-N page with no `next_cursor`.
+</ParamField>
+
+<ParamField path="fields" type="string">
+  Comma-separated fields to include. Omit for the summary projection (`name`, `enabled`, `priority`, `trigger`, `category`, `hit_count`, `last_hit_at` — no conditions or actions trees). Pass `fields=all` for every field.
+</ParamField>
+
+### Example — find dead rules
+
+```json
+{ "only_unused": true, "sort_by": "created_at", "sort_order": "desc" }
+```
+
+### Example — highest-impact rules for a category
+
+```json
+{ "category_slug": "food_and_drink_groceries", "sort_by": "hit_count", "limit": 10 }
+```
 
 ---
 
