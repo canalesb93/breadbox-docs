@@ -104,20 +104,23 @@ A complete list of every tool Breadbox exposes, grouped by domain. Tools without
 **Data access (read)**
 
 - Overview: `get_overview` — household snapshot; mirrors `breadbox://overview`.
-- Transactions: [`query_transactions`, `count_transactions`, `transaction_summary`, `list_annotations`](/mcp/reference/transactions)
+- Transactions: [`query_transactions`, `transaction_summary`, `list_annotations`](/mcp/reference/transactions)
 - Accounts and users: [`list_accounts`, `list_users`](/mcp/reference/accounts)
 - Categories: [`list_categories`](/mcp/reference/categories)
 - Tags: [`list_tags`](/mcp/reference/tags)
 - Rules: [`list_transaction_rules`, `query_transaction_rules`, `preview_rule`, `find_matching_rules`](/mcp/reference/rules)
 - Connections and sync: [`get_sync_status`](/mcp/reference/connections-sync)
-- Recurring series: `list_series`, `get_series`, `explain_series_candidates`
+- Recurring series: `list_series`, `get_series`
+- Counterparties: `list_counterparties`, `get_counterparty`
 - Workflows: `list_workflows`
+- Guidance docs: `get_reference`
 
 **Mutations (write)**
 
-- Transactions: [`update_transactions`](/mcp/reference/transactions-write), `flag_transaction`, `unflag_transaction` — `update_transactions` is the compound write for category sets, tag adds/removes, and comments; the former individual tools were merged into it.
-- Transaction metadata: `set_transaction_metadata`, `remove_transaction_metadata`, `replace_transaction_metadata`, `clear_transaction_metadata`
-- Rules: [`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `batch_create_rules`, `apply_rules`](/mcp/reference/rules-write)
+- Transactions: [`update_transactions`](/mcp/reference/transactions-write) — compound write for category sets, tag adds/removes, and comments.
+- Transaction metadata: `set_transaction_metadata`
+- Rules: [`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `apply_rules`](/mcp/reference/rules-write)
 - Tags: [`create_tag`, `update_tag`, `delete_tag`](/mcp/reference/tags-write)
-- Recurring series: `review_series`, `assign_series`, `update_series`, `set_series_type`, `rekey_series`, `split_series`, `unlink_series_transactions`, `add_series_tag`, `remove_series_tag`
+- Recurring series: `assign_series`, `update_series`, `unlink_series_transactions`
+- Counterparties: `update_counterparty`, `assign_counterparty`, `unlink_counterparty_transactions`
 - Reports: [`submit_report`](/mcp/reference/reports)
