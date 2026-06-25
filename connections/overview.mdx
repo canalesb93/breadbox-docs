@@ -7,15 +7,19 @@ A **connection** in Breadbox is the link between your self-hosted instance and a
 
 ## Providers supported
 
-Breadbox currently supports three ways to bring in bank data. If you're setting up for the first time, **Teller is the easiest starting point**: the free Development tier connects to real accounts immediately, with no production approval process to wait on.
+Breadbox currently supports four ways to bring in bank data. If you're setting up for the first time, **Teller is the easiest starting point**: the free Development tier connects to real accounts immediately, with no production approval process to wait on.
 
-<Columns cols={3}>
+<Columns cols={2}>
   <Card title="Teller" icon="landmark" href="/connections/teller">
     Recommended starter. Real bank connections on the free Development tier without a production approval process. Uses mTLS-based authentication.
   </Card>
 
   <Card title="Plaid" icon="building" href="/connections/plaid">
     Widest US coverage — thousands of institutions, automatic sync, webhooks, and balance tracking. Worth the extra setup once you're ready for production.
+  </Card>
+
+  <Card title="SimpleFIN" icon="bridge" href="/connections/simplefin">
+    Token-paste aggregator via the SimpleFIN Bridge. One token spans every bank linked at the bridge, and new banks added there appear automatically on the next sync.
   </Card>
 
   <Card title="CSV import" icon="file-spreadsheet" href="/connections/csv-import">
@@ -77,13 +81,17 @@ The same operations are available programmatically via the [Connections API](/ap
 
 ## Next steps
 
-<Columns cols={3}>
+<Columns cols={2}>
   <Card title="Connect with Teller" icon="plug" href="/connections/teller">
     Configure Teller and enroll a bank using the Teller Connect flow.
   </Card>
 
   <Card title="Connect with Plaid" icon="plug" href="/connections/plaid">
     Set up Plaid credentials and link your first bank account.
+  </Card>
+
+  <Card title="Connect with SimpleFIN" icon="bridge" href="/connections/simplefin">
+    Paste a SimpleFIN setup token to pull in every bank linked at your bridge.
   </Card>
 
   <Card title="Import from CSV" icon="upload" href="/connections/csv-import">
