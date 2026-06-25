@@ -32,9 +32,14 @@ Create a transaction rule. Rules match condition trees against transactions duri
   - `{"type": "set_category", "category_slug": "..."}`
   - `{"type": "add_tag", "tag_slug": "..."}`
   - `{"type": "remove_tag", "tag_slug": "..."}`
+  - `{"type": "set_metadata", "metadata_key": "...", "metadata_value": <any JSON>}`
+  - `{"type": "remove_metadata", "metadata_key": "..."}`
+  - `{"type": "assign_series", "series_short_id": "..."}` or `{"type": "assign_series", "series_name": "...", "create_if_missing": true}`
+  - `{"type": "assign_counterparty", "counterparty_short_id": "..."}` or `{"type": "assign_counterparty", "counterparty_name": "...", "create_if_missing": true}`
+  - `{"type": "flag"}` / `{"type": "unflag"}` — no parameters
   - `{"type": "add_comment", "content": "..."}`
 
-  Actions compose — a rule can set a category, add a tag, and add a comment on the same match. `add_comment` fires only at sync time (not on retroactive apply). If omitted, supply `category_slug` as a shorthand.
+  Actions compose — a rule can set a category, add a tag, write metadata, and link a series on the same match. `add_comment` fires only at sync time (not on retroactive apply); every other action materializes through both sync and retroactive paths. If `actions` is omitted, supply `category_slug` as a shorthand.
 </ParamField>
 
 <ParamField path="category_slug" type="string">
@@ -58,16 +63,16 @@ Create a transaction rule. Rules match condition trees against transactions duri
 </ParamField>
 
 <ParamField path="apply_retroactively" type="boolean" default="false">
-  If `true`, immediately apply this rule to existing transactions after creation. Materializes `set_category`, `add_tag`, `remove_tag`; skips `add_comment` (sync-only).
+  If `true`, immediately apply this rule to existing transactions after creation. Materializes every state-mutating action (`set_category`, `add_tag`, `remove_tag`, `set_metadata`, `remove_metadata`, `assign_series`, `assign_counterparty`, `flag`, `unflag`); skips `add_comment` (sync-only).
 </ParamField>
 
 ### Example input
 
 ```json
 {
-  "name": "name: Starbucks → food_and_drink_coffee",
+  "name": "Starbucks → food_and_drink_coffee",
   "conditions": {
-    "field": "merchant_name",
+    "field": "provider_merchant_name",
     "op": "contains",
     "value": "starbucks"
   },
@@ -85,9 +90,9 @@ Create a transaction rule. Rules match condition trees against transactions duri
 {
   "rule": {
     "id": "r9Xm2pQr",
-    "name": "name: Starbucks → food_and_drink_coffee",
+    "name": "Starbucks → food_and_drink_coffee",
     "conditions": {
-      "field": "merchant_name",
+      "field": "provider_merchant_name",
       "op": "contains",
       "value": "starbucks"
     },
@@ -224,7 +229,7 @@ Each item follows the same shape as `create_transaction_rule`. Returns created r
       "name": "Tag coffee shops",
       "stage": "baseline",
       "conditions": {
-        "field": "merchant_name",
+        "field": "provider_merchant_name",
         "op": "contains",
         "value": "starbucks"
       },
@@ -287,20 +292,25 @@ Rules fire in priority-ASC order during each sync pass, and within a single pass
 
 Rules of thumb:
 
-- Per-merchant rules (priority 20–30 or `refinement`) > name-pattern rules (`standard`) > `category_primary` rules (`baseline`).
+- Per-merchant rules (priority 20–30 or `refinement`) > name-pattern rules (`standard`) > `provider_category_primary` rules (`baseline`).
 - Prefer `contains` over exact match — bank feeds format merchant names inconsistently.
 - Always use `category_slug`, not `category_id`, when authoring actions or filters.
 
 ## Condition grammar
 
-Same grammar used by [`preview_rule`](/mcp/reference/rules#preview_rule).
+Same grammar used by [`preview_rule`](/mcp/reference/rules#preview_rule). For the full reference (every operator, the match-stability contract, and the recurrence idiom), see [Rules](/transactions/rules).
 
-- **Fields** — `name`, `merchant_name`, `amount`, `category_primary`, `category_detailed`, `category` (assigned slug, live-updated by earlier-stage rules), `pending`, `provider`, `account_id`, `account_name`, `user_id`, `user_name`, `tags`.
+- **Fields** —
+  - **Raw-immutable** (safe to author on): `provider_name`, `provider_merchant_name`, `amount`, `provider_category_primary`, `provider_category_detailed`, `pending`, `provider`.
+  - **Stable-surrogate** (safe): `account_id`, `user_id`.
+  - **Stable-derived** date-parts (safe): `day_of_month`, `month`, `day_of_week`, `day_of_year`.
+  - **Mutable-display** (use deliberately, not as a load-bearing match): `account_name`, `user_name`, `category` (assigned slug, live-updated by earlier-stage rules), `tags`, `series`, `in_series`, `counterparty`, `has_counterparty`, `metadata.<key>`.
 - **Operators** —
-  - String/category: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
-  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`.
+  - String: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
+  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `approx` (`value ± tolerance`), `between` (`min`/`max`).
   - Bool: `eq`, `neq`.
   - Tags: `contains`, `not_contains`, `in`.
+  - Metadata (`metadata.<key>`): all string and numeric operators above, plus `exists` / `not_exists`.
 - **Combinators** — `and`, `or`, `not` (nest freely, max depth 10).
 
 Nested example:
@@ -310,11 +320,23 @@ Nested example:
   "or": [
     {
       "and": [
-        { "field": "merchant_name", "op": "contains", "value": "starbucks" },
+        { "field": "provider_merchant_name", "op": "contains", "value": "starbucks" },
         { "field": "amount", "op": "gte", "value": 5 }
       ]
     },
     { "field": "tags", "op": "contains", "value": "coffee" }
+  ]
+}
+```
+
+Recurrence idiom — match a subscription by amount and day-of-month:
+
+```json
+{
+  "and": [
+    { "field": "provider_merchant_name", "op": "contains", "value": "spotify" },
+    { "field": "amount", "op": "approx", "value": 10.99, "tolerance": 1.00 },
+    { "field": "day_of_month", "op": "approx", "value": 14, "tolerance": 2 }
   ]
 }
 ```

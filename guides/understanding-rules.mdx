@@ -1,32 +1,41 @@
 ---
 title: "Understanding rules"
-description: "A primer on the Breadbox rule DSL — how to build condition trees, what actions are available, and four worked examples you can adapt."
+description: "A primer on the Breadbox rule DSL — the doctrine behind it, how to build condition trees, what actions are available, and worked examples you can adapt."
 ---
 
-Rules are the workhorse of any Breadbox setup. A well-tuned set of rules can categorize the overwhelming majority of your transactions during sync, leaving only the genuinely ambiguous ones for a human or agent to look at. This guide walks through the DSL by example — four rules you can adapt and drop into your instance today.
+Rules are the workhorse of any Breadbox setup. A well-tuned set of rules can categorize the overwhelming majority of your transactions during sync, leaving only the genuinely ambiguous ones for a human or agent to look at. This guide walks through the DSL by example — five rules you can adapt and drop into your instance today.
 
-If you haven't yet, skim [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) first for the vocabulary. The full specification lives in [Auto-categorize transactions with rules](/transactions/rules) and the [rules API reference](/api/overview).
+If you haven't yet, skim [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) first for the vocabulary. The full specification lives in [Rules: the substrate that turns provider data into intelligence](/transactions/rules) and the [rules API reference](/api/overview).
+
+## The doctrine: provider data is immutable; intelligence accrues as rules
+
+Breadbox treats provider data — the raw transactions Plaid, Teller, SimpleFIN, or your CSV imports drop into the database — as a permanent, untouched substrate. Breadbox never rewrites the provider's name, merchant, amount, or categories. Every durable choice you or an agent makes about a charge — *"this is a subscription"*, *"this is a grocery run"*, *"flag anything over $1000"* — accrues as a **rule**. The next sync resolves the same kind of charge the same way automatically, without a re-run.
+
+Two practical consequences:
+
+- **Match on raw fields.** A rule keyed on `provider_name`, `provider_merchant_name`, `amount`, `pending`, or the date-parts (`day_of_month`, `month`, ...) resolves identically on every sync and on retroactive apply. A rule keyed on a mutable label (`account_name`, `category`, `tags`) is reacting to something a person, agent, or earlier-stage rule can change.
+- **Last-writer-wins.** Rules, agents, and users all write the same fields (`category_id`, tags, metadata, series link, counterparty link, flag). There is no per-source precedence guard — whoever runs last wins. The sync engine only runs rules on new or changed transactions, so a user's manual edit on an unchanged row is not silently re-clobbered.
 
 ## The DSL, in one screen
 
 A rule is a JSON document with three important pieces:
 
 1. **A condition** — a recursive tree of leaves (`field`/`op`/`value`) and combinators (`and` / `or` / `not`).
-2. **One or more actions** — `set_category`, `add_tag`, `remove_tag`, `add_comment`, or `assign_series` (link the charge to a recurring [series](/guides/tracking-subscriptions)).
+2. **One or more actions** — `set_category`, `add_tag`, `remove_tag`, `set_metadata`, `remove_metadata`, `assign_series`, `assign_counterparty`, `flag`, `unflag`, or `add_comment`.
 3. **A trigger and stage** — when the rule runs (<Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>, `always`, `on_change`) and where in the pipeline (`baseline`, `standard`, `refinement`, `override`).
 
 Amounts use Plaid convention: **positive = money out** (purchases, payments), **negative = money in** (refunds, paychecks). Every example below respects that.
 
 ## Example 1 — Amazon purchases → Shopping
 
-The canonical "merchant name contains a substring" rule. Two conditions combined with `and`: the description must contain `AMAZON`, and the amount must be positive (so we don't catch Amazon refunds).
+The canonical "merchant name contains a substring" rule. Two conditions combined with `and`: the provider's raw description must contain `AMAZON`, and the amount must be positive (so we don't catch Amazon refunds).
 
 ```json
 {
   "name": "Amazon purchases",
   "conditions": {
     "and": [
-      { "field": "name", "op": "contains", "value": "AMAZON" },
+      { "field": "provider_name", "op": "contains", "value": "AMAZON" },
       { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
@@ -57,7 +66,7 @@ curl -X POST \
   -d '{
     "conditions": {
       "and": [
-        { "field": "name", "op": "contains", "value": "AMAZON" },
+        { "field": "provider_name", "op": "contains", "value": "AMAZON" },
         { "field": "amount", "op": "gt", "value": 0 }
       ]
     }
@@ -67,14 +76,14 @@ curl -X POST \
 
 ## Example 2 — Uber / Lyft / Waymo → Transportation
 
-When a single condition isn't enough, an `or` group handles the "any of these merchants" case. Here we use the `in` operator on `merchant_name` to check against a list in one shot.
+When a single condition isn't enough, an `or` group handles the "any of these merchants" case. Here we use the `in` operator on `provider_merchant_name` to check against a list in one shot.
 
 ```json
 {
   "name": "Ridesharing → Transportation",
   "conditions": {
     "and": [
-      { "field": "merchant_name", "op": "in", "value": ["Uber", "Lyft", "Waymo"] },
+      { "field": "provider_merchant_name", "op": "in", "value": ["Uber", "Lyft", "Waymo"] },
       { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
@@ -88,33 +97,61 @@ When a single condition isn't enough, an `or` group handles the "any of these me
 ```
 
 <Note>
-  `merchant_name` is only populated for providers that enrich the raw description (Plaid does this; Teller and CSV imports often don't). If your data comes primarily from Teller, prefer `name` with `contains` and match on a substring of the raw description.
+  `provider_merchant_name` is only populated for providers that enrich the raw description (Plaid does this; Teller and CSV imports often don't). If your data comes primarily from Teller, prefer `provider_name` with `contains` and match on a substring of the raw description.
 </Note>
 
-## Example 3 — Threshold tag: flag anything over $500
+## Example 3 — Threshold flag: surface anything over $1000
 
-Not every rule has to change the category. This one only _tags_ — anything over $500 gets the `high-amount` tag so you can scan the queue for big-ticket items before the rest.
+Not every rule has to change the category. This one only **flags** a charge for human attention — anything over $1000 goes into the flagged queue so you can review it before the rest.
 
 ```json
 {
-  "name": "Flag transactions over $500",
+  "name": "Flag transactions over $1000",
   "conditions": {
     "and": [
-      { "field": "amount", "op": "gt", "value": 500 },
+      { "field": "amount", "op": "gt", "value": 1000 },
       { "field": "pending", "op": "eq", "value": false }
     ]
   },
   "actions": [
-    { "type": "add_tag", "tag_slug": "high-amount" }
+    { "type": "flag" },
+    { "type": "add_comment", "content": "Flagged automatically: over $1000." }
   ],
   "trigger": "on_create",
   "stage": "standard"
 }
 ```
 
-You'd pair this with a tag you've pre-created in the dashboard (**Tags** → **New tag**, slug `high-amount`). Then filter to `/transactions?tags=high-amount` in the UI, or `query_transactions(tags=["high-amount"])` from an agent.
+`flag` sets `flagged_at = NOW()` on the matching transaction. Retrieve flagged rows with `query_transactions(flagged=true)` from MCP, `GET /transactions?flagged=true` from the API, or the flagged filter in the dashboard. A follow-up `unflag` rule (or a manual review) clears the flag once you're done with it.
 
-## Example 4 — A `not` rule: auto-categorize groceries, but not Whole Foods prepared food
+## Example 4 — Tag a subscription via the recurrence idiom
+
+Recurring charges have a stable signature: the same merchant, near the same amount, near the same day of the month. `amount approx` and `day_of_month approx` capture that in two conditions — and `assign_series` makes every future match join the same series automatically.
+
+```json
+{
+  "name": "Spotify → subscription series",
+  "conditions": {
+    "and": [
+      { "field": "provider_merchant_name", "op": "contains", "value": "Spotify" },
+      { "field": "amount", "op": "approx", "value": 10.99, "tolerance": 1.00 },
+      { "field": "day_of_month", "op": "approx", "value": 14, "tolerance": 2 }
+    ]
+  },
+  "actions": [
+    { "type": "assign_series", "series_name": "Spotify", "create_if_missing": true },
+    { "type": "add_tag", "tag_slug": "streaming" }
+  ],
+  "trigger": "on_create",
+  "stage": "standard"
+}
+```
+
+`amount approx 10.99 ± 1.00` keeps matching when a $10.99 plan ticks up to $11.99. `day_of_month approx 14 ± 2` is cyclic and clamped — day 1 and the month's last day are 1 apart, and a target past a short month clamps to the last day (so "the 31st" matches February). This pair is the backbone of every recurring-charge rule.
+
+`assign_series` mints the series the first time a charge matches and links every future match to it. See [Tracking subscriptions](/guides/tracking-subscriptions) for the full series story.
+
+## Example 5 — A `not` rule: auto-categorize groceries, but not Whole Foods prepared food
 
 Sometimes the cleanest way to express a rule is "match this _except_ for these cases." The `not` combinator wraps a sub-condition and inverts it.
 
@@ -123,8 +160,8 @@ Sometimes the cleanest way to express a rule is "match this _except_ for these c
   "name": "Grocery stores → Groceries (except prepared food)",
   "conditions": {
     "and": [
-      { "field": "merchant_name", "op": "in", "value": ["Whole Foods", "Trader Joe's", "Safeway"] },
-      { "not": { "field": "name", "op": "contains", "value": "PREPARED" } }
+      { "field": "provider_merchant_name", "op": "in", "value": ["Whole Foods", "Trader Joe's", "Safeway"] },
+      { "not": { "field": "provider_name", "op": "contains", "value": "PREPARED" } }
     ]
   },
   "actions": [
@@ -138,8 +175,16 @@ Sometimes the cleanest way to express a rule is "match this _except_ for these c
 You can freely nest `and`, `or`, and `not` up to 10 levels deep. For most workflows you'll keep it under three.
 
 <Tip>
-  If a transaction gets the wrong category anyway, set it manually from the dashboard. That sets <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override = 'user'`</Tooltip>, which the rule engine honors forever — your deliberate choice won't be undone by a later rule.
+  If a transaction gets the wrong category anyway, set it manually from the dashboard. Last-writer-wins applies — your manual edit replaces the rule's choice. The sync engine only re-runs rules on new or changed transactions, so a deliberate manual edit on an unchanged row stays in place across syncs.
 </Tip>
+
+## Beyond categorization — what else rules do
+
+Rules aren't just for `set_category`. The same condition tree feeds every other action:
+
+- **`set_metadata` / `remove_metadata`** — write any household-specific enrichment to a transaction's free-form `metadata` blob. Mark anything Whole Foods as `tax_deductible: false`; tag every charge from your trip account with `trip: "japan-2026"`; record `reimbursable_by: "work"`. A later rule can read it back via `metadata.<key>` conditions, and you can query on it from MCP and the API.
+- **`assign_counterparty`** — bind a transaction to the canonical "other side" of the charge, covering merchants and non-merchants (Venmo, people, employers). Same surrogate-first, NULL-fill semantics as `assign_series`.
+- **`flag` / `unflag`** — surface a transaction for human attention. The example above is the simplest version; pair `unflag` with a follow-up condition to auto-retire a flag once it's resolved.
 
 ## Applying rules retroactively
 
@@ -157,10 +202,10 @@ curl -X POST \
   http://localhost:8080/api/v1/rules/apply-all
 ```
 
-Retroactive apply follows the same pipeline order and the same `category_override` protection as live sync. One caveat: `add_comment` actions are skipped during retroactive apply (they're designed to narrate a specific sync event).
+Retroactive apply follows the same pipeline order as live sync and materializes every state-mutating action — `set_category`, `add_tag`, `remove_tag`, `set_metadata`, `remove_metadata`, `assign_series`, `assign_counterparty`, `flag`, and `unflag`. One caveat: `add_comment` actions are skipped during retroactive apply (they're designed to narrate a specific sync event).
 
 ## Where to go next
 
 - [Single Routine Reviewer](/guides/single-routine-reviewer) — put these rules to work with an agent that clears the remaining `needs-review` queue on a schedule.
-- [Tracking Subscriptions](/guides/tracking-subscriptions) — a worked rule example for tagging recurring charges.
+- [Tracking subscriptions](/guides/tracking-subscriptions) — how `assign_series` builds your recurring catalog from rules alone.
 - [Rules reference](/transactions/rules) and [Rules API](/api/overview) — full DSL, every field and operator, plus the JSON shape of every endpoint.

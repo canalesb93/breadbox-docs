@@ -17,7 +17,7 @@ Every iteration the agent does the same four things:
     Call `query_transactions(tags=["needs-review"], fields="core,category", limit=30)` to pull a page worth of detail. Keep batches small — one batch is the unit the agent reasons over end-to-end.
   </Step>
   <Step title="Decide per transaction">
-    For each row the agent considers `name`, `merchant_name`, `amount`, `account_name`, and any pre-applied category. It either confirms the category, picks a new one, or defers.
+    For each row the agent considers `provider_name`, `provider_merchant_name`, `amount`, `account_name`, and any pre-applied category. It either confirms the category, picks a new one, or defers.
   </Step>
   <Step title="Resolve with a compound write">
     Call `update_transactions` once per batch with up to 50 operations. Each op can set the category, remove the `needs-review` tag with a note, and optionally add a comment — all in a single request.

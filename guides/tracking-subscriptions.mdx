@@ -1,83 +1,84 @@
 ---
 title: "Tracking your subscriptions"
-description: "Breadbox detects recurring charges automatically and groups them into Series — confirm or reject the candidates, tag a whole subscription at once, and auto-join future charges with a rule."
+description: "Breadbox tracks recurring charges as Series — thin, rule-maintained groupings. Author an assign_series rule once and every future matching charge joins the series automatically."
 ---
 
 Subscriptions are the quiet budget-killer of every household. Streaming services nobody watches anymore, a forgotten cloud backup, a free-trial-turned-monthly-charge — they accumulate, and they're easy to miss because each one is small.
 
-Breadbox tracks them under **Recurring** — the umbrella for *any* repeating charge, not just subscriptions: mortgage, rent, insurance, utilities, and loans land here too. A *series* groups the charges from one merchant so you can see the whole thing as one, track what it costs, and act on it in one place. A subscription is just the most familiar kind.
+Breadbox tracks them under **Recurring** — the umbrella for *any* repeating charge, not just subscriptions: mortgage, rent, insurance, utilities, and loans land here too. A *series* groups the charges from one merchant so you can see the whole thing as one place. A subscription is just the most familiar kind.
 
 <Note>
   Recurring is in **Beta**. Find it in the admin dashboard under **Recurring** (the old `/subscriptions` URL redirects there), plus the REST API and MCP. The shapes below are stable, but expect the surface to keep growing.
 </Note>
 
-## What a series is
+## A series is a thin, rule-maintained entity
 
-A series is a recurring charge pattern. Each one carries:
+In Breadbox's rules-as-substrate model, a series is deliberately minimal:
 
-- **Cadence** — `weekly`, `biweekly`, `monthly`, `quarterly`, `semiannual`, or `annual` (plus `irregular` / `unknown` for charges that don't snap cleanly).
-- **Expected amount** and its `iso_currency_code`, with an amount tolerance — so a $10.99 plan that ticks up to $11.99 stays the same series. Never sum expected amounts across currencies.
-- **Next expected date** — when the next charge is due.
-- **Status** — `candidate`, `active`, `paused`, or `cancelled`.
-- **Occurrence count** and the detection signals behind it.
+- **Surrogate identity** — a stable `id` / `short_id` that survives renames.
+- **`name`** — the human label you (or an agent) picked. Unique among live series.
+- **`type`** — `subscription`, `bill`, `loan`, or `other`.
 
-Every charge that belongs to the series is *linked* to it, so the series detail page shows the full history of that subscription at a glance.
+That's it. There's no shipped detector, no cadence inference, no expected-amount field, no candidate/active/paused/cancelled lifecycle. **Membership is exactly the set of charges its `assign_series` rules match** — a series *is* its governing rules.
 
-## Automatic detection
+The admin Recurring detail page makes that explicit: it shows the linked charges side-by-side with the **governing rules** that define them.
 
-You don't have to hand-build your subscription list. On each sync, Breadbox's detector looks for charges that repeat from the same merchant at a regular cadence and proposes them as **candidate** series. It normalizes merchant names to a stable signature and ignores generic descriptors — transfers, ACH, Venmo/Zelle, bill-pay, refunds, and the like — so one-off payments don't masquerade as subscriptions.
+## Auto-join charges with a rule
 
-Candidates wait for a verdict. From the **Recurring** page you can:
-
-- **Confirm** — yes, this is a subscription. The series becomes `active`.
-- **Reject** (shown as *Not recurring*) — the rejection is *sticky*: the detector won't re-propose it at the same amount band.
-- **Pause** or **Cancel** — for subscriptions you've stopped or are putting on hold.
-
-<Note>
-  A person's verdict outranks an agent's. If you confirm a series, a later agent run can't quietly reject it.
-</Note>
-
-## Tag a whole subscription at once
-
-A series can carry its own tags, and **every linked charge inherits them automatically** — including charges that join later. Tag a series `streaming` once and all of its past and future transactions pick up that tag, no per-row tagging required.
-
-Removing a tag from the series strips only the copies it added; a tag you put on an individual charge by hand survives.
-
-## Auto-join future charges with a rule
-
-To make every future charge from a merchant join a series on sync, use the [`assign_series` rule action](/transactions/rules#assign-a-series):
+To make every charge from a merchant join a series on sync, use the [`assign_series` rule action](/transactions/rules#assign_series). The recurrence idiom — `amount approx` + `day_of_month approx` — is the durable way to express a recurring pattern:
 
 ```json
 {
   "name": "Spotify → subscription series",
   "conditions": {
     "and": [
-      { "field": "merchant_name", "op": "contains", "value": "Spotify" },
-      { "field": "amount", "op": "gt", "value": 0 }
+      { "field": "provider_merchant_name", "op": "contains", "value": "Spotify" },
+      { "field": "amount", "op": "approx", "value": 10.99, "tolerance": 1.00 },
+      { "field": "day_of_month", "op": "approx", "value": 14, "tolerance": 2 }
     ]
   },
   "actions": [
-    { "type": "assign_series", "merchant_key": "spotify", "create_if_missing": true }
+    { "type": "assign_series", "series_name": "Spotify", "create_if_missing": true },
+    { "type": "add_tag", "tag_slug": "streaming" }
   ],
   "trigger": "on_create",
   "stage": "standard"
 }
 ```
 
-`create_if_missing` mints the series the first time a matching charge appears; after that, every future charge joins it. Provide `series_short_id` instead to target a series that already exists.
+How the action resolves:
+
+- `series_name` + `create_if_missing: true` mints the series the first time a charge matches; every future charge with the same `series_name` joins the existing one (surrogate-first — the same name always resolves the same series).
+- Provide `series_short_id` instead to target a series that already exists.
+- A transaction belongs to at most one series. `assign_series` is NULL-fill only — it never steals a charge already in another series. Across the pipeline, the highest-priority rule wins.
+
+To tag every member of the subscription (e.g. `streaming`, `work-tools`), bundle the `add_tag` action into the same rule. Members get the tag at sync time and on retroactive apply.
 
 <Note>
-  Applying the subscription rule **by itself** back-fills your existing charges into the series, not just future ones (see [applying a rule retroactively](/transactions/rules#applying-a-rule-retroactively)). The bulk "apply all rules" pass doesn't link series yet, so apply this rule on its own. You can also link a charge by hand or with the `assign_series` MCP tool.
+  Series tags as a separate, inherited surface have been removed. Tag a series by adding an `add_tag` action to the same rule that does `assign_series`, or author a separate rule that matches the same conditions.
 </Note>
+
+## Back-fill existing charges
+
+Once the rule is in place, future syncs handle themselves. To pull in charges that already exist, apply the rule retroactively:
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  http://localhost:8080/api/v1/rules/rule_abc123/apply
+```
+
+Retroactive apply materializes `assign_series` (and every other state-mutating action) through both the single-rule and the bulk apply-all paths. You can also link a charge by hand from the admin Recurring page, or with the `assign_series` MCP tool for a one-off assignment.
 
 ## Working with series from an agent
 
 The same surface is available over MCP, which is how a scheduled reviewer agent can keep your subscription list tidy:
 
-- `list_series` (optionally `status=candidate`) to find series awaiting a verdict, then `review_series` to confirm, reject, pause, or cancel.
-- `get_series` to inspect one series and the evidence behind it.
-- `assign_series` to create a series detection missed, or back-link charges to an existing one.
-- `add_series_tag` / `remove_series_tag` to tag a subscription and its members.
+- `list_series` — list every live series (`name`, `type`, charge count). Lean by default.
+- `get_series` — fetch one series' `name` and `type` by short ID or UUID. Its linked charges come from `query_transactions(series_id=...)`.
+- `assign_series` — a one-off link/mint for transactions an agent has already decided about. For durable patterns, the agent should author an `assign_series` rule instead.
+- `update_series` — rename a series or change its `type`.
+- `unlink_series_transactions` — detach charges from a series (inverse of `assign_series`' link path).
 
 See the [MCP tools](/mcp/tools#series-subscriptions) page for the agent-facing summary.
 
@@ -85,16 +86,17 @@ See the [MCP tools](/mcp/tools#series-subscriptions) page for the agent-facing s
 
 Once your subscriptions are series:
 
-- **See the portfolio.** The **Recurring** page lists every active series with its cadence and expected amount.
-- **Total the outflow.** Sum the expected amounts of your active monthly series (keep each `iso_currency_code` separate — don't mix currencies).
-- **Spot creep.** A series tracks its last amount against the expected one, so a plan that quietly raised its price stands out.
+- **See the portfolio.** The **Recurring** page lists every live series with its name, type, and charge count, and the detail view shows the linked charges plus the governing rules behind them.
+- **Total the outflow.** Query the transactions linked to your active monthly series (`query_transactions(series_id=...)`) and sum their amounts. Keep each `iso_currency_code` separate — don't mix currencies.
+- **Spot creep.** A `set_metadata` rule can stamp the expected price into the transaction's metadata blob; reviewing actuals against it surfaces silent price hikes.
 
 ## Deleting a series
 
-Removing a series is non-destructive — its transactions stay exactly where they are and simply lose the series link. Your history is never deleted.
+Removing a series is non-destructive — its transactions stay exactly where they are and simply lose the series link. Your history is never deleted. To stop new charges from joining, disable or delete the `assign_series` rules that govern it.
 
 ## Related reading
 
 - [Rules](/transactions/rules) — the `assign_series` action and the full rule DSL.
+- [Understanding rules](/guides/understanding-rules) — the recurrence idiom (`amount approx` + `day_of_month approx`) explained.
 - [MCP tools](/mcp/tools#series-subscriptions) — the series tools an agent can call.
 - [On-demand analysis](/guides/on-demand-analysis) — ask Claude "which of my subscriptions are underused?" once they're tracked.

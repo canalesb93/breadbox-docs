@@ -343,22 +343,28 @@ None. Pass an empty object.
 
 ## Series (subscriptions)
 
-Breadbox detects recurring charges and groups them into [series](/guides/tracking-subscriptions). These tools are the agent-facing side of the **Recurring** page — they let a scheduled reviewer adjudicate what the detector proposed and fill in anything it missed. (The tool *names* stay `*_series` for API stability even though the surface is now called Recurring.)
+A [series](/guides/tracking-subscriptions) is a thin, rule-maintained entity — a surrogate identity, a `name`, and a `type` (`subscription`, `bill`, `loan`, or `other`). Membership comes from `assign_series` **rules**, not a shipped detector: a series *is* its governing rules. (The tool *names* stay `*_series` for API stability even though the surface is called Recurring.)
 
 | Tool | Scope | What it does |
 | --- | --- | --- |
-| `list_series` | Read | List detected series. Filter by `status` (`active`, `candidate`, `paused`, `cancelled`); `candidate` surfaces the ones awaiting a verdict. Each row carries cadence, expected amount + currency, next expected date, and the detection signals. |
-| `get_series` | Read | Fetch one series by ID, including the full evidence the detector used. |
-| `explain_series_candidates` | Read | Answer "why isn't *X* recurring?" — lists recurring-looking merchants the precision-first detector skipped, with the reason (too few occurrences, irregular cadence, unstable amount, …). |
-| `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
-| `update_series` | Write | Edit a series' user-owned attributes: name, expected amount, cadence, expected day, category, or owner. Every field is optional; omit to leave unchanged. Edits survive future detection runs (the detector won't revert them). |
-| `set_series_type` | Write | Set the series type: `subscription`, `bill`, `loan`, or `other`. Overrides the type the detector inferred from the charges' category; the override is sticky. |
-| `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
-| `unlink_series_transactions` | Write | Detach transactions from a series (inverse of `assign_series`). Clears the series link and strips inherited tags from the affected charges only. |
-| `rekey_series` | Write | Fix a series grouped under a wrong or fallback merchant key (e.g. `payment` → `spotify`), repointing it and its charges. |
-| `split_series` | Write | Break an over-grouped series in two — move stray charges into a new series (e.g. a $4.99 add-on swept into a $139/yr renewal). |
-| `add_series_tag` / `remove_series_tag` | Write | Tag a series; every linked transaction inherits the tag automatically. Removing strips only the inherited copies. |
+| `list_series` | Read | List every live series — `name`, `type`, and charge count. Lean by default; pass `fields=all` for timestamps. |
+| `get_series` | Read | Fetch one series' `name` and `type` by short ID or UUID. Its linked charges come from `query_transactions(series_id=...)`; its governing rules appear on the admin Recurring detail page. |
+| `assign_series` | Write | A **one-off** link/mint — bind transactions to an existing series (`series_id`) or mint/resolve by `series_name` + `create_if_missing:true`. For durable patterns, author an `assign_series` rule instead. Optional `type` for a minted series. NULL-fill only — never steals a charge already in another series. |
+| `update_series` | Write | Rename a series or change its `type`. Both optional. Renaming onto an existing live name is rejected (the name is the series' unique mint key). |
+| `unlink_series_transactions` | Write | Detach transactions from a series (inverse of `assign_series`' link path). Errors if any listed transaction isn't a current member. |
 
 <Note>
-  A typical reviewer agent calls `list_series(status="candidate")`, inspects each with `get_series`, and resolves it with `review_series` — the same confirm/reject loop a person runs on the Recurring page.
+  Series tags as a separate, inherited surface have been removed. Tag a series by adding an `add_tag` action to the same rule that does `assign_series` — every linked charge gets the tag at sync time and on retroactive apply.
 </Note>
+
+### Counterparties
+
+A counterparty is the canonical, cross-provider "other side" of a charge — merchants and non-merchants alike (Venmo, people, employers). Same model as series: a thin entity (surrogate identity, `name`, optional enrichment fields like `website_url`, `logo_url`, `category_id`, `mcc`) whose membership comes from `assign_counterparty` rules.
+
+| Tool | Scope | What it does |
+| --- | --- | --- |
+| `list_counterparties` | Read | List counterparties. |
+| `get_counterparty` | Read | Fetch one counterparty's `name` and enrichment. Governing rules appear on the admin Counterparties detail page. |
+| `assign_counterparty` | Write | One-off link/mint — bind transactions to an existing counterparty (`counterparty_id`) or mint/resolve by `name` + `create_if_missing:true`, with optional enrichment in the same call. For durable patterns, author an `assign_counterparty` rule. |
+| `update_counterparty` | Write | Edit a counterparty's name or enrichment fields. |
+| `unlink_counterparty_transactions` | Write | Detach transactions from a counterparty. |

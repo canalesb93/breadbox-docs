@@ -1,22 +1,22 @@
 ---
-title: "Rules: automate categorization, tagging, and annotations"
-description: "Build condition-based rules that categorize, apply tags, and leave annotations on transactions automatically — at sync time or retroactively — using Breadbox's recursive AND/OR/NOT condition engine with a multi-stage pipeline."
+title: "Rules: the substrate that turns provider data into intelligence"
+description: "Build condition-based rules that categorize, tag, annotate, flag, link to a series or counterparty, and write free-form metadata on transactions — at sync time or retroactively — using Breadbox's recursive AND/OR/NOT condition engine with a multi-stage pipeline."
 sidebarTitle: "Rules"
 ---
 
-Breadbox's rules engine lets you define conditions that run automatically whenever transactions are synced. When a transaction matches a rule's conditions, the rule assigns a category, adds tags, or leaves a comment — without any manual intervention.
+Breadbox's rules engine is the single layer where your household's intelligence about transactions lives. Provider data (Plaid, Teller, CSV, ...) is treated as immutable — it's the raw substrate. Every durable choice you or an agent makes about that data — *"Spotify is a subscription"*, *"any Whole Foods over $50 is a grocery run, not prepared food"*, *"flag any single charge over $1000"* — accrues as a rule. The next sync resolves the same kind of charge the same way automatically.
 
-## What rules do
-
-A rule is a JSON document that pairs a **condition** (which transactions to match) with one or more **actions** (what to do with them). Rules run at sync time in a defined pipeline order. You can also apply rules retroactively to your full transaction history at any time.
+That's the doctrine: **provider data is immutable; intelligence accrues as rules**. A rule is a JSON document pairing a **condition** (which transactions to match) with one or more **actions** (what to do with them). Rules run at sync time in a defined pipeline order, and you can apply them retroactively to your full history at any time.
 
 A single rule can:
 
 - Set a transaction's category (`set_category`)
-- Add a tag to the transaction (`add_tag`)
-- Remove a tag from the transaction (`remove_tag`)
-- Leave an automated comment explaining the categorization (`add_comment`)
+- Add or remove tags (`add_tag`, `remove_tag`)
+- Write or delete free-form metadata keys (`set_metadata`, `remove_metadata`)
 - Link the transaction to a recurring [series](/guides/tracking-subscriptions) (`assign_series`)
+- Link the transaction to a counterparty (`assign_counterparty`)
+- Raise or clear the flag that surfaces a charge for human attention (`flag`, `unflag`)
+- Leave an automated comment explaining the categorization (`add_comment`)
 
 ## Condition structure
 
@@ -25,7 +25,7 @@ Rule conditions use a recursive tree of **leaf nodes** and **combinators**.
 A **leaf node** tests a single field:
 
 ```json
-{ "field": "merchant_name", "op": "contains", "value": "Starbucks" }
+{ "field": "provider_merchant_name", "op": "contains", "value": "Starbucks" }
 ```
 
 A **combinator** groups multiple conditions with logic:
@@ -42,27 +42,42 @@ Combinators nest to any depth up to 10 levels. An empty condition object `{}` ma
 
 | Field | Type | Description |
 |-------|------|-------------|
-| `name` | string | Raw transaction description from the institution |
-| `merchant_name` | string | Enriched merchant name (may be empty for CSV or un-enriched rows) |
+| `provider_name` | string | Raw transaction description from the institution |
+| `provider_merchant_name` | string | Provider's enriched merchant name (may be empty for CSV or un-enriched rows) |
 | `amount` | numeric | Transaction amount — positive = money out, negative = money in |
-| `category_primary` | string | Provider's raw primary category (does not change when Breadbox reassigns) |
-| `category_detailed` | string | Provider's raw detailed subcategory |
+| `provider_category_primary` | string | Provider's raw primary category (does not change when Breadbox reassigns) |
+| `provider_category_detailed` | string | Provider's raw detailed subcategory |
 | `category` | string | Currently assigned Breadbox category slug (updates mid-pipeline as rules run) |
 | `pending` | boolean | Whether the transaction is pending |
-| `provider` | string | `plaid`, `teller`, or `csv` |
+| `provider` | string | `plaid`, `teller`, `simplefin`, or `csv` |
 | `account_id` | string | Account UUID |
 | `account_name` | string | Account display name |
 | `user_id` | string | Family member UUID |
 | `user_name` | string | Family member display name |
 | `tags` | tags | Current tag slugs on the transaction |
+| `series` | string | `short_id` of the recurring series the transaction belongs to (empty when unassigned) |
+| `in_series` | boolean | Whether the transaction is linked to any recurring series |
+| `counterparty` | string | `short_id` of the counterparty bound to the transaction (empty when unbound) |
+| `has_counterparty` | boolean | Whether the transaction is bound to any counterparty |
+| `day_of_month` | numeric | Day of the posting date (`1`–`31`) |
+| `month` | numeric | Month of the posting date (`1`–`12`) |
+| `day_of_week` | numeric | Weekday of the posting date (`0` = Sunday … `6` = Saturday) |
+| `day_of_year` | numeric | Ordinal day of the posting date (`1`–`366`) |
+| `metadata.<key>` | metadata | One key from the transaction's free-form metadata blob — e.g. `metadata.tax_deductible` reads `metadata["tax_deductible"]`. |
 
 <Note>
-Use `category` (not `category_primary` or `category_detailed`) when you want a condition to react to the category that Breadbox or a prior rule assigned. The `category_primary` and `category_detailed` fields always hold the provider's original values and never change.
+Use `category` (not `provider_category_primary` or `provider_category_detailed`) when you want a condition to react to the category that Breadbox or a prior rule assigned. The `provider_*` fields always hold the provider's original values and never change.
 </Note>
+
+### Match-stability: prefer raw, immutable fields
+
+A rule is only as durable as the fields it matches on. The provider's raw fields (`provider_name`, `provider_merchant_name`, `amount`, `pending`, `provider`, `provider_category_*`) and the date-parts derived from the immutable posting date (`day_of_month`, `month`, `day_of_week`, `day_of_year`) are **raw-immutable** — Breadbox never rewrites them, so a rule keyed on them resolves the same way on the create pass, on every re-sync, and on retroactive apply. The surrogate IDs `account_id` and `user_id` are **stable-surrogate** — also safe.
+
+`account_name`, `user_name`, `category`, `tags`, `series`, `in_series`, `counterparty`, `has_counterparty`, and `metadata.<key>` are **mutable-display** — they either silently break when something is renamed or depend on what an earlier-stage rule wrote in the same pass. Use them deliberately to chain off another rule's output, not as the load-bearing condition that decides whether the rule fires.
 
 ### Operators by field type
 
-**String fields** (`name`, `merchant_name`, `category_primary`, `category_detailed`, `category`, `provider`, `account_name`, `user_name`):
+**String fields** (`provider_name`, `provider_merchant_name`, `provider_category_primary`, `provider_category_detailed`, `category`, `provider`, `account_name`, `user_name`, `series`, `counterparty`):
 
 | Operator | Behavior |
 |----------|----------|
@@ -73,25 +88,24 @@ Use `category` (not `category_primary` or `category_detailed`) when you want a c
 | `matches` | RE2 regex match (case-sensitive by default; use `(?i)` for insensitive) |
 | `in` | Value is in the provided array (case-insensitive) |
 
-**Numeric fields** (`amount`):
+**Numeric fields** (`amount`, date-parts):
 
 | Operator | Behavior |
 |----------|----------|
 | `eq` | Equal |
 | `neq` | Not equal |
-| `gt` | Greater than |
-| `gte` | Greater than or equal |
-| `lt` | Less than |
-| `lte` | Less than or equal |
+| `gt` / `gte` / `lt` / `lte` | Standard comparisons |
+| `approx` | `value ± tolerance` — matches when `abs(actual - value) ≤ tolerance`. Requires a sibling `tolerance ≥ 0`. For `day_of_month` the comparison is cyclic (day 1 and the month's last day are 1 apart) and clamps a target past a short month to its last day (so "the 31st" matches February). |
+| `between` | `min ≤ actual ≤ max` (inclusive). Requires sibling `min` and `max`. |
 
-**Boolean fields** (`pending`):
+**Boolean fields** (`pending`, `in_series`, `has_counterparty`):
 
 | Operator | Behavior |
 |----------|----------|
 | `eq` | Equal to `true` or `false` |
 | `neq` | Not equal to `true` or `false` |
 
-**Tag fields** (`tags`):
+**Tag field** (`tags`):
 
 | Operator | Behavior |
 |----------|----------|
@@ -99,9 +113,20 @@ Use `category` (not `category_primary` or `category_detailed`) when you want a c
 | `not_contains` | Transaction does not have the specified tag slug |
 | `in` | Transaction has any of the slugs in the provided array |
 
+**Metadata fields** (`metadata.<key>`):
+
+| Operator | Behavior |
+|----------|----------|
+| `exists` / `not_exists` | Key presence test; `value` is ignored |
+| `eq` / `neq` | Boolean, numeric, or stringified comparison driven by the expected value's type |
+| `contains` / `not_contains` / `matches` / `in` | String ops on the stringified stored value |
+| `gt` / `gte` / `lt` / `lte` | Numeric comparison; both sides must parse as numbers |
+
+Every operator other than `exists` / `not_exists` requires the key to be present — an absent key matches only `not_exists`. Use `or` of the two when you mean "missing OR different".
+
 ## Pipeline stages
 
-Rules run in pipeline order — lower stage numbers run first. For `set_category`, the **last matching rule wins**, so higher-stage rules have the final say on categorization. For `add_tag` and `add_comment`, every matching rule contributes.
+Rules run in pipeline order — lower stage numbers run first. For `set_category`, the **last matching rule wins**, so higher-stage rules have the final say on categorization. For accumulator actions (`add_tag`, `add_comment`, `set_metadata`), every matching rule contributes.
 
 | Stage name | Priority | Purpose |
 |------------|----------|---------|
@@ -114,18 +139,18 @@ Supply `stage` as a string in the request body. You can also supply a raw `prior
 
 ### Rule chaining
 
-Because rules run in pipeline order and share a mutable transaction context, later rules can react to what earlier rules did. A rule that assigns a category at stage 0 makes that category readable via `field: "category"` for any rule at stage 10 or higher in the same sync pass.
+Because rules run in pipeline order and share a mutable transaction context, later rules can react to what earlier rules did. A rule that assigns a category at stage 0 makes that category readable via `field: "category"` for any rule at stage 10 or higher in the same sync pass. The same holds for `tags`, `series`, `counterparty`, and `metadata.<key>` — a later rule reads what an earlier one wrote.
 
 ## Creating a rule
 
-Here is a complete example that categorizes Amazon purchases:
+A complete example that categorizes Amazon purchases:
 
 ```json
 {
   "name": "Amazon purchases",
   "conditions": {
     "and": [
-      { "field": "name", "op": "contains", "value": "AMAZON" },
+      { "field": "provider_name", "op": "contains", "value": "AMAZON" },
       { "field": "amount", "op": "gt", "value": 0 }
     ]
   },
@@ -147,7 +172,7 @@ curl -X POST \
     "name": "Amazon purchases",
     "conditions": {
       "and": [
-        { "field": "name", "op": "contains", "value": "AMAZON" },
+        { "field": "provider_name", "op": "contains", "value": "AMAZON" },
         { "field": "amount", "op": "gt", "value": 0 }
       ]
     },
@@ -160,7 +185,94 @@ curl -X POST \
   http://localhost:8080/api/v1/rules
 ```
 
-A rule with no `trigger` specified defaults to <Tooltip headline="on_create stage" tip="The rule pipeline stage that fires once for every newly-synced transaction. The seeded `needs-review` rule runs here." cta="Rule pipeline" href="/transactions/rules">`on_create`</Tooltip>, which means it fires only on newly synced transactions. Use `always` to also run on re-synced changes, or `on_change` to run only when an existing transaction is modified.
+A rule with no `trigger` specified defaults to `on_create`, which means it fires only on newly synced transactions. Use `always` to also run on re-synced changes, or `on_change` to run only when an existing transaction is modified.
+
+## Actions
+
+### `set_category`
+
+```json
+{ "type": "set_category", "category_slug": "food_and_drink_groceries" }
+```
+
+Sets the transaction's assigned category. At most one `set_category` per rule. Last-writer-wins across the pipeline — rules, agents, and users all write the same `category_id` field, so a higher-stage rule's `set_category` overrides a lower one. Rules only run on new or changed transactions, so a user's manual edit on an unchanged row is not continuously re-clobbered.
+
+### `add_tag` / `remove_tag`
+
+```json
+{ "type": "add_tag", "tag_slug": "needs-review" }
+{ "type": "remove_tag", "tag_slug": "needs-review" }
+```
+
+Adds or removes a tag. Tags are auto-created on `add_tag` if the slug doesn't exist. Both are idempotent. If a single sync pass would `add_tag` and `remove_tag` the same slug, they cancel — neither write hits the DB.
+
+### `set_metadata` / `remove_metadata`
+
+```json
+{ "type": "set_metadata", "metadata_key": "tax_deductible", "metadata_value": true }
+{ "type": "remove_metadata", "metadata_key": "needs_receipt" }
+```
+
+Upserts or deletes one key in the transaction's free-form JSONB `metadata` blob, leaving every other key untouched. `metadata_value` can be any JSON value (string, number, boolean, object, array); keys are ≤128 chars and values must serialize to ≤4 KiB. Repeatable — a rule can write several keys at once. Last-writer-wins per key; a same-pass set-then-remove cancels.
+
+Use it to capture arbitrary household enrichment that isn't a first-class field: `tax_deductible`, `trip`, `reimbursable_by`, `project_code`, ... A later rule can read it back via `metadata.<key>` conditions.
+
+### `assign_series`
+
+```json
+{ "type": "assign_series", "series_name": "Spotify", "create_if_missing": true }
+```
+
+Links the matching transaction to a recurring [series](/guides/tracking-subscriptions). Provide **exactly one** of:
+
+- `series_short_id` — link to an existing series by its short ID.
+- `series_name` + `create_if_missing: true` — mint a series by name if one doesn't already exist with that live name (surrogate-first; the same name always resolves the same series).
+
+A transaction belongs to at most one series; if several rules try to assign one, the highest-priority rule wins. Back-linking is NULL-fill only — `assign_series` never steals a charge already in another series.
+
+A series is its governing rules: the membership of every series is exactly the set of charges its `assign_series` rules match. The admin Recurring detail page makes this explicit by listing the linked charges beside the rules that define them.
+
+### `assign_counterparty`
+
+```json
+{ "type": "assign_counterparty", "counterparty_name": "Spotify USA Inc", "create_if_missing": true }
+```
+
+Binds the matching transaction to a counterparty — the canonical "other side" of a charge, covering merchants and non-merchants (Venmo, people, employers). Provide **exactly one** of `counterparty_short_id` or `counterparty_name` + `create_if_missing: true`. Same NULL-fill, last-writer-wins, surrogate-first semantics as `assign_series`. Like series, a counterparty's membership is exactly the set of charges its `assign_counterparty` rules bind.
+
+### `flag` / `unflag`
+
+```json
+{ "type": "flag" }
+{ "type": "unflag" }
+```
+
+Surfaces a transaction for human attention (or clears that flag). Both take no parameters. `flag` sets `transactions.flagged_at = NOW()`; `unflag` clears it. Last-writer-wins across the pipeline — a higher-priority `unflag` clears a lower-priority `flag`. Retrieve flagged rows with the `query_transactions(flagged=true)` MCP tool or `GET /transactions?flagged=true`.
+
+Use it to mark anything that needs eyes: large charges, suspected duplicates, foreign-currency outliers, charges from a paused subscription, ...
+
+### `add_comment`
+
+```json
+{ "type": "add_comment", "content": "Auto-categorized by rule: Dining" }
+```
+
+Appends a comment authored by the rule. Multiple rules can each contribute a comment in one sync pass. **Sync-only** — retroactive apply skips `add_comment` because comments narrate a specific sync event.
+
+## Combining actions
+
+A rule can carry multiple actions of different types; they all fire together. Useful combinations:
+
+| Actions | Use case |
+| --- | --- |
+| `set_category` alone | Straightforward reclassification. |
+| `set_category` + `add_tag` | Reclassify and annotate (e.g. Uber → `transportation_rideshare` + `recurring`). |
+| `assign_series` + `set_category` + `add_tag` | The full subscription pattern — link the charge, categorize it, tag it. |
+| `flag` + `add_comment` | Surface a transaction with a reason recorded in the timeline. |
+| `add_tag` + `remove_tag` (different slugs) | Transition between tags (add `reviewed`, remove `needs-review`). |
+| `set_metadata` | Capture household-specific enrichment for later querying. |
+
+Only `set_category`, `flag`, and `unflag` are singleton per rule. The rest can appear multiple times (e.g. add two tags, write two metadata keys).
 
 ## Previewing a rule
 
@@ -173,7 +285,7 @@ curl -X POST \
   -d '{
     "conditions": {
       "and": [
-        { "field": "name", "op": "contains", "value": "AMAZON" },
+        { "field": "provider_name", "op": "contains", "value": "AMAZON" },
         { "field": "amount", "op": "gt", "value": 0 }
       ]
     }
@@ -203,36 +315,20 @@ curl -X POST \
 
 </CodeGroup>
 
-Retroactive apply respects the same pipeline stage ordering as sync. It also respects <Tooltip headline="category_override" tip="Who last set the category: 'none' (rule-applied or unset), 'agent' (AI-set), or 'user' (manually set — protected from automatic changes).">`category_override`</Tooltip> — transactions whose `category_override` is not `'none'` are skipped for `set_category` actions, just as they are during sync.
+Retroactive apply respects the same pipeline stage ordering as sync. Every state-mutating action materializes — `set_category`, `add_tag`, `remove_tag`, `set_metadata`, `remove_metadata`, `assign_series`, `assign_counterparty`, `flag`, and `unflag` — through both the single-rule and the bulk apply-all paths.
 
 <Warning>
-`add_comment` actions do **not** fire during retroactive apply. Comments are designed to narrate a specific sync event and are only written during live syncs.
+`add_comment` actions do **not** fire during retroactive apply. Comments narrate a specific sync event and are only written during live syncs.
 </Warning>
 
-## Respecting manual overrides
+## Last-writer-wins, no provenance guard
 
-If a transaction has been manually categorized (its `category_override` is `'user'`), a rule's `set_category` action is skipped for that transaction. The rule still runs — `add_tag` and `add_comment` actions fire normally — but the category is not changed. This means you can safely apply rules in bulk without worrying about undoing deliberate manual work.
-
-## Assign a series
-
-The `assign_series` action links a matching transaction to a recurring [series](/guides/tracking-subscriptions) — a subscription or other repeating charge. It's the series counterpart to `set_category`: author the rule once and every future matching charge joins the series automatically. Provide **exactly one** of:
-
-- `series_short_id` — link to an existing series by its short ID.
-- `merchant_key` + `create_if_missing: true` — mint a household series for that merchant the first time a charge matches, then link every future match to it.
-
-```json
-{ "type": "assign_series", "merchant_key": "spotify", "create_if_missing": true }
-```
-
-A transaction belongs to at most one series; if several rules try to assign one, the highest-priority rule wins. Minting honors a rejected series — a rule can't resurrect a subscription you've dismissed.
-
-<Note>
-  `assign_series` materializes at sync time and on **single-rule** [retroactive apply](#applying-a-rule-retroactively) (`POST /rules/{id}/apply`) — applying that one rule links matching existing transactions. The bulk *apply-all* path doesn't materialize `assign_series` yet, so apply the rule on its own to back-fill. You can also link a charge by hand or with the `assign_series` MCP tool.
-</Note>
+Rules, agents, and users all write the same underlying fields (`category_id`, tags, metadata, series link, counterparty link, flag). There is no per-source precedence — the writer who runs last wins. The sync engine still only runs rules on new or changed transactions, so a user's manual edit on an unchanged row is not silently re-clobbered on the next sync.
 
 ## Related reading
 
 - [Rules API](/api/overview) — REST endpoints for creating, listing, updating, deleting, applying, and previewing rules.
 - [MCP: rules (read)](/mcp/reference/rules) and [MCP: rules (write)](/mcp/reference/rules-write) — the equivalent tools agents use to create and maintain rules on your behalf.
 - [Categories](/transactions/categories) — how the two-level hierarchy that rules target is structured.
+- [Tracking subscriptions](/guides/tracking-subscriptions) — how `assign_series` builds your recurring catalog.
 - [Review workflow](/transactions/review-workflow) — how the seeded `needs-review` rule drives the default triage queue.

@@ -57,9 +57,9 @@ Lists transaction rules with optional filters. Agents should always call this be
   "rules": [
     {
       "id": "r9Xm2pQr",
-      "name": "name: Starbucks → food_and_drink_coffee",
+      "name": "Starbucks → food_and_drink_coffee",
       "conditions": {
-        "field": "merchant_name",
+        "field": "provider_merchant_name",
         "op": "contains",
         "value": "starbucks"
       },
@@ -192,7 +192,7 @@ Dry-run a condition tree against existing transactions — no writes, no hit-cou
 {
   "conditions": {
     "and": [
-      { "field": "merchant_name", "op": "contains", "value": "starbucks" },
+      { "field": "provider_merchant_name", "op": "contains", "value": "starbucks" },
       { "field": "amount", "op": "gte", "value": 5 }
     ]
   },
@@ -239,14 +239,19 @@ Dry-run a condition tree against existing transactions — no writes, no hit-cou
 
 ### Condition grammar
 
-Full DSL is in the Breadbox repo's `docs/rule-dsl.md`. Short form:
+Full DSL lives in [Rules](/transactions/rules). Short form:
 
-- **Fields** — `name`, `merchant_name`, `amount`, `category_primary`, `category_detailed`, `category` (the assigned slug, live-updated by earlier-stage rules), `pending`, `provider`, `account_id`, `account_name`, `user_id`, `user_name`, `tags`.
+- **Fields** —
+  - **Raw-immutable** (safe to author on): `provider_name`, `provider_merchant_name`, `amount`, `provider_category_primary`, `provider_category_detailed`, `pending`, `provider`.
+  - **Stable-surrogate**: `account_id`, `user_id`.
+  - **Stable-derived** date-parts: `day_of_month`, `month`, `day_of_week`, `day_of_year`.
+  - **Mutable-display** (use for chaining, not as a primary match): `account_name`, `user_name`, `category` (assigned slug, live-updated by earlier-stage rules), `tags`, `series`, `in_series`, `counterparty`, `has_counterparty`, `metadata.<key>`.
 - **Operators** —
-  - String/category: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
-  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`.
+  - String: `eq`, `neq`, `contains`, `not_contains`, `matches` (RE2), `in`.
+  - Numeric: `eq`, `neq`, `gt`, `gte`, `lt`, `lte`, `approx` (`value ± tolerance`), `between` (`min`/`max`).
   - Bool: `eq`, `neq`.
   - Tags: `contains`, `not_contains`, `in`.
+  - Metadata: all string and numeric operators, plus `exists` / `not_exists`.
 - **Combinators** — `and`, `or`, `not` (nest freely, max depth 10).
 
 Pass `{}` (or omit conditions entirely on rule creation) to match every transaction.
@@ -283,7 +288,7 @@ Reports which existing active rules already match a given transaction or merchan
   "rules": [
     {
       "short_id": "r9Xm2pQr",
-      "name": "name: Starbucks → food_and_drink_coffee",
+      "name": "Starbucks → food_and_drink_coffee",
       "sets_category": "food_and_drink_coffee",
       "trigger": "on_create",
       "priority": 10,
