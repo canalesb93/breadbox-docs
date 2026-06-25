@@ -1,0 +1,123 @@
+---
+title: "Counterparties: the canonical 'other side' of a charge"
+description: "Group raw provider descriptions like 'AMZN Mktp US*RT4G7' and 'AMAZON.COM*1H2K9' under one canonical counterparty — merchants, employers, friends, anything on the other side of the transaction — and enrich it with a brand logo, website, and default category."
+sidebarTitle: "Counterparties"
+---
+
+A **counterparty** is the canonical, cross-provider entity on the *other side* of a transaction — a merchant like Amazon or Starbucks, but also a non-merchant like Venmo, an employer, or a person. Each bank reports the same payee with a different noisy string (`AMZN Mktp US*RT4G7`, `AMAZON.COM*1H2K9`, `Amazon Prime`); a counterparty collapses every variant into one stable identity that powers display, search, and reporting.
+
+Counterparties are a **thin, rule-maintained entity**. Breadbox does not ship a normalizer or a built-in merchant database — membership comes purely from `assign_counterparty` rules you (or an agent) author against raw provider fields. Provider data stays immutable; the counterparty layer is your accrued intelligence about who's on the other side.
+
+## What a counterparty stores
+
+Every counterparty is identified by a short ID and a display name, with optional enrichment fields:
+
+| Field | Type | Description |
+| --- | --- | --- |
+| `short_id` | string | 8-character base62 alias accepted anywhere `id` is. |
+| `name` | string | Canonical display name (e.g., `Amazon`). Unique among live counterparties. |
+| `website_url` | string | Canonical homepage. Also drives the [logo.dev](https://logo.dev) brand-logo lookup. |
+| `logo_url` | string | Manual logo URL override. When set, beats the logo.dev hotlink. |
+| `category_id` | UUID | Default category for charges that resolve to this counterparty. |
+| `mcc` | string | 4-digit merchant category code (informational). |
+
+The name is the **only** required field. Enrichment is added incrementally — typically the first time you (or an agent) recognize the counterparty.
+
+## How a transaction gets a counterparty
+
+Counterparties surface on every transaction read path. When a transaction is bound to one, the response carries:
+
+| Field | Description |
+| --- | --- |
+| `counterparty_short_id` | Short ID of the assigned counterparty, or `null`. |
+| `counterparty_name` | Canonical display name, or `null`. |
+| `counterparty_logo_url` | Resolved logo URL (manual `logo_url`, or a logo.dev hotlink derived from `website_url`), or `null`. |
+
+The dashboard, CSV export, and merchant rollups prefer `counterparty_name` for display and fall back to the provider's `merchant_name` / raw `name` when no counterparty is assigned. Importantly, the **merchant summary endpoint groups by counterparty**, so a Spotify subscription that arrives under three different provider descriptions collapses into one row once the counterparty rule lands.
+
+## Author an `assign_counterparty` rule
+
+The durable way to bind transactions to a counterparty is a rule. Like every other [rule](/transactions/rules), it runs at sync time and can be applied retroactively.
+
+```json
+{
+  "name": "Amazon — all variants",
+  "conditions": {
+    "or": [
+      { "field": "name", "op": "contains", "value": "AMZN" },
+      { "field": "name", "op": "contains", "value": "AMAZON" }
+    ]
+  },
+  "actions": [
+    {
+      "type": "assign_counterparty",
+      "name": "Amazon",
+      "create_if_missing": true
+    }
+  ],
+  "stage": "standard"
+}
+```
+
+Provide **exactly one** of:
+
+- `counterparty_short_id` — link to an existing counterparty by its short ID.
+- `name` + `create_if_missing: true` — resolve-or-mint a counterparty under that name the first time a charge matches. Subsequent matches link to the same record.
+
+A transaction belongs to at most one counterparty. If several rules try to assign one, last-writer-wins in pipeline order. Author conditions against **raw, immutable** fields like `name` and `provider` — never against `merchant_name` or `category`, which can change as the pipeline runs (see [rule field stability](/transactions/rules#available-fields)).
+
+### Filter by counterparty in other rules
+
+Once a counterparty exists, two derived fields become available to every rule:
+
+- `counterparty` — the assigned counterparty's short ID.
+- `has_counterparty` — boolean, `true` if any counterparty is assigned.
+
+This lets later rules react to membership — for example, tagging all transactions that resolved to a specific counterparty, or routing un-attributed charges to review.
+
+## Manage counterparties from the admin dashboard
+
+Navigate to **Counterparties** in the admin sidebar.
+
+- **`/counterparties`** — a flat directory listing every live counterparty as one row: name, logo, linked-charge count, and how many rules govern its membership. No candidate/review queue: membership comes from rules, so this is just the ledger.
+- **`/counterparties/{id}`** — the detail page has three panels:
+  1. **Enrichment form** — set `name`, `website_url`, `logo_url`, default `category_id`, and `mcc`.
+  2. **Linked charges** — every transaction currently bound to this counterparty, with a per-row unlink action.
+  3. **Governing rules** — the `assign_counterparty` rules that define membership, each with a link to the rule editor. This is where you'd open a rule to add a missing provider variant.
+
+The same surface is available over REST (`/api/v1/counterparties` and `/api/v1/counterparties/{id}`) and MCP (`list_counterparties`, `get_counterparty`, `update_counterparty`, `assign_counterparty`, `unlink_counterparty_transactions`). See the [API reference](/api/overview) and [MCP counterparty tools](/mcp/reference/overview) for full request shapes.
+
+## Manual assignment without a rule
+
+When you only need to bind a handful of transactions and don't expect the pattern to repeat, call `assign_counterparty` imperatively rather than authoring a rule:
+
+```bash
+curl -X POST \
+  -H "X-API-Key: bb_your_key" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "transaction_ids": ["tx_abc123", "tx_def456"]
+  }' \
+  http://localhost:8080/api/v1/counterparties/cp_amazon01/transactions
+```
+
+Imperative assignment is **NULL-fill only** — it links the supplied transactions when they have no counterparty yet, and never steals a charge already bound elsewhere. For anything you expect to see again, author a rule instead so the next sync resolves it automatically.
+
+## Brand logos via logo.dev
+
+Breadbox can hotlink brand logos from [logo.dev](https://logo.dev) using a counterparty's `website_url`. Logos are off by default unless you configure them:
+
+1. Get a publishable token from logo.dev (it's a public key — it rides in the `<img src>`).
+2. Set it via env (`LOGO_DEV_TOKEN`) or under **Settings → General → Counterparties** (`logo_dev_token` in [app_config](/configuration/app-config)).
+3. Toggle logos with `BREADBOX_COUNTERPARTY_LOGOS` (`true` / `1`) or the `counterparty_logos` app_config row.
+
+With logos enabled and a token configured, every counterparty with a `website_url` and no manual `logo_url` override renders a real brand logo. Without a token, Breadbox falls back to a gradient monogram — both surfaces are complete; logos are purely cosmetic.
+
+A manual `logo_url` on a counterparty always wins over the logo.dev hotlink, so you can pin a specific image for counterparties that logo.dev doesn't recognize (small businesses, individuals, internal transfers).
+
+## Related reading
+
+- [Rules](/transactions/rules) — the full rule grammar, including the field stability contract that governs which fields are safe to match against.
+- [Transactions overview](/transactions/overview) — the `counterparty_short_id`, `counterparty_name`, and `counterparty_logo_url` fields on every transaction response.
+- [API reference](/api/overview) and [MCP overview](/mcp/reference/overview) — REST endpoints and MCP tools for counterparties.
+- [App config](/configuration/app-config) — how `LOGO_DEV_TOKEN` and `counterparty_logos` resolve.

@@ -41,6 +41,9 @@ Every transaction record includes the following fields:
 | `date` | date | Settlement date for posted transactions; occurrence date for pending ones. Format: `YYYY-MM-DD`. |
 | `name` | string | Raw transaction description from the financial institution. Always populated. |
 | `merchant_name` | string | Enriched, cleaned merchant name (e.g., `McDonald's`). May be `null` when the merchant cannot be identified. |
+| `counterparty_short_id` | string | Short ID of the assigned [counterparty](/transactions/counterparties) — the canonical "other side" of the charge. `null` when none is bound. Prefers this over `merchant_name` for display when present. |
+| `counterparty_name` | string | Canonical counterparty display name (e.g., `Amazon`). `null` when none is bound. |
+| `counterparty_logo_url` | string | Resolved logo URL for the counterparty (manual override or logo.dev hotlink). `null` when none is bound or no logo is configured. |
 | `category_primary` | string | High-level provider category (e.g., `FOOD_AND_DRINK`, `TRANSPORTATION`). |
 | `category_detailed` | string | Granular subcategory (e.g., `FOOD_AND_DRINK_RESTAURANTS`). |
 | `category_slug` | string | Breadbox category slug when rules or a human/agent has assigned one (e.g., `food_and_drink_groceries`). Takes precedence over the provider fields for display and filtering. |

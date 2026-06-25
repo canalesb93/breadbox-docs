@@ -85,6 +85,7 @@
               "transactions/categories",
               "transactions/tags",
               "transactions/rules",
+              "transactions/counterparties",
               "transactions/review-workflow"
             ]
           },
