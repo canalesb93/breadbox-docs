@@ -52,36 +52,49 @@ Entity IDs in MCP responses are compact 8-character base62 strings (e.g., `k7Xm9
 
 This differs from the REST API, which returns both `id` (UUID) and `short_id` on every record. If you're cross-referencing between an agent session and the admin UI, remember that what the agent sees as `id` is what the UI calls `short_id`.
 
-## Resources
+## Reads-as-tools, no MCP resources
 
-MCP resources are static or live documents the server exposes alongside tools. Breadbox serves nine, each annotated with an audience (`assistant`-only by default; the four with real attach-in-chat flows are dual-audience for both `user` and `assistant`), a priority, and a `lastModified` timestamp (build time for static prompts, read time for live data).
+Earlier versions of Breadbox exposed the orientation data and the operating-guidance docs as a parallel `breadbox://` resources surface. That surface has been retired entirely — the registry advertises **0 resources, 35 tools**. Resources weren't visible to MCP clients that can't call `resources/list` (notably Claude.ai), so every read is now a tool call.
 
-| URI | MIME | Audience | What it returns |
-| --- | --- | --- | --- |
-| `breadbox://overview` | `application/json` | user, assistant | Live dataset summary clustered as `scope`, `freshness`, and `backlog`, plus the household `users` roster |
-| `breadbox://accounts` | `application/json` | user, assistant | Bank accounts (checking, savings, credit cards, loans, investments) with balances, institution names, and currency |
-| `breadbox://categories` | `application/json` | assistant | Two-level category taxonomy keyed by slug; source for valid `category_slug` values when categorizing or authoring rules |
-| `breadbox://tags` | `application/json` | assistant | Current tag vocabulary keyed by slug; the `needs-review` tag is the review-queue handle |
-| `breadbox://users` | `application/json` | assistant | Household members with their roles (admin, editor, viewer) |
-| `breadbox://sync-status` | `application/json` | assistant | Per-connection sync status and last-sync timestamps |
-| `breadbox://review-guidelines` | `text/markdown` | user, assistant | Guidance for reviewing transactions and creating rules (user-editable in `/mcp` admin) |
-| `breadbox://report-format` | `text/markdown` | user, assistant | Report structure templates used by `submit_report` (user-editable) |
-| `breadbox://rule-dsl` | `text/markdown` | assistant | Reference grammar for transaction rules: condition fields, action types, priority bands, sync vs retroactive semantics, and provider quirks |
+The migration is mechanical:
 
-The live `accounts`, `categories`, `tags`, `users`, and `sync-status` resources replace what would otherwise be redundant `list_*` tool calls — agents can read them on connect instead of paying for a round-trip per list.
+| Old resource URI | Now |
+| --- | --- |
+| `breadbox://overview` | `get_overview` tool |
+| `breadbox://accounts` | `list_accounts` tool |
+| `breadbox://categories` | `list_categories` tool |
+| `breadbox://tags` | `list_tags` tool |
+| `breadbox://users` | `list_users` tool |
+| `breadbox://sync-status` | `get_sync_status` tool |
+| `breadbox://rules` (rules list) | `list_transaction_rules` tool |
+| `breadbox://instructions` | `get_reference` tool, `kind=instructions` |
+| `breadbox://rule-dsl` | `get_reference` tool, `kind=rule-dsl` |
+| `breadbox://review-guidelines` | `get_reference` tool, `kind=review-guidelines` |
+| `breadbox://report-format` | `get_reference` tool, `kind=report-format` |
 
-Agents are expected to read `breadbox://overview` first to orient themselves, and to read `breadbox://review-guidelines` before processing review work.
+A new agent is expected to call `get_overview` first to orient itself, and to call `get_reference(kind="review-guidelines")` before processing review work.
 
-### `breadbox://overview` shape
+### Guidance docs via `get_reference`
 
-The overview resource returns a JSON object with four top-level keys:
+`get_reference` is a single read tool that serves the near-static markdown that teaches an agent how to drive the server. Pass a `kind`:
+
+| `kind` | Returns |
+| --- | --- |
+| `instructions` | Data-model + conventions overview, how the tool surface is organized. |
+| `rule-dsl` | The full transaction-rule condition grammar, action types, pipeline-stage ordering, and sync-vs-retroactive semantics. Fixed grammar — not operator-customizable. |
+| `review-guidelines` | Principles for reviewing transactions and creating rules. Reflects operator customization from the MCP Settings page. |
+| `report-format` | Structure and formatting conventions for `submit_report`. Reflects operator customization. |
+
+The response is a single markdown content block.
+
+### `get_overview` shape
+
+`get_overview` returns a JSON object with four top-level keys:
 
 - `users` — minimal household roster (`id`, `name`).
 - `scope` — dataset size: `transaction_count`, `account_count`, `category_count`, `earliest_transaction_date`, `latest_transaction_date`.
 - `freshness` — ingest-time signals: `last_sync_at` (most recent successful sync across active connections), `errored_connection_count`, `pending_transaction_count`, `transactions_added_last_24h`, `transactions_added_last_7d`. The `transactions_added_last_*` counters track when Breadbox first ingested each row, not when the underlying transaction occurred.
 - `backlog` — what's open: `needs_review_count` (transactions tagged `needs-review`) and `unmapped_transaction_count` (transactions with no category).
-
-The 30-day spending summary, the per-connection list, and the `accounts_by_type` histogram that earlier versions of this resource returned have been removed — read `breadbox://accounts`, `breadbox://sync-status`, or call `transaction_summary` for that detail.
 
 ## Error shape
 
@@ -103,7 +116,7 @@ A complete list of every tool Breadbox exposes, grouped by domain. Tools without
 
 **Data access (read)**
 
-- Overview: `get_overview` — household snapshot; mirrors `breadbox://overview`.
+- Overview: `get_overview` — household snapshot (scope, freshness, backlog).
 - Transactions: [`query_transactions`, `transaction_summary`, `list_annotations`](/mcp/reference/transactions)
 - Accounts and users: [`list_accounts`, `list_users`](/mcp/reference/accounts)
 - Categories: [`list_categories`](/mcp/reference/categories)
@@ -117,7 +130,7 @@ A complete list of every tool Breadbox exposes, grouped by domain. Tools without
 
 **Mutations (write)**
 
-- Transactions: [`update_transactions`](/mcp/reference/transactions-write) — compound write for category sets, tag adds/removes, and comments.
+- Transactions: [`update_transactions`](/mcp/reference/transactions-write) — compound write for category sets, tag adds/removes, flag toggles, and comments.
 - Transaction metadata: `set_transaction_metadata`
 - Rules: [`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `apply_rules`](/mcp/reference/rules-write)
 - Tags: [`create_tag`, `update_tag`, `delete_tag`](/mcp/reference/tags-write)

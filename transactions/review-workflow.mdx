@@ -58,7 +58,7 @@ System-seeded rules can be disabled but not deleted, so you can always turn the 
 Because the queue is just a tag filter, AI agents connected over MCP can participate using the same tools humans would:
 
 - `query_transactions(tags=["needs-review"])` to fetch the backlog
-- `count_transactions(tags=["needs-review"])` to check the size before diving in
+- `query_transactions(tags=["needs-review"], count_only=true)` to check the size before diving in
 - `update_transactions` with a compound op (<Tooltip headline="category_slug" tip="Breadbox's internal category slug (e.g. `food_and_drink_groceries`). Takes precedence over raw provider fields for display and filtering." cta="See categories" href="/transactions/categories">`category_slug`</Tooltip> \+ `tags_to_remove` with a note \+ an optional `comment`) to resolve items in batches
 - Leave the tag in place when an agent isn't confident — that's the equivalent of "skipping"
 
@@ -66,7 +66,7 @@ A typical agent loop:
 
 <Steps>
   <Step title="Fetch the backlog">
-    `count_transactions(tags=["needs-review"])` to size it up, then `query_transactions(tags=["needs-review"], fields=core,category, limit=30)`.
+    `query_transactions(tags=["needs-review"], count_only=true)` to size it up, then `query_transactions(tags=["needs-review"], fields=core,category, limit=30)`.
   </Step>
   <Step title="Decide per transaction">
     For each row the agent inspects name, merchant, amount, and any pre-applied category. It applies your review guidelines (configurable in settings) to decide whether to accept the category, change it, or defer.

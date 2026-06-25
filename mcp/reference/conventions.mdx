@@ -118,7 +118,7 @@ Comma-separated values in `search` are ORed. `search=starbucks,dunkin` matches e
 
 ## Tag filters
 
-`query_transactions` and `count_transactions` accept two tag filters:
+`query_transactions` accepts two tag filters (also honored when called with `count_only: true`):
 
 - `tags` — array, AND semantics. All tags must be present.
 - `any_tag` — array, OR semantics. At least one tag must match.
@@ -140,6 +140,6 @@ The review queue is just `tags=["needs-review"]`.
 
 - List tools default to `limit=50`, max 500.
 - `update_transactions` caps at 50 operations per call.
-- `batch_create_rules` caps at 100 items.
+- `create_transaction_rule` accepts 1–100 rules per call via its `rules` array.
 
 Exceeding a cap returns an error; the server does not silently truncate.

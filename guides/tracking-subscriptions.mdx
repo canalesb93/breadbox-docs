@@ -74,10 +74,12 @@ To make every future charge from a merchant join a series on sync, use the [`ass
 
 The same surface is available over MCP, which is how a scheduled reviewer agent can keep your subscription list tidy:
 
-- `list_series` (optionally `status=candidate`) to find series awaiting a verdict, then `review_series` to confirm, reject, pause, or cancel.
-- `get_series` to inspect one series and the evidence behind it.
-- `assign_series` to create a series detection missed, or back-link charges to an existing one.
-- `add_series_tag` / `remove_series_tag` to tag a subscription and its members.
+- `list_series` to scan the current series; `get_series` to inspect one.
+- `assign_series` to mint a series an agent missed, or back-link transactions to an existing one.
+- `update_series` to rename a series or change its type (`subscription`, `bill`, `loan`, `other`).
+- `unlink_series_transactions` to detach charges that don't belong.
+
+When you want every future charge from a merchant to land in a series automatically, encode that as an `assign_series` rule via `create_transaction_rule` rather than calling `assign_series` repeatedly.
 
 See the [MCP tools](/mcp/tools#series-subscriptions) page for the agent-facing summary.
 
