@@ -11,7 +11,7 @@ Every iteration the agent does the same four things:
 
 <Steps>
   <Step title="Size up the backlog">
-    Call `count_transactions(tags=["needs-review"])` to see how many transactions are pending. If the count is very large, the agent narrows by date or account.
+    Call `query_transactions(tags=["needs-review"], count_only=true)` to see how many transactions are pending. If the count is very large, the agent narrows by date or account.
   </Step>
   <Step title="Fetch a working batch">
     Call `query_transactions(tags=["needs-review"], fields="core,category", limit=30)` to pull a page worth of detail. Keep batches small — one batch is the unit the agent reasons over end-to-end.
@@ -77,7 +77,7 @@ Step-by-step, every run:
 1. Call `get_sync_status`. If any connection has `status = "error"` or
    `status = "pending_reauth"`, note it in the report and skip those
    accounts' transactions.
-2. Call `count_transactions(tags=["needs-review"])`. If the count is over
+2. Call `query_transactions(tags=["needs-review"], count_only=true)`. If the count is over
    200, narrow the batch by the most recent 7 days.
 3. Call `query_transactions(tags=["needs-review"], fields="core,category",
    limit=30)`. Work in batches of 30.
@@ -129,4 +129,4 @@ Until you hit one of those, keep it simple.
 
 - [Breadbox in a nutshell](/guides/breadbox-in-a-nutshell) — the primitives the loop rests on.
 - [Review workflow](/transactions/review-workflow) — the full spec for the `needs-review` tag and its seeded rule.
-- [MCP tools](/mcp/tools) — reference for `query_transactions`, `count_transactions`, and `update_transactions`.
+- [MCP tools](/mcp/tools) — reference for `query_transactions` (including its `count_only` mode) and `update_transactions`.

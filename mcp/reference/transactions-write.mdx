@@ -4,7 +4,7 @@ sidebarTitle: "Transaction writes"
 description: "Compound writes for category, tags, and comments on transactions. Categorization lives on its own page."
 ---
 
-Write tools for editing transactions. `update_transactions` is the single primitive — it covers category, tags, and a comment in one atomic op per row, for up to 50 transactions per call.
+Write tools for editing transactions. `update_transactions` is the single primitive — it covers category sets, category resets, tag adds/removes, flag toggles, and a free-form comment in one atomic op per row, for up to 50 transactions per call. The retired per-row tools (`categorize_transaction`, `batch_categorize_transactions`, `reset_transaction_category`, `bulk_recategorize`, `flag_transaction`, `unflag_transaction`) all fold into it.
 
 All tools on this page are **Write** scope. See [Categorization](/mcp/reference/categorization) for category-only writes.
 
@@ -48,7 +48,11 @@ Every change lands as a single linked annotation per operation, so the activity 
 </ParamField>
 
 <ParamField path="category_slug" type="string">
-  Category slug to set. Sets `category_override = 'agent'` (skips the row if a user has already set it to `'user'`). Omit to leave the category unchanged.
+  Category slug to set. Sets `category_override = 'agent'` (skips the row if a user has already set it to `'user'`). Omit to leave the category unchanged. Mutually exclusive with `reset_category`.
+</ParamField>
+
+<ParamField path="reset_category" type="boolean" default="false">
+  Drop the transaction back to uncategorized so rules can re-categorize it on the next sync. Mutually exclusive with `category_slug`. Use to undo a prior agent or rule decision.
 </ParamField>
 
 <ParamField path="tags_to_add" type="array">
@@ -57,6 +61,10 @@ Every change lands as a single linked annotation per operation, so the activity 
 
 <ParamField path="tags_to_remove" type="array">
   List of `{slug, note?}` entries. `note` is recommended for workflow tags like `needs-review`.
+</ParamField>
+
+<ParamField path="flagged" type="boolean">
+  Flag (`true`) or unflag (`false`) the transaction for human attention without changing its category. Pair `flagged: true` with a `comment` carrying the reason; retrieve flagged rows later with `query_transactions(flagged=true)`. Omit to leave the flag untouched. Replaces the retired `flag_transaction` / `unflag_transaction` tools.
 </ParamField>
 
 <ParamField path="comment" type="string">
@@ -98,6 +106,22 @@ Every change lands as a single linked annotation per operation, so the activity 
   ],
   "succeeded": 2,
   "failed": 0
+}
+```
+
+### Flagging a transaction
+
+To mark a transaction for follow-up without changing its category, pass `flagged: true` with a `comment` carrying the reason. Retrieve flagged rows later with `query_transactions(flagged=true)`. Clearing a flag is `flagged: false`.
+
+```json
+{
+  "operations": [
+    {
+      "transaction_id": "k7Xm9pQ2",
+      "flagged": true,
+      "comment": "Charge from a merchant we don't recognize — verify before next statement."
+    }
+  ]
 }
 ```
 

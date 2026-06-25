@@ -50,6 +50,10 @@ Returns a paginated list of transactions matching the supplied filters. This is 
   Filter by pending status. Omit to return both.
 </ParamField>
 
+<ParamField path="flagged" type="boolean">
+  Filter to flagged transactions (`true`) or unflagged (`false`). Omit to return both. Use `flagged=true` to retrieve transactions you (or an agent) marked for follow-up via `update_transactions`.
+</ParamField>
+
 <ParamField path="search" type="string">
   Case-insensitive substring match on `name` and `merchant_name`. Comma-separate values for OR.
 </ParamField>
@@ -88,6 +92,10 @@ Returns a paginated list of transactions matching the supplied filters. This is 
 
 <ParamField path="fields" type="string">
   Comma-separated fields or aliases (`minimal`, `core`, `category`, `timestamps`). See [Conventions](/mcp/reference/conventions#fields-aliases). `id` is always included.
+</ParamField>
+
+<ParamField path="count_only" type="boolean" default="false">
+  When `true`, return only `{"count": N}` for the given filters — no rows, no pagination. `cursor`, `limit`, `sort_by`, `sort_order`, and `fields` are ignored. Use this to size a result set or compare counts across date ranges or categories before paginating. Replaces the retired `count_transactions` tool.
 </ParamField>
 
 ### Example input
@@ -133,17 +141,13 @@ Returns a paginated list of transactions matching the supplied filters. This is 
 
 ---
 
-## count_transactions
+## Counting matches: `query_transactions(count_only=true)`
 
-Returns the count of transactions matching the filters, without fetching any rows. Agents use this as a cheap pre-flight to decide whether to paginate or narrow filters.
+There is no separate `count_transactions` tool. To get just a count for a given set of filters, pass `count_only: true` to `query_transactions` with the same filters you'd otherwise use. The response is `{"count": N}` with no rows, no pagination, and no cursor — `cursor`, `limit`, `sort_by`, `sort_order`, and `fields` are ignored. Agents use this as a cheap pre-flight to decide whether to paginate or narrow filters.
 
 **Scope:** Read
 
 **Mirrors:** [`GET /api/v1/transactions/count`](/api/overview)
-
-### Parameters
-
-Accepts the same filters as `query_transactions` except `cursor`, `limit`, `sort_by`, `sort_order`, and `fields`.
 
 ### Example input
 
@@ -151,7 +155,8 @@ Accepts the same filters as `query_transactions` except `cursor`, `limit`, `sort
 {
   "start_date": "2026-01-01",
   "end_date": "2026-04-01",
-  "category_slug": "food_and_drink_groceries"
+  "category_slug": "food_and_drink_groceries",
+  "count_only": true
 }
 ```
 

@@ -74,7 +74,7 @@ Navigate to **Transactions** in the admin dashboard sidebar to browse, search, a
 For programmatic access, Breadbox offers two interfaces:
 
 - **REST API** — Use `GET /api/v1/transactions` with query parameters to filter (date, account, user, category, amount, search), sort, paginate, and filter by tags (`tags=` / `any_tag=`). See [Transactions API](/api/overview) for the full parameter list and [Tags API](/api/overview) for attaching and detaching tags.
-- **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions`, `count_transactions`, and `update_transactions` to query, categorize, tag, and summarize in natural-language workflows. See [MCP overview](/mcp/overview) for setup and [MCP Reference](/mcp/reference/overview) for the full tool list.
+- **MCP server** — AI agents connect to Breadbox's MCP server and use tools like `query_transactions` (which doubles as a counter via `count_only=true`) and `update_transactions` to query, categorize, tag, and summarize in natural-language workflows. See [MCP overview](/mcp/overview) for setup and [MCP Reference](/mcp/reference/overview) for the full tool list.
 
 ## Soft deletes
 

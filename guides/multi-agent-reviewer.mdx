@@ -39,7 +39,7 @@ can work them.
 
 Each run:
 
-1. `count_transactions(tags=["needs-review"])`. If zero, submit a report
+1. `query_transactions(tags=["needs-review"], count_only=true)`. If zero, submit a report
    and stop.
 2. `query_transactions(tags=["needs-review"], fields="core,category",
    limit=50)`.

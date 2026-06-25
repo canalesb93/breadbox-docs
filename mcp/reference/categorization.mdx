@@ -82,4 +82,4 @@ Category writes follow the precedence **user > agent > rule**. If a transaction'
 
 To categorize in bulk by applying a stored rule to existing transactions, use `apply_rules`. Pass a `rule_id` to run one rule in isolation, or omit it to run the full active-rule pipeline in priority order.
 
-See [Rules (write)](/mcp/reference/rules-write) for the other rules write tools (`create_transaction_rule`, `update_transaction_rule`, `delete_transaction_rule`, `batch_create_rules`).
+See [Rules (write)](/mcp/reference/rules-write) for the other rules write tools (`create_transaction_rule` — accepts a `rules` array for batch creation, `update_transaction_rule`, `delete_transaction_rule`).

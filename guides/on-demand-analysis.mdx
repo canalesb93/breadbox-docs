@@ -103,7 +103,7 @@ include pending transactions."
 I'll:
 1. Call list_categories to find the grocery category slugs available.
 2. Call list_users to get the user IDs.
-3. Call count_transactions with category_detailed=FOOD_AND_DRINK_GROCERIES,
+3. Call query_transactions(count_only=true) with category_detailed=FOOD_AND_DRINK_GROCERIES,
    start_date=2026-01-01, end_date=2026-03-31, pending=false. If the
    count is manageable (<500), proceed.
 4. Call query_transactions with the same filters, paginated as needed.

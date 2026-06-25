@@ -16,7 +16,7 @@ This page is for **you** — the person deciding what to hand an agent. Agents r
 
 ## What a typical agent session looks like
 
-An agent connected to Breadbox usually opens a session by orienting itself before it starts querying. First it calls `list_users` and `list_accounts` to see who's in the household and which accounts exist — this gives it the IDs it needs to filter anything downstream. Then, before pulling rows, it calls `count_transactions` with its intended filters so it knows whether to expect fifty results or five thousand. Only then does it call `query_transactions`, paginating with the returned cursor if `has_more` is `true`.
+An agent connected to Breadbox usually opens a session by orienting itself before it starts querying. First it calls `list_users` and `list_accounts` to see who's in the household and which accounts exist — this gives it the IDs it needs to filter anything downstream. Then, before pulling rows, it calls `query_transactions` with `count_only: true` and its intended filters so it knows whether to expect fifty results or five thousand. Only then does it call `query_transactions` for real, paginating with the returned cursor if `has_more` is `true`.
 
 That pattern — orient, size, query — keeps token usage predictable and matches how Breadbox's tools are designed. You don't need to enforce it from the outside; the tool descriptions nudge the agent toward it.
 
@@ -161,32 +161,17 @@ When there are no more pages, the response includes `"has_more": false` and `"ne
 
 ---
 
-## `count_transactions`
+## Counting without paginating: `query_transactions(count_only=true)`
 
-Counts matching transactions without returning any transaction data. Accepts the same filters as `query_transactions` (excluding `cursor`, `limit`, `sort_by`, and `sort_order`). It's the cheap pre-flight an agent uses to decide whether to narrow filters or brace for pagination.
-
-**Scope:** Read
-
-**Input parameters**
-
-| Parameter | Type | Required | Description |
-| --- | --- | --- | --- |
-| `start_date` | string (YYYY-MM-DD) | No | Count transactions on or after this date (inclusive). |
-| `end_date` | string (YYYY-MM-DD) | No | Count transactions before this date (exclusive). To cover all of January, pass `2025-02-01`. |
-| `account_id` | string | No | Filter to a specific account. |
-| `user_id` | string | No | Filter to accounts owned by this family member. |
-| `category_slug` | string | No | Filter by category slug. Parent slugs include all children. |
-| `min_amount` | number | No | Minimum transaction amount. |
-| `max_amount` | number | No | Maximum transaction amount. |
-| `pending` | boolean | No | Filter by pending status. |
-| `search` | string | No | Full-text search over merchant name and description. |
+There's no separate `count_transactions` tool. To get just a count for a given set of filters, call `query_transactions` with `count_only: true` and the same filters you'd otherwise use. The response is `{"count": N}` with no rows, no pagination, and no cursor — `cursor`, `limit`, `sort_by`, `sort_order`, and `fields` are ignored. It's the cheap pre-flight an agent uses to decide whether to narrow filters or brace for pagination.
 
 **Example input**
 
 ```json
 {
   "start_date": "2025-01-01",
-  "end_date": "2025-02-01"
+  "end_date": "2025-02-01",
+  "count_only": true
 }
 ```
 
@@ -200,7 +185,7 @@ Counts matching transactions without returning any transaction data. Accepts the
 
 ## `list_categories`
 
-Returns the Breadbox category taxonomy as a flat list. Each category has a stable `slug` — the handle agents pass to `query_transactions` and `count_transactions` to filter by category, and to rule actions to set a category.
+Returns the Breadbox category taxonomy as a flat list. Each category has a stable `slug` — the handle agents pass to `query_transactions` to filter by category, and to rule actions to set a category.
 
 **Scope:** Read
 
@@ -242,7 +227,7 @@ None. Pass an empty object.
 }
 ```
 
-Pass a category `slug` as the `category_slug` parameter in `query_transactions` and `count_transactions` to filter by category. Parent slugs (e.g., `food_and_drink`) include all child categories automatically.
+Pass a category `slug` as the `category_slug` parameter in `query_transactions` to filter by category. Parent slugs (e.g., `food_and_drink`) include all child categories automatically.
 
 ---
 
@@ -343,22 +328,16 @@ None. Pass an empty object.
 
 ## Series (subscriptions)
 
-Breadbox detects recurring charges and groups them into [series](/guides/tracking-subscriptions). These tools are the agent-facing side of the **Recurring** page — they let a scheduled reviewer adjudicate what the detector proposed and fill in anything it missed. (The tool *names* stay `*_series` for API stability even though the surface is now called Recurring.)
+Breadbox groups recurring charges into [series](/guides/tracking-subscriptions). A series is a thin surrogate identity (id, name, type) — its membership is maintained by `assign_series` rules in the rule engine, not by a built-in detector. These tools are the agent-facing side of the **Recurring** page; an agent uses them to mint or rename a series and to one-off-link or unlink specific charges.
 
 | Tool | Scope | What it does |
 | --- | --- | --- |
-| `list_series` | Read | List detected series. Filter by `status` (`active`, `candidate`, `paused`, `cancelled`); `candidate` surfaces the ones awaiting a verdict. Each row carries cadence, expected amount + currency, next expected date, and the detection signals. |
-| `get_series` | Read | Fetch one series by ID, including the full evidence the detector used. |
-| `explain_series_candidates` | Read | Answer "why isn't *X* recurring?" — lists recurring-looking merchants the precision-first detector skipped, with the reason (too few occurrences, irregular cadence, unstable amount, …). |
-| `review_series` | Write | Apply a verdict: `confirm`, `reject` (sticky — never re-proposed at that amount band), `pause`, or `cancel`. A user's prior confirmation outranks a later agent verdict. |
-| `update_series` | Write | Edit a series' user-owned attributes: name, expected amount, cadence, expected day, category, or owner. Every field is optional; omit to leave unchanged. Edits survive future detection runs (the detector won't revert them). |
-| `set_series_type` | Write | Set the series type: `subscription`, `bill`, `loan`, or `other`. Overrides the type the detector inferred from the charges' category; the override is sticky. |
-| `assign_series` | Write | Create a series the detector missed, or back-link transactions to an existing one. Never steals a charge already in another series. |
-| `unlink_series_transactions` | Write | Detach transactions from a series (inverse of `assign_series`). Clears the series link and strips inherited tags from the affected charges only. |
-| `rekey_series` | Write | Fix a series grouped under a wrong or fallback merchant key (e.g. `payment` → `spotify`), repointing it and its charges. |
-| `split_series` | Write | Break an over-grouped series in two — move stray charges into a new series (e.g. a $4.99 add-on swept into a $139/yr renewal). |
-| `add_series_tag` / `remove_series_tag` | Write | Tag a series; every linked transaction inherits the tag automatically. Removing strips only the inherited copies. |
+| `list_series` | Read | List recurring series. Lean by default (`name`, `type`); pass `fields=all` for the full row. Use `query_transactions` with a `series_id` filter to enumerate a series' charges. |
+| `get_series` | Read | Fetch one series by short ID or UUID. |
+| `assign_series` | Write | Link transactions to a series, creating it if needed. Provide `series_id` to assign to an existing series, or `series_name` + `create_if_missing: true` to mint one (surrogate-first — the same name always resolves the same series). Optional `type` (`subscription`, `bill`, `loan`, `other`) for a minted series. `transaction_ids` (≤50) back-link members; an `assign_series` call never steals a charge already in another series. |
+| `update_series` | Write | Edit a series' `name` and/or `type`. Both optional; omit to leave unchanged. Renaming onto another live series' name is rejected — the name is the series' unique mint key. |
+| `unlink_series_transactions` | Write | Detach transactions (≤50) from a series — the inverse of `assign_series`. Each listed transaction must currently belong to the series; the call errors out otherwise so it can't silently touch the wrong rows. |
 
 <Note>
-  A typical reviewer agent calls `list_series(status="candidate")`, inspects each with `get_series`, and resolves it with `review_series` — the same confirm/reject loop a person runs on the Recurring page.
+  When you want every future charge from a merchant to land in a series automatically, encode that as an `assign_series` rule via `create_transaction_rule` instead of calling `assign_series` for each new transaction.
 </Note>

@@ -54,7 +54,7 @@ On each run:
 1. Call `create_session` with purpose "12h triage — <ISO date>".
    Save the returned session_id for all subsequent write calls.
 
-2. Call `count_transactions(tags=["needs-review"])`.
+2. Call `query_transactions(tags=["needs-review"], count_only=true)`.
    - If the count is 0: call `submit_report` with title
      "Triage check — queue empty." and stop.
    - If the count is 1–150: proceed to step 3.
