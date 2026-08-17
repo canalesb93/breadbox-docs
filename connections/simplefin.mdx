@@ -1,0 +1,94 @@
+---
+title: "Connect banks with SimpleFIN"
+description: "Paste a SimpleFIN setup token to bring banks into Breadbox through the SimpleFIN Bridge — including banks you add at the bridge after connecting."
+sidebarTitle: "SimpleFIN"
+---
+
+[SimpleFIN](https://www.simplefin.org/protocol.html) is a token-paste, poll-only bank-data protocol commonly used by the self-hosting community via the hosted [SimpleFIN Bridge](https://bridge.simplefin.org) or a self-run server. It is the simplest provider Breadbox supports: no OAuth dialog, no SDK, no webhooks — just paste a setup token and Breadbox starts polling.
+
+Use SimpleFIN when you already use the SimpleFIN Bridge, when your bank isn't covered by [Plaid](/connections/plaid) or [Teller](/connections/teller), or when you want a single token that spans multiple banks.
+
+## What you need
+
+- A **SimpleFIN account** at [bridge.simplefin.org](https://bridge.simplefin.org) (or a self-run server) with at least one bank linked at the bridge.
+- A **setup token** generated from your bridge's setup page. Setup tokens are one-time-use and short-lived — generate one immediately before pasting it into Breadbox.
+- The `simplefin_enabled` opt-in toggle set to `true` in Breadbox (either via the `SIMPLEFIN_ENABLED` environment variable or **Settings → Providers**). There is no per-server credential to configure.
+
+## Connect a bank
+
+<Steps>
+  <Step title="Generate a setup token at your bridge">
+    Sign in at [bridge.simplefin.org](https://bridge.simplefin.org), link your banks if you haven't already, and click **Create Token**. Copy the base64 setup token — it is single-use.
+  </Step>
+  <Step title="Start a new connection in Breadbox">
+    Go to **Connections** → **Connect New Bank**, select the household member who will own this connection, and choose **SimpleFIN** as the provider.
+  </Step>
+  <Step title="Paste the setup token">
+    Paste the token into the prompt and submit. Breadbox claims the token (exchanging it for an access URL), stores the credential encrypted, and discovers the accounts available at the bridge.
+  </Step>
+  <Step title="Wait for the initial sync">
+    Breadbox polls the bridge for about one year of transaction history on the first sync. Status flips to **Active** once the initial sync completes.
+  </Step>
+</Steps>
+
+One SimpleFIN connection covers **every bank you have linked at the bridge** — you don't run the connect flow once per bank.
+
+## Automatic account discovery on every sync
+
+SimpleFIN is an aggregator: the same access URL covers every bank you've linked at the bridge, and you can keep adding banks there at any time. To handle this, **every sync re-reads the full account list** from the bridge and Breadbox upserts any new accounts before processing transactions.
+
+That means:
+
+- A bank you link at the bridge **after** connecting Breadbox shows up automatically on the next scheduled sync — there is no "rescan accounts" button to hit and no need to re-paste your token.
+- Existing accounts keep their settings (display name, exclusion flag, owner override). Only metadata is upserted on discovery — balances refresh on their normal path.
+- If you want a newly added bank to appear sooner than the next scheduled run, click **Sync now** on the connection.
+
+Plaid and Teller pin the account set at connect time, so this behavior is specific to SimpleFIN.
+
+## Mixed-owner bridges and per-account owner override
+
+A single SimpleFIN token often spans accounts belonging to **different household members** — for example, one partner links both their and their partner's banks at the same bridge. The Breadbox connection has a single owner, but you can reassign **individual accounts** to another household member using the per-account owner override.
+
+### Set the owner from the admin dashboard
+
+1. Open the account from **Accounts** (or from its connection).
+2. In the **Settings** section of the account-detail page, change the **Owner** select to the household member who should own this account.
+3. Save. The change takes effect immediately for new and existing transactions on that account — no resync, no backfill.
+
+Selecting **Inherit from connection** clears the override and the account falls back to the connection's owner.
+
+### Set the owner from the API
+
+The override is exposed on `PATCH /api/v1/accounts/{id}` as the optional `owner_user_id` field. Pass a member's `short_id` to set it, or an empty string to clear it.
+
+```json
+{
+  "owner_user_id": "u8Xk2p9q"
+}
+```
+
+### Attribution precedence
+
+The effective owner of each transaction resolves at read time in this order:
+
+1. **Per-transaction attribution** (from [account links](/transactions/overview), e.g. a child's purchases routed away from the parent who owns the card).
+2. **Per-account owner override** (`accounts.owner_user_id`, the field you set above).
+3. **Connection owner** (`bank_connections.user_id`, set when the connection was created).
+
+The first one that's set wins. Because attribution resolves on the read path, reassigning an account's owner re-routes **every existing transaction** on that account across per-user totals, summaries, and category aggregations without any backfill job.
+
+## Re-authentication
+
+SimpleFIN tokens don't expire on a schedule, but the bridge can revoke the underlying access URL (for example, if you regenerate it from the bridge UI). When a sync starts returning `403`, the connection moves to **Re-auth Needed**.
+
+To re-authenticate, generate a fresh setup token from the bridge, click **Re-authenticate** on the connection, and paste the new token. Breadbox rotates the stored credential in place — the connection row and all of its accounts and history are preserved.
+
+## Limitations
+
+- **No webhooks.** Sync runs on the cron schedule you configure (every 4, 8, 12, or 24 hours). There is no near-real-time path.
+- **Balances and transactions only.** SimpleFIN doesn't expose investment holdings, statements, or identity data.
+- **Amounts are inverted at the protocol level** — Breadbox normalizes signs internally, so amounts in the API and dashboard follow the same convention as Plaid and Teller.
+
+## Disconnecting
+
+Removing a SimpleFIN connection stops future syncs and preserves all previously synced transactions. To stop the bridge itself from holding your bank credentials, revoke the access URL from the SimpleFIN Bridge UI as well.

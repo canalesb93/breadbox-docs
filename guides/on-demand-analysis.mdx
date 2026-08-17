@@ -77,11 +77,17 @@ If the answer comes back as a single number without naming a currency, that's a 
 
 ### Attribution
 
-Breadbox supports attributing transactions to a specific household member different from the account owner — for example, a child's purchases on a shared card attributed to the child, not the parent who owns the card. Transaction queries use `COALESCE(attributed_user_id, account_owner_user_id)` to resolve the effective user, so per-user totals "do the right thing" by default. But ad-hoc questions that slice by account and then by user can double-count if you're not careful.
+Breadbox supports attributing transactions to a specific household member different from the account owner — for example, a child's purchases on a shared card attributed to the child, not the parent who owns the card. The effective user resolves at read time through a three-step precedence chain:
 
-If you ask "how much did Alice spend last month," Claude filters by `user_id` correctly. If you ask "how much spending happened on the Chase Amex last month, broken down by user," the answer will respect attribution too. But if you ask "whose transactions are on the Chase Amex," the answer might surprise you — attributed transactions show a different user than the account owner.
+1. **Per-transaction attribution** (from account links, e.g. a child's purchases routed away from the parent who owns the card).
+2. **Per-account owner override** (set from the account-detail Settings page, useful when a single connection — like a [SimpleFIN](/connections/simplefin) bridge — spans accounts belonging to different household members).
+3. **Connection owner** (the household member who created the connection).
 
-When in doubt, ask Claude to say whether it's using account ownership or attribution to decide who a transaction belongs to.
+The first one that's set wins, so per-user totals "do the right thing" by default. But ad-hoc questions that slice by account and then by user can double-count if you're not careful.
+
+If you ask "how much did Alice spend last month," Claude filters by `user_id` correctly. If you ask "how much spending happened on the Chase Amex last month, broken down by user," the answer will respect attribution too. But if you ask "whose transactions are on the Chase Amex," the answer might surprise you — attributed transactions show a different user than the account owner, and the account itself may have been reassigned to another member via the per-account override.
+
+When in doubt, ask Claude to say which of the three levels (per-transaction, per-account override, or connection owner) it's using to decide who a transaction belongs to.
 
 ### One more, minor: pending transactions
 
